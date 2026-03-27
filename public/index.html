@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Agent Orchestra</title>
+<style>
+  :root { --bg: #0d1117; --surface: #161b22; --border: #30363d; --text: #e6edf3; --dim: #8b949e; --accent: #58a6ff; --green: #3fb950; --purple: #bc8cff; --orange: #d29922; }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif; background: var(--bg); color: var(--text); line-height: 1.6; }
+  .container { max-width: 800px; margin: 0 auto; padding: 2rem 1.5rem; }
+  h1 { font-size: 2.5rem; margin-bottom: 0.5rem; }
+  h1 span { color: var(--accent); }
+  .subtitle { color: var(--dim); font-size: 1.1rem; margin-bottom: 2.5rem; }
+  h2 { font-size: 1.3rem; margin: 2rem 0 1rem; color: var(--accent); border-bottom: 1px solid var(--border); padding-bottom: 0.5rem; }
+  .modes { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin: 1.5rem 0; }
+  @media (max-width: 600px) { .modes { grid-template-columns: 1fr; } }
+  .mode { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 1.2rem; }
+  .mode h3 { font-size: 1rem; margin-bottom: 0.4rem; }
+  .mode p { color: var(--dim); font-size: 0.85rem; }
+  .mode-discuss h3 { color: var(--accent); }
+  .mode-pipeline h3 { color: var(--green); }
+  .mode-parallel h3 { color: var(--orange); }
+  .mode-consensus h3 { color: var(--purple); }
+  .agents { display: flex; flex-wrap: wrap; gap: 0.5rem; margin: 1rem 0; }
+  .agent { background: var(--surface); border: 1px solid var(--border); border-radius: 6px; padding: 0.4rem 0.8rem; font-size: 0.85rem; }
+  .agent .model { color: var(--dim); font-size: 0.75rem; }
+  pre { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 1rem; overflow-x: auto; font-size: 0.85rem; margin: 1rem 0; }
+  code { color: var(--green); }
+  .tech { color: var(--dim); font-size: 0.85rem; margin-top: 2rem; padding-top: 1rem; border-top: 1px solid var(--border); }
+  a { color: var(--accent); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+  .diagram { color: var(--dim); font-family: monospace; font-size: 0.8rem; line-height: 1.4; margin: 0.8rem 0; }
+</style>
+</head>
+<body>
+<div class="container">
+
+<h1><span>Agent</span> Orchestra</h1>
+<p class="subtitle">Multi-agent orchestration &mdash; Claude agents with different roles discuss, develop, and review together.</p>
+
+<h2>Interaction Modes</h2>
+<div class="modes">
+  <div class="mode mode-discuss">
+    <h3>Discussion</h3>
+    <p>Round-robin debate. Each agent sees the full transcript and adds their perspective. PM summarizes.</p>
+    <div class="diagram">Topic &rarr; A &rarr; B &rarr; C &rarr; A &rarr; &hellip; &rarr; Summary</div>
+  </div>
+  <div class="mode mode-pipeline">
+    <h3>Pipeline</h3>
+    <p>Sequential handoff. Design &rarr; code &rarr; review &rarr; test. Rework loop on critical issues.</p>
+    <div class="diagram">Architect &rarr; Developer &rarr; Reviewer &rarr; Tester</div>
+  </div>
+  <div class="mode mode-parallel">
+    <h3>Parallel</h3>
+    <p>Fan-out / fan-in. Agents work simultaneously on different aspects, then results are merged.</p>
+    <div class="diagram">Task &rarr; [A, B, C] &rarr; Merge</div>
+  </div>
+  <div class="mode mode-consensus">
+    <h3>Consensus</h3>
+    <p>Voting with structured output. Agents vote independently, supermajority decides.</p>
+    <div class="diagram">Question &rarr; All vote &rarr; Tally &rarr; Decision</div>
+  </div>
+</div>
+
+<h2>Agent Roles</h2>
+<div class="agents">
+  <div class="agent"><strong>Architect</strong> <span class="model">opus</span></div>
+  <div class="agent"><strong>Developer</strong> <span class="model">sonnet</span></div>
+  <div class="agent"><strong>Reviewer</strong> <span class="model">opus</span></div>
+  <div class="agent"><strong>PM</strong> <span class="model">sonnet</span></div>
+  <div class="agent"><strong>Tester</strong> <span class="model">sonnet</span></div>
+  <div class="agent"><strong>DevOps</strong> <span class="model">sonnet</span></div>
+  <div class="agent"><strong>Security</strong> <span class="model">opus</span></div>
+</div>
+
+<h2>Usage</h2>
+<pre><code># Discussion
+orchestra discuss "REST or GraphQL?" --agents architect,developer,reviewer
+
+# Pipeline
+orchestra pipeline "Add authentication" --steps architect:design,developer:implement,reviewer:review
+
+# Parallel
+orchestra parallel "Build dashboard" --tasks "developer:frontend" "developer:API" "devops:Docker"
+
+# Consensus
+orchestra consensus "PostgreSQL or MongoDB?" --agents architect,developer,devops</code></pre>
+
+<h2>Architecture</h2>
+<p>Each agent is an independent <code>ClaudeSDKClient</code> process. Python orchestrator controls turn order, message routing, and stopping criteria. No shared context window &mdash; each agent gets its full capacity.</p>
+<p>Runs on Claude Max subscription (no per-token API costs). Roles, modes, and prompts are configurable via YAML.</p>
+
+<p class="tech">Built with <code>claude-agent-sdk</code> + Python 3.11 &bull; <a href="https://github.com/yanhs/orchestra">GitHub</a></p>
+
+</div>
+</body>
+</html>
