@@ -195,7 +195,7 @@ Return ONLY valid JSON:
 }}
 
 Rules:
-- Pick 2-4 agents best suited for this specific task
+- Pick as many agents as the task requires (2-10). Simple questions need 2-3, complex projects may need 5-8. Don't force exactly 3
 - Reuse existing agents by ID if they fit (keep same config)
 - Create new ones only if needed, with task-specific prompts
 - For pipeline mode, add "steps" in options: [{{"agent":"id","action":"design|implement|review|test"}}]
