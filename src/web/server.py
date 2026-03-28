@@ -138,6 +138,49 @@ class AutoPlanRequest(BaseModel):
     topic: str
 
 
+class SelfRepairRequest(BaseModel):
+    error: str
+    context: str = ""
+
+
+ORCHESTRA_PROJECT_PATH = Path(__file__).parent.parent.parent
+
+
+@app.post("/api/self-repair")
+async def self_repair(req: SelfRepairRequest):
+    """Launch a Claude agent to diagnose and fix errors in the orchestra code."""
+    prompt = f"""You are a senior developer fixing a bug in the Agent Orchestra system.
+The system is located at: {ORCHESTRA_PROJECT_PATH}
+
+ERROR: {req.error}
+
+CONTEXT: {req.context}
+
+Key files:
+- src/web/server.py — FastAPI backend, API endpoints, auto-plan logic
+- src/orchestrator/coordinator.py — mode execution (discuss, pipeline, parallel, consensus, custom)
+- src/modes/discussion.py, pipeline.py, parallel.py, consensus.py — mode implementations
+- src/agents/client.py — ClaudeSDKClient wrapper
+- public/index.html — frontend SPA
+
+Diagnose the issue, fix it, and verify your fix. After fixing, the service needs restart:
+  Run: systemctl --user restart orchestra-web
+
+Be precise. Make minimal changes to fix the specific error."""
+
+    try:
+        content = await _call_claude(prompt, model="opus")
+        # After repair, restart the service
+        import subprocess
+        subprocess.Popen(
+            ["systemctl", "--user", "restart", "orchestra-web"],
+            stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+        )
+        return {"ok": True, "diagnosis": content[:500]}
+    except Exception as e:
+        return {"error": str(e)}
+
+
 ANALYZE_PROMPT = """You are a task analyst. Analyze the user's request and produce a structured understanding.
 
 USER REQUEST: "{topic}"
@@ -244,27 +287,46 @@ GENERAL RULES:
 - IMPORTANT: ALL text MUST be in the SAME LANGUAGE as the TASK"""
 
 
-async def _call_claude(prompt: str, model: str = "opus") -> str:
-    """Helper: call Claude and return text content."""
+async def _call_claude(prompt: str, model: str = "opus", max_retries: int = 3) -> str:
+    """Helper: call Claude with auto-retry on failure."""
     from claude_agent_sdk import ClaudeAgentOptions, ClaudeSDKClient, AssistantMessage, ResultMessage, TextBlock
 
-    options = ClaudeAgentOptions(model=model, max_turns=1, permission_mode="bypassPermissions")
-    client = ClaudeSDKClient(options)
-    content = ""
-    try:
-        await client.connect()
-        await client.query(prompt)
-        async for msg in client.receive_messages():
-            if isinstance(msg, ResultMessage):
-                if msg.result:
-                    content = msg.result
-                break
-            elif isinstance(msg, AssistantMessage):
-                for block in msg.content or []:
-                    if isinstance(block, TextBlock):
-                        content += block.text
-    finally:
-        await client.disconnect()
+    fallback_models = {"opus": "sonnet", "sonnet": "haiku", "haiku": "haiku"}
+    current_model = model
+
+    for attempt in range(max_retries):
+        try:
+            options = ClaudeAgentOptions(model=current_model, max_turns=1, permission_mode="bypassPermissions")
+            client = ClaudeSDKClient(options)
+            content = ""
+            try:
+                await client.connect()
+                await client.query(prompt)
+                async for msg in client.receive_messages():
+                    if isinstance(msg, ResultMessage):
+                        if msg.result:
+                            content = msg.result
+                        break
+                    elif isinstance(msg, AssistantMessage):
+                        for block in msg.content or []:
+                            if isinstance(block, TextBlock):
+                                content += block.text
+            finally:
+                await client.disconnect()
+
+            if content.strip():
+                return content
+
+            # Empty response — retry with fallback model
+            print(f"Empty response from {current_model} (attempt {attempt+1})")
+            current_model = fallback_models.get(current_model, current_model)
+
+        except Exception as e:
+            print(f"_call_claude error (attempt {attempt+1}, model={current_model}): {e}")
+            current_model = fallback_models.get(current_model, current_model)
+            if attempt == max_retries - 1:
+                raise
+
     return content
 
 

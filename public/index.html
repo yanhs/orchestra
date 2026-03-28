@@ -271,27 +271,36 @@ async function init(){
 let planVariants=[];
 let taskAnalysis=null;
 
-async function doPlan(){
+async function doPlan(retryCount=0){
+  const maxRetries=2;
   const topic=document.getElementById('topicIn').value.trim();
   if(!topic)return;
   S.topic=topic;
   const btn=document.getElementById('btnPlan');
-  btn.disabled=true;btn.textContent='Planning...';
+  btn.disabled=true;
+  btn.textContent=retryCount?`Retrying (${retryCount}/${maxRetries})...`:'Planning...';
   try{
     const r=await fetch(BASE+'/api/auto-plans',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({topic})});
     const text=await r.text();
     let data;
-    try{data=JSON.parse(text)}catch(pe){alert('Invalid response: '+text.slice(0,200));btn.disabled=false;btn.textContent='Plan';return}
-    if(data.error){alert('Error: '+data.error);btn.disabled=false;btn.textContent='Plan';return}
-    // Support both {analysis, plans} and plain array
+    try{data=JSON.parse(text)}catch(pe){
+      if(retryCount<maxRetries){btn.textContent='Retrying...';return doPlan(retryCount+1)}
+      alert('Invalid response');btn.disabled=false;btn.textContent='Plan';return;
+    }
+    if(data.error){
+      if(retryCount<maxRetries){btn.textContent='Retrying...';return doPlan(retryCount+1)}
+      alert('Error: '+data.error);btn.disabled=false;btn.textContent='Plan';return;
+    }
     if(data.plans){
       taskAnalysis=data.analysis||null;
       planVariants=data.plans;
     }else if(Array.isArray(data)){
       taskAnalysis=null;
       planVariants=data;
-    }else{alert('Unexpected response');btn.disabled=false;btn.textContent='Plan';return}
-    // Auto-select recommended
+    }else{
+      if(retryCount<maxRetries){btn.textContent='Retrying...';return doPlan(retryCount+1)}
+      alert('Unexpected response');btn.disabled=false;btn.textContent='Plan';return;
+    }
     const recIdx=planVariants.findIndex(p=>p.recommended);
     if(recIdx>=0){
       await pickVariant(recIdx);
@@ -300,9 +309,25 @@ async function doPlan(){
       setPhase('choose');
     }
   }catch(e){
-    alert('Planning failed: '+e.message);
+    if(retryCount<maxRetries){return doPlan(retryCount+1)}
+    btn.textContent='Self-repairing...';
+    await selfRepair(e.message,'doPlan: '+topic);
+    btn.disabled=false;btn.textContent='Plan';
   }
   btn.disabled=false;btn.textContent='Plan';
+}
+
+async function selfRepair(error,context){
+  try{
+    const r=await fetch(BASE+'/api/self-repair',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({error,context})});
+    const d=await r.json();
+    if(d.ok){
+      // Wait for service restart
+      await new Promise(r=>setTimeout(r,3000));
+      // Reload page to get fixed code
+      location.reload();
+    }
+  }catch(e){}
 }
 
 function renderVariants(){
@@ -519,7 +544,7 @@ async function doRun(){
       drawDiagram();
     }else if(d.type==='result'){
       if(d.summary)addSum(d.summary);showStats(d);fin();
-    }else if(d.type==='error'){addCard('Error','error',d.text);fin()}
+    }else if(d.type==='error'){addCard('Error','error',d.text);selfRepair(d.text,'ws run: '+S.topic);fin()}
   };
   S.ws.onclose=()=>{if(S.phase==='running')fin()};
   S.ws.onerror=()=>{addCard('Error','error','Connection failed');fin()};
