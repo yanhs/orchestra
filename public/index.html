@@ -231,7 +231,8 @@ async function init(){
   }catch(e){document.getElementById('statusBar').textContent='Failed to load'}
 }
 
-function render(){renderModes();renderAgents();renderOpts();document.getElementById('assignBtn').style.display=selectedMode==='auto'?'block':'none'}
+let autoAssigned=false;
+function render(){renderModes();renderAgents();renderOpts();document.getElementById('assignBtn').style.display=(selectedMode==='auto'||autoAssigned)?'block':'none'}
 
 // ── Modes ──
 function renderModes(){
@@ -278,7 +279,7 @@ async function fullReset(){
   const d=await(await fetch(BASE+'/api/config')).json();agents=d.agents;
   selectedAgents=new Set(Object.keys(agents).slice(0,3));
   // Clear UI
-  selectedMode='auto';autoPlan=null;
+  selectedMode='auto';autoPlan=null;autoAssigned=false;
   document.getElementById('output').innerHTML='<div class="ph">Select mode, agents, and topic</div>';
   document.getElementById('statsBar').style.display='none';
   document.getElementById('topicIn').value='';
@@ -527,6 +528,7 @@ async function autoAssign(){
     const agIds=(plan.agents||[]).map(a=>a.id);
     selectedAgents=new Set(agIds);
     selectedMode=plan.mode||'discuss';
+    autoAssigned=true;
     autoPlan=plan;
     render();drawDiagram();
     // Show assigned info
@@ -607,7 +609,7 @@ async function doRun(){
   ws.onclose=()=>{if(running)fin()};
   ws.onerror=()=>{addCard('Error','error','WebSocket failed');fin()};
 }
-function fin(){running=false;agentActivity={};renderAgents();drawDiagram();document.getElementById('runBtn').textContent='Run';document.getElementById('runBtn').classList.remove('stop');document.getElementById('statusBar').textContent=''}
+function fin(){running=false;autoAssigned=false;agentActivity={};renderAgents();drawDiagram();document.getElementById('runBtn').textContent='Run';document.getElementById('runBtn').classList.remove('stop');document.getElementById('statusBar').textContent=''}
 
 function addCard(ag,ev,txt){
   const out=document.getElementById('output');
