@@ -49,7 +49,15 @@ class DiscussionMode(BaseMode):
             # All agents work in parallel within a round
             async def run_agent(agent: AgentClient) -> tuple[AgentClient, AgentResponse]:
                 prompt = self._build_prompt(topic, transcript, agent, round_num)
-                response = await agent.run(prompt)
+                try:
+                    response = await asyncio.wait_for(agent.run(prompt), timeout=180)
+                except asyncio.TimeoutError:
+                    response = AgentResponse(
+                        agent_name=agent.display_name,
+                        content="",
+                        is_error=True,
+                        error_message="Agent timed out after 180s",
+                    )
                 return agent, response
 
             responses = await asyncio.gather(

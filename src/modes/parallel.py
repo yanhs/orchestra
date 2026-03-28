@@ -55,7 +55,16 @@ class ParallelMode(BaseMode):
                     f"## Your Subtask\n{task.description}\n\n"
                     "Focus only on your subtask. Be thorough and specific."
                 )
-                response = await task.agent.run(prompt)
+                try:
+                    response = await asyncio.wait_for(task.agent.run(prompt), timeout=180)
+                except asyncio.TimeoutError:
+                    from ..agents.client import AgentResponse
+                    response = AgentResponse(
+                        agent_name=task.agent.display_name,
+                        content="",
+                        is_error=True,
+                        error_message=f"Agent timed out after 180s",
+                    )
 
                 if on_update:
                     event = "error" if response.is_error else "done"

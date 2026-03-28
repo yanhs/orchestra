@@ -539,6 +539,8 @@ async def ws_run(ws: WebSocket):
     except WebSocketDisconnect:
         active_agents.clear()
     except Exception as e:
+        import traceback
+        traceback.print_exc()
         active_agents.clear()
         try:
             await ws.send_json({"type": "error", "text": str(e)})
