@@ -41,7 +41,10 @@ def _write_yaml(data: dict) -> None:
 
 @app.get("/")
 async def index():
-    return HTMLResponse((PUBLIC_PATH / "index.html").read_text())
+    return HTMLResponse(
+        (PUBLIC_PATH / "index.html").read_text(),
+        headers={"Cache-Control": "no-store"},
+    )
 
 
 # ── Config API ──
