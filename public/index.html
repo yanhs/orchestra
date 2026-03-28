@@ -19,10 +19,9 @@ body{background:var(--bg);color:var(--t);font-family:'Inter',system-ui,sans-seri
 .hb:hover{border-color:var(--a);color:var(--a)} .hb.on{background:var(--ad);border-color:var(--a);color:var(--a)}
 .hb-r{color:#fff;background:rgba(248,113,113,0.15);border-color:var(--r);font-weight:600}
 
-/* ── STATE: TOPIC ── */
-.topic-view{flex:1;display:none;align-items:center;justify-content:center;background:var(--s)}
-body.st-topic .topic-view{display:flex}
-body.st-topic .work-view{display:none}
+/* ── STATE: TOPIC — now always shows work layout ── */
+.topic-view{display:none}
+body.st-topic .topic-view{display:none}
 .tv-box{width:100%;max-width:560px;padding:2rem}
 .tv-box h2{font-size:1.4rem;font-weight:600;margin-bottom:0.3rem;color:var(--t)}
 .tv-box h2 span{color:var(--a)}
@@ -36,10 +35,8 @@ body.st-topic .work-view{display:none}
 .tv-manual{margin-top:0.8rem;text-align:center;font-size:0.72rem}
 .tv-manual a{color:var(--d);cursor:pointer;text-decoration:none} .tv-manual a:hover{color:var(--a)}
 
-/* ── STATE: WORK (plan-ready / running / done) ── */
+/* ── STATE: WORK — always visible ── */
 .work-view{flex:1;display:flex;overflow:hidden}
-body.st-topic .work-view{display:none}
-body:not(.st-topic) .work-view{display:flex}
 
 /* Plan Card (left) */
 .pc{width:380px;min-width:380px;border-right:1px solid var(--b);background:var(--s);display:flex;flex-direction:column;overflow:hidden}
@@ -184,17 +181,7 @@ body.st-choose .topic-view,body.st-choose .work-view{display:none}
   <div class="hb" id="histBtn" onclick="toggleHist()">History</div>
 </div>
 
-<!-- STATE: TOPIC ENTRY -->
-<div class="topic-view">
-  <div class="tv-box">
-    <h2><span>Agent</span> Orchestra</h2>
-    <p>Describe your goal. AI supervisor will assemble the right team, plan the stages, and execute.</p>
-    <textarea class="tv-ta" id="topicIn" placeholder="e.g. Заработай денег, Напиши статью про AI, Разработай лендинг..." oninput="document.getElementById('btnGo').disabled=!this.value.trim()"></textarea>
-    <div class="tv-btns">
-      <button class="btn-plan" id="btnGo" onclick="doSupervised()" disabled>Go</button>
-    </div>
-  </div>
-</div>
+<!-- topic-view removed — input is now in plan card -->
 
 <!-- STATE: CHOOSE VARIANT -->
 <div class="choose-view">
@@ -209,10 +196,16 @@ body.st-choose .topic-view,body.st-choose .work-view{display:none}
 <!-- STATE: WORK (plan-ready / running / done) -->
 <div class="work-view">
   <div class="pc">
-    <div class="pc-scroll" id="planCard"></div>
+    <div class="pc-scroll" id="planCard">
+      <!-- Default: topic input -->
+      <div class="ps">
+        <div class="ps-label">Goal</div>
+        <textarea class="tv-ta" id="topicIn" style="min-height:60px;font-size:0.82rem" placeholder="Describe your goal..." oninput="document.getElementById('btnGo').disabled=!this.value.trim()"></textarea>
+      </div>
+    </div>
     <div class="pc-run">
-      <button class="btn-run" id="btnRun" onclick="doRun()">Run</button>
-      <div id="otherVariants" style="text-align:center;margin-top:0.4rem;font-size:0.68rem"><a style="color:var(--d);cursor:pointer" onclick="renderVariants();setPhase('choose')">other variants</a></div>
+      <button class="btn-run" id="btnGo" onclick="doSupervised()">Go</button>
+      <button class="btn-run stop" id="btnRun" onclick="doRun()" style="display:none">Stop</button>
     </div>
   </div>
   <div class="out-area">
@@ -253,9 +246,10 @@ let S={
 // ── Phase transitions ──
 function setPhase(p){
   S.phase=p;
-  if(p==='topic')document.body.className='st-topic';
-  else if(p==='choose')document.body.className='st-choose';
-  else document.body.className=''; // work view (plan-ready/running/done)
+  document.body.className=p==='choose'?'st-choose':'';
+  // Toggle Go/Stop buttons
+  document.getElementById('btnGo').style.display=(p==='running')?'none':'block';
+  document.getElementById('btnRun').style.display=(p==='running')?'block':'none';
   renderPlan();
 }
 
@@ -272,8 +266,6 @@ async function init(){
       S.plan={mode:'supervised',reasoning:'Reconnecting...',agents:[],options:{}};
       document.getElementById('output').innerHTML='';
       setPhase('running');
-      document.getElementById('btnRun').textContent='Stop';
-      document.getElementById('btnRun').classList.add('stop');
       attachToJob(cur.id);
       return;
     }
@@ -526,7 +518,6 @@ async function doSupervised(){
   document.getElementById('output').innerHTML='';
   document.getElementById('statsBar').style.display='none';
   setPhase('running');
-  const btn=document.getElementById('btnRun');btn.textContent='Stop';btn.classList.add('stop');
   connectWS({action:'start',topic});
 }
 
@@ -577,7 +568,6 @@ async function doRun(){
   document.getElementById('statsBar').style.display='none';
   switchTab(document.querySelector('[data-p="output"]'));
   setPhase('running');
-  const btn=document.getElementById('btnRun');btn.textContent='Stop';btn.classList.add('stop');
 
   // Ensure agents exist on backend
   for(const ag of S.plan.agents){
@@ -612,20 +602,19 @@ async function doRun(){
 function fin(){
   S.agentActivity={};S.ws=null;
   setPhase('done');
-  const btn=document.getElementById('btnRun');btn.textContent='Run';btn.classList.remove('stop');
 }
 
 // ── RESET ──
 function fullReset(){
+  if(S.currentJobId){
+    fetch(BASE+'/api/jobs/'+S.currentJobId+'/stop',{method:'POST'}).catch(()=>{});
+  }
   if(S.ws){S.ws.onclose=null;S.ws.close();S.ws=null}
-  S.plan=null;S.topic='';S.agentActivity={};
+  S.plan=null;S.topic='';S.agentActivity={};S.currentJobId=null;
   document.getElementById('topicIn').value='';
-  document.getElementById('btnPlan').disabled=true;
-  document.getElementById('btnPlan').textContent='Plan';
-  document.getElementById('output').innerHTML='<div class="ph">Plan is ready. Press Run to start.</div>';
+  document.getElementById('output').innerHTML='<div class="ph">Enter a goal and press Go</div>';
   document.getElementById('statsBar').style.display='none';
   setPhase('topic');
-  document.body.className='st-topic';
 }
 
 // ── OUTPUT HELPERS ──
