@@ -189,9 +189,10 @@ body.st-choose .topic-view,body.st-choose .work-view{display:none}
   <div class="tv-box">
     <h2><span>Agent</span> Orchestra</h2>
     <p>Describe what you want to discuss, build, analyze, or decide. AI will assemble the right team and plan.</p>
-    <textarea class="tv-ta" id="topicIn" placeholder="e.g. Предложи 20 бизнес-идей и выбери 2 лучших..." oninput="document.getElementById('btnPlan').disabled=!this.value.trim()"></textarea>
+    <textarea class="tv-ta" id="topicIn" placeholder="e.g. Предложи 20 бизнес-идей и выбери 2 лучших..." oninput="const v=!this.value.trim();document.getElementById('btnPlan').disabled=v;document.getElementById('btnSuper').disabled=v"></textarea>
     <div class="tv-btns">
       <button class="btn-plan" id="btnPlan" onclick="doPlan()" disabled>Plan</button>
+      <button class="btn-plan" id="btnSuper" onclick="doSupervised()" disabled style="background:var(--p);flex:1">Supervisor</button>
     </div>
     <div class="tv-manual"><a onclick="goManual()">or configure manually</a></div>
   </div>
@@ -239,7 +240,7 @@ body.st-choose .topic-view,body.st-choose .work-view{display:none}
 const BASE=location.pathname.replace(/\/(app\/?)?$/,'');
 const ALL_TOOLS=['Read','Write','Edit','Bash','Glob','Grep','WebSearch','WebFetch'];
 const MC={opus:'#c084fc',sonnet:'#60a5fa',haiku:'#4ade80'};
-const MODE_NAMES={discuss:'Discussion',pipeline:'Pipeline',parallel:'Parallel',consensus:'Consensus',custom:'Custom Workflow'};
+const MODE_NAMES={supervised:'Supervised',discuss:'Discussion',pipeline:'Pipeline',parallel:'Parallel',consensus:'Consensus',custom:'Custom Workflow'};
 
 // ── State ──
 let S={
@@ -508,6 +509,35 @@ async function addAgent(){
 }
 
 // ── RUN ──
+async function doSupervised(){
+  const topic=document.getElementById('topicIn').value.trim();
+  if(!topic)return;
+  S.topic=topic;
+  S.plan={mode:'supervised',reasoning:'Supervisor controls all stages',agents:[],options:{}};
+  document.getElementById('output').innerHTML='';
+  document.getElementById('statsBar').style.display='none';
+  setPhase('running');
+  const btn=document.getElementById('btnRun');btn.textContent='Stop';btn.classList.add('stop');
+  const proto=location.protocol==='https:'?'wss:':'ws:';
+  S.ws=new WebSocket(`${proto}//${location.host}${BASE}/ws/run`);
+  S.ws.onopen=()=>{
+    S.ws.send(JSON.stringify({mode:'supervised',topic,agents:[],options:{}}));
+  };
+  S.ws.onmessage=e=>{
+    const d=JSON.parse(e.data);
+    if(d.type==='update'){
+      addCard(d.agent,d.event,d.text);
+      if(d.event==='start')S.agentActivity[d.agent]='working';
+      else if(d.event==='done'||d.event==='error')S.agentActivity[d.agent]='idle';
+      drawDiagram();
+    }else if(d.type==='result'){
+      if(d.summary)addSum(d.summary);showStats(d);fin();
+    }else if(d.type==='error'){addCard('Error','error',d.text);fin()}
+  };
+  S.ws.onclose=()=>{if(S.phase==='running')fin()};
+  S.ws.onerror=()=>{addCard('Error','error','Connection failed');fin()};
+}
+
 async function doRun(){
   if(S.phase==='running'){
     if(S.ws){S.ws.onclose=null;S.ws.onerror=null;S.ws.onmessage=null;S.ws.close();S.ws=null}

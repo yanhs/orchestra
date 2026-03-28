@@ -654,6 +654,14 @@ async def ws_run(ws: WebSocket):
                 workflow=workflow,
                 on_update=on_update,
             )
+        elif mode == "supervised":
+            from ..orchestrator.supervisor import SupervisedRun
+            supervised = SupervisedRun(
+                goal=topic,
+                on_update=on_update,
+                project_path=Path(project_path) if project_path else None,
+            )
+            result = await supervised.run()
         else:
             await ws.send_json({"type": "error", "text": f"Unknown mode: {mode}"})
             return
