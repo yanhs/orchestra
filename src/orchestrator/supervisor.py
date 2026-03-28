@@ -15,34 +15,10 @@ LOG_DIR = Path(__file__).parent.parent.parent / "_orchestra" / "supervised"
 
 
 async def _call_supervisor(prompt: str) -> str:
-    """Call supervisor (opus) and get response."""
-    from claude_agent_sdk import (
-        ClaudeAgentOptions, ClaudeSDKClient,
-        AssistantMessage, ResultMessage, TextBlock,
-    )
-
-    options = ClaudeAgentOptions(
-        model="opus",
-        max_turns=1,
-        permission_mode="bypassPermissions",
-    )
-    client = ClaudeSDKClient(options)
-    content = ""
-    try:
-        await client.connect()
-        await client.query(prompt)
-        async for msg in client.receive_messages():
-            if isinstance(msg, ResultMessage):
-                if msg.result:
-                    content = msg.result
-                break
-            elif isinstance(msg, AssistantMessage):
-                for block in msg.content or []:
-                    if isinstance(block, TextBlock):
-                        content += block.text
-    finally:
-        await client.disconnect()
-    return content
+    """Call supervisor (opus) with retry fallback."""
+    # Import from server module which has retry logic
+    from ..web.server import _call_claude
+    return await _call_claude(prompt, model="opus")
 
 
 def _parse_json(text: str):
@@ -158,18 +134,28 @@ Plan your first stage. What should we do first to achieve this goal?"""
 
         await self._notify("Supervisor", "start", "Analyzing goal and planning first stage...")
 
+        empty_retries = 0
+        max_empty_retries = 2
+
         for stage_num in range(self.max_stages):
             # Ask supervisor what to do
             try:
                 raw = await _call_supervisor(prompt)
                 if not raw.strip():
-                    await self._notify("Supervisor", "error", "Empty response, retrying...")
+                    empty_retries += 1
+                    if empty_retries > max_empty_retries:
+                        await self._notify("Supervisor", "error", "Supervisor not responding. Stopping.")
+                        break
+                    await self._notify("Supervisor", "error", f"Empty response, retrying ({empty_retries}/{max_empty_retries})...")
                     continue
+                empty_retries = 0  # reset on success
                 decision = _parse_json(raw)
             except Exception as e:
                 await self._notify("Supervisor", "error", f"Parse error: {e}")
                 self._log({"type": "error", "stage": stage_num, "error": str(e)})
-                break
+                # Try to continue with simplified prompt
+                prompt = f'{SUPERVISOR_SYSTEM}\n\nGOAL: "{self.goal}"\n\nPrevious attempt had error. Plan a simple stage with 1-2 agents. Return valid JSON.'
+                continue
 
             action = decision.get("action", "")
             self._log({"type": "decision", "stage": stage_num, "decision": decision})

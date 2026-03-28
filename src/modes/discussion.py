@@ -58,7 +58,7 @@ class DiscussionMode(BaseMode):
                             await r
 
                 try:
-                    response = await asyncio.wait_for(agent.run(prompt, on_stream=_stream), timeout=180)
+                    response = await asyncio.wait_for(agent.run(prompt, on_stream=_stream), timeout=600)
                 except asyncio.TimeoutError:
                     response = AgentResponse(
                         agent_name=agent.display_name,

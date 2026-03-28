@@ -61,7 +61,7 @@ class ParallelMode(BaseMode):
                         if asyncio.iscoroutine(r):
                             await r
                 try:
-                    response = await asyncio.wait_for(task.agent.run(prompt, on_stream=_stream), timeout=180)
+                    response = await asyncio.wait_for(task.agent.run(prompt, on_stream=_stream), timeout=600)
                 except asyncio.TimeoutError:
                     from ..agents.client import AgentResponse
                     response = AgentResponse(
