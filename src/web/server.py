@@ -252,7 +252,7 @@ async def auto_plans(req: AutoPlanRequest):
     prompt = PLAN_PROMPT_TEMPLATE.format(topic=req.topic, existing=json.dumps(existing))
 
     try:
-        content = await _call_claude(prompt, model="opus")
+        content = await _call_claude(prompt, model="sonnet")
         plans = _parse_json(content)
         if not isinstance(plans, list):
             return {"error": "Expected array of plans"}
