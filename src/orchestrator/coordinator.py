@@ -1,5 +1,6 @@
 """OrchestraCoordinator — main orchestration logic."""
 
+import asyncio
 from pathlib import Path
 
 from ..agents.client import AgentClient
@@ -215,7 +216,6 @@ class OrchestraCoordinator:
                 stage_topic = f"{topic}\n\n## Previous stages output:\n{transcript_so_far}"
 
             if on_update:
-                import asyncio
                 r = on_update("Workflow", "start", f"Stage {i+1}/{len(workflow)}: {stage_type}")
                 if asyncio.iscoroutine(r):
                     await r
@@ -247,16 +247,82 @@ class OrchestraCoordinator:
                     agent_names=agent_ids,
                     on_update=on_update,
                 )
+            elif stage_type == "loop":
+                # Loop: evaluator checks output, reruns target stage if needed
+                evaluator_id = stage.get("agent", agent_ids[0] if agent_ids else None)
+                target_idx = stage.get("target_stage", max(0, i - 1))
+                max_iter = stage.get("max_iterations", 3)
+                criteria = stage.get("criteria", "quality is sufficient")
+
+                for iteration in range(max_iter):
+                    if on_update:
+                        r = on_update("Loop", "start", f"Iteration {iteration+1}/{max_iter}: evaluating...")
+                        if asyncio.iscoroutine(r):
+                            await r
+
+                    # Evaluator checks current output
+                    eval_prompt = (
+                        f"{stage_topic}\n\n"
+                        f"## Current output to evaluate:\n{transcript_so_far}\n\n"
+                        f"## Criteria: {criteria}\n\n"
+                        "Reply with EXACTLY one line:\n"
+                        "PASS: <reason> — if the output meets the criteria\n"
+                        "FAIL: <what needs improvement> — if it does not"
+                    )
+                    if evaluator_id:
+                        evaluator = self._make_agent(evaluator_id)
+                        eval_response = await evaluator.run(eval_prompt)
+                        result.add_response(eval_response)
+
+                        if on_update:
+                            r = on_update(evaluator.display_name, "done", eval_response.content)
+                            if asyncio.iscoroutine(r):
+                                await r
+
+                        if eval_response.content.strip().upper().startswith("PASS"):
+                            break
+
+                        # Re-run target stage
+                        if target_idx < len(workflow) and target_idx < i:
+                            target = workflow[target_idx]
+                            t_type = target.get("type", "discuss")
+                            t_agents = target.get("agents", [])
+                            rework_topic = f"{stage_topic}\n\n## Feedback: {eval_response.content}\n\nPlease improve based on the feedback above."
+
+                            if on_update:
+                                r = on_update("Loop", "start", f"Reworking stage {target_idx+1} ({t_type})")
+                                if asyncio.iscoroutine(r):
+                                    await r
+
+                            # Execute target stage again with feedback
+                            if t_type == "pipeline":
+                                steps = target.get("steps", [{"agent": a, "action": "improve"} for a in t_agents])
+                                rework_result = await self.pipeline(topic=rework_topic, steps=[(s["agent"], s["action"]) for s in steps], on_update=on_update)
+                            elif t_type == "discuss":
+                                rework_result = await self.discuss(topic=rework_topic, agent_names=t_agents, rounds=target.get("rounds", 1), on_update=on_update)
+                            elif t_type == "parallel":
+                                tasks = target.get("tasks", [{"agent": a, "description": "improve"} for a in t_agents])
+                                rework_result = await self.parallel(topic=rework_topic, tasks=[(t["agent"], t["description"]) for t in tasks], on_update=on_update)
+                            else:
+                                break
+
+                            for resp in rework_result.responses:
+                                result.add_response(resp)
+                            rework_text = rework_result.summary or "\n".join(r.content for r in rework_result.responses if not r.is_error)
+                            transcript_so_far += f"\n### Loop iteration {iteration+1} rework:\n{rework_text}\n"
+
+                stage_result = None  # loop doesn't produce its own result
             else:
                 continue
 
             # Accumulate results
-            for resp in stage_result.responses:
-                result.add_response(resp)
-            stage_text = stage_result.summary or "\n".join(
-                r.content for r in stage_result.responses if not r.is_error
-            )
-            transcript_so_far += f"\n### Stage {i+1} ({stage_type}):\n{stage_text}\n"
+            if stage_result:
+                for resp in stage_result.responses:
+                    result.add_response(resp)
+                stage_text = stage_result.summary or "\n".join(
+                    r.content for r in stage_result.responses if not r.is_error
+                )
+                transcript_so_far += f"\n### Stage {i+1} ({stage_type}):\n{stage_text}\n"
 
         result.summary = transcript_so_far
         return result

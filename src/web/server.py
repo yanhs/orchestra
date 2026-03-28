@@ -134,6 +134,7 @@ BASE MODES (can use as-is or combine into custom workflows):
 - discuss: All agents debate simultaneously in rounds
 - parallel: Agents work on different subtasks at the same time
 - consensus: Agents vote independently
+- loop: Repeat a stage until quality criteria met (agent evaluates output, loops back if not good enough). In workflow: {{"type":"loop","agent":"evaluator_id","target_stage":0,"max_iterations":3,"criteria":"description of when to stop"}}
 
 You can also design CUSTOM workflows by combining these in "options.workflow" — a sequence of stages:
   {{"workflow": [{{"type":"parallel","agents":["a","b"],"task":"research"}}, {{"type":"discuss","agents":["c","d"],"rounds":2}}, {{"type":"pipeline","steps":[{{"agent":"e","action":"write"}}]}}]}}

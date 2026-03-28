@@ -379,6 +379,7 @@ function renderPlan(){
           <span class="opt-x" onclick="S.plan.options.workflow.splice(${i},1);renderPlan()">×</span>
         </div>
         ${st.task?`<div style="font-size:0.65rem;color:var(--d);margin-top:2px">${esc(st.task)}</div>`:''}
+        ${st.type==='loop'?`<div style="font-size:0.6rem;color:var(--y);margin-top:2px">↻ loop stage ${(st.target_stage||0)+1}, max ${st.max_iterations||3}x${st.criteria?' — '+esc(st.criteria):''}</div>`:''}
       </div>`;
     });
     const rounds=P.options.rounds||2;
