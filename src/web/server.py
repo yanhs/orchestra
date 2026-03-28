@@ -248,7 +248,7 @@ async def _call_claude(prompt: str, model: str = "opus") -> str:
     """Helper: call Claude and return text content."""
     from claude_agent_sdk import ClaudeAgentOptions, ClaudeSDKClient, AssistantMessage, ResultMessage, TextBlock
 
-    options = ClaudeAgentOptions(model=model, max_turns=1, permission_mode="plan")
+    options = ClaudeAgentOptions(model=model, max_turns=1, permission_mode="bypassPermissions")
     client = ClaudeSDKClient(options)
     content = ""
     try:
@@ -288,7 +288,13 @@ async def auto_plans(req: AutoPlanRequest):
         # Stage 1: Analyze the prompt
         analyze_prompt = ANALYZE_PROMPT.format(topic=req.topic)
         analysis_raw = await _call_claude(analyze_prompt, model="opus")
-        analysis = _parse_json(analysis_raw)
+        if not analysis_raw.strip():
+            return {"error": "Empty response from analysis stage"}
+        try:
+            analysis = _parse_json(analysis_raw)
+        except Exception as e:
+            print(f"Analysis parse error: {e}\nRaw: {analysis_raw[:500]}")
+            return {"error": f"Failed to parse analysis: {e}"}
 
         # Stage 2: Generate plans based on analysis
         prompt = PLAN_PROMPT_TEMPLATE.format(
@@ -297,13 +303,21 @@ async def auto_plans(req: AutoPlanRequest):
             existing=json.dumps(existing),
         )
         content = await _call_claude(prompt, model="opus")
-        plans = _parse_json(content)
-        if not isinstance(plans, list):
-            return {"error": "Expected array of plans"}
+        if not content.strip():
+            return {"error": "Empty response from planning stage"}
+        try:
+            plans = _parse_json(content)
+        except Exception as e:
+            print(f"Plans parse error: {e}\nRaw: {content[:500]}")
+            return {"error": f"Failed to parse plans: {e}"}
 
-        # Attach analysis to response
+        if not isinstance(plans, list):
+            return {"error": f"Expected array of plans, got {type(plans).__name__}"}
+
         return {"analysis": analysis, "plans": plans}
     except Exception as e:
+        import traceback
+        traceback.print_exc()
         return {"error": str(e)}
 
 
