@@ -199,10 +199,11 @@ Rules:
 - Reuse existing agents by ID if they fit (keep same config)
 - Create new ones only if needed, with task-specific prompts
 - For pipeline mode, add "steps" in options: [{{"agent":"id","action":"design|implement|review|test"}}]
-- For parallel mode, add "tasks" in options: [{{"agent":"id","description":"subtask"}}]"""
+- For parallel mode, add "tasks" in options: [{{"agent":"id","description":"subtask"}}]
+- IMPORTANT: "reasoning", "display_name", and "system_prompt" MUST be in the same language as the TASK. If task is in Russian, respond in Russian. If in English, respond in English."""
 
     options = ClaudeAgentOptions(
-        model="sonnet",
+        model="opus",
         max_turns=1,
         permission_mode="plan",
     )
