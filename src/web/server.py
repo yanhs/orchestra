@@ -177,25 +177,34 @@ Return ONLY a valid JSON array of 3 plans:
 
 For "custom" mode, add "workflow" array in options describing stage-by-stage execution.
 
+CRITICAL — MULTI-PHASE TASKS:
+If the task is complex/ambitious (e.g. "заработай деньги", "build a startup", "create a product"), break it into PHASES.
+Each phase is a separate workflow stage that depends on results of the previous phase.
+Example for "заработай деньги":
+  Phase 1: Brainstorm — parallel agents generate business ideas
+  Phase 2: Evaluate — discuss and vote on best ideas
+  Phase 3: Plan — pipeline to create detailed business plan for winner
+  Phase 4: Execute — parallel agents implement different aspects
+  Phase 5: Review — loop to check quality and iterate
+
+Use "custom" mode with workflow stages. Each stage's agents get output from ALL previous stages as context.
+Don't try to do everything in one simple pipeline — DECOMPOSE into logical phases.
+
 VARIANT RULES:
-- The 3 variants must differ significantly in depth, number of agents, models, rounds, and approach
-- Variant 1 = fastest/cheapest way to get a useful result for THIS specific task
-- Variant 2 = solid middle ground tailored to THIS task
-- Variant 3 = the most thorough approach you can design for THIS task
-- Do NOT use fixed numbers — adapt everything to the task. A simple question might need 2/3/5 agents. A complex project might need 4/7/10.
-- Each variant MUST have its own interaction strategy — don't just add more agents to the same mode. Change HOW agents interact:
-  * Fast might use a single pipeline (A→B) or quick parallel split
-  * Balanced might add review loops, cross-checking, or multi-round debate
-  * Deep might combine modes: parallel research first, then pipeline build, then discussion review
-- Describe the interaction pattern in "description" so the user understands the workflow, not just agent count
-- Choose models per agent based on role complexity, not on variant level
+- The 3 variants must differ significantly in depth and approach
+- Variant 1 = fastest useful result. Maybe skip some phases, fewer agents per phase
+- Variant 2 = solid middle ground. All key phases, moderate depth
+- Variant 3 = maximum thoroughness. More phases, more agents, loops for quality, parallel exploration
+- Do NOT use fixed numbers — adapt everything to the task
+- Each variant MUST have its own interaction strategy. Describe step-by-step in "description"
+- Choose models per agent based on role complexity
 
 GENERAL RULES:
 - For pipeline: add "steps" in options: [{{"agent":"id","action":"<verb>"}}]
 - For parallel: add "tasks" in options: [{{"agent":"id","description":"subtask"}}]
-- Each agent's system_prompt must be specific to THIS task
-- Reuse existing agents by ID if they fit
-- IMPORTANT: ALL text (label, description, reasoning, display_name, system_prompt) MUST be in the SAME LANGUAGE as the TASK"""
+- For loop: add in workflow: {{"type":"loop","agent":"id","target_stage":<N>,"max_iterations":3,"criteria":"..."}}
+- Each agent's system_prompt must be specific to THIS task AND to their phase
+- IMPORTANT: ALL text MUST be in the SAME LANGUAGE as the TASK"""
 
 
 async def _call_claude(prompt: str, model: str = "opus") -> str:
