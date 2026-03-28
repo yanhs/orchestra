@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Agent Orchestra</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root { --bg:#09090b; --s:#111113; --s2:#18181b; --b:rgba(255,255,255,0.06); --t:#e4e4e7; --d:#71717a; --d2:#a1a1aa; --a:#818cf8; --g:#4ade80; --y:#fbbf24; --p:#c084fc; --o:#fb923c; }
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:var(--bg);color:var(--t);font-family:'Inter',system-ui,sans-serif;-webkit-font-smoothing:antialiased}
+.c{max-width:720px;margin:0 auto;padding:3rem 1.5rem}
+h1{font-size:2rem;font-weight:600;margin-bottom:0.3rem}
+h1 span{color:var(--a)}
+.sub{color:var(--d2);font-size:0.95rem;margin-bottom:2.5rem;line-height:1.5}
+.launch{display:inline-block;padding:0.6rem 1.4rem;background:var(--a);color:#000;font-weight:600;font-size:0.85rem;border-radius:6px;text-decoration:none;margin-bottom:2.5rem;transition:filter 0.15s}
+.launch:hover{filter:brightness(1.15)}
+h2{font-size:1.1rem;font-weight:600;color:var(--a);margin:2rem 0 0.8rem;padding-bottom:0.4rem;border-bottom:1px solid var(--b)}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:0.6rem;margin-bottom:1.5rem}
+@media(max-width:560px){.grid{grid-template-columns:1fr}}
+.card{background:var(--s);border:1px solid var(--b);border-radius:6px;padding:0.9rem 1rem}
+.card h3{font-size:0.85rem;font-weight:600;margin-bottom:0.25rem}
+.card p{font-size:0.78rem;color:var(--d2);line-height:1.5}
+.card.m1 h3{color:var(--a)} .card.m2 h3{color:var(--g)} .card.m3 h3{color:var(--o)} .card.m4 h3{color:var(--p)}
+.flow{color:var(--d);font-family:'JetBrains Mono',monospace;font-size:0.7rem;margin-top:0.4rem}
+.roles{display:flex;flex-wrap:wrap;gap:0.35rem;margin-bottom:1.5rem}
+.role{background:var(--s);border:1px solid var(--b);border-radius:5px;padding:0.35rem 0.7rem;font-size:0.78rem;display:flex;align-items:center;gap:0.3rem}
+.role .m{font-family:'JetBrains Mono',monospace;font-size:0.62rem;color:var(--d)}
+.arch{border-color:rgba(129,140,248,0.2)} .arch h3{color:var(--a)}
+pre{background:var(--s);border:1px solid var(--b);border-radius:6px;padding:0.8rem;font-size:0.78rem;overflow-x:auto;font-family:'JetBrains Mono',monospace;color:var(--g);margin-bottom:1.5rem;line-height:1.6}
+.how{background:var(--s);border:1px solid var(--b);border-radius:6px;padding:1rem;margin-bottom:1.5rem}
+.how p{font-size:0.8rem;color:var(--d2);line-height:1.6}
+.how code{background:rgba(255,255,255,0.06);padding:1px 5px;border-radius:3px;font-size:0.75rem;font-family:'JetBrains Mono',monospace;color:var(--g)}
+.foot{margin-top:2rem;padding-top:1rem;border-top:1px solid var(--b);font-size:0.75rem;color:var(--d);display:flex;gap:1.5rem;flex-wrap:wrap}
+.foot a{color:var(--a);text-decoration:none}
+.foot a:hover{text-decoration:underline}
+</style>
+</head>
+<body>
+<div class="c">
+
+<h1><span>Agent</span> Orchestra</h1>
+<p class="sub">Multiple Claude agents collaborate on your tasks. Each has its own role, context, and expertise. A coordinator manages the interaction across different modes.</p>
+
+<a href="/agents/" class="launch">Open Dashboard</a>
+
+<h2>Modes</h2>
+<div class="grid">
+  <div class="card m1">
+    <h3>Discussion</h3>
+    <p>Round-robin debate. Agents discuss from their perspective, PM summarizes decisions and action items.</p>
+    <div class="flow">Topic &rarr; A &rarr; B &rarr; C &rarr; ... &rarr; Summary</div>
+  </div>
+  <div class="card m2">
+    <h3>Pipeline</h3>
+    <p>Sequential handoff. Design, implement, review, test. Loops back on critical issues.</p>
+    <div class="flow">Architect &rarr; Developer &rarr; Reviewer &rarr; Tester</div>
+  </div>
+  <div class="card m3">
+    <h3>Parallel</h3>
+    <p>Fan-out / fan-in. Agents work on subtasks simultaneously, results merged by coordinator.</p>
+    <div class="flow">Task &rarr; [A, B, C] &rarr; Merge</div>
+  </div>
+  <div class="card m4">
+    <h3>Consensus</h3>
+    <p>Structured voting. Each agent votes independently with confidence score. Supermajority decides.</p>
+    <div class="flow">Question &rarr; Vote &rarr; Tally &rarr; Decision</div>
+  </div>
+</div>
+
+<h2>Agents</h2>
+<div class="roles">
+  <div class="role">Architect <span class="m">opus</span></div>
+  <div class="role">Developer <span class="m">sonnet</span></div>
+  <div class="role">Reviewer <span class="m">opus</span></div>
+  <div class="role">PM <span class="m">sonnet</span></div>
+  <div class="role">Tester <span class="m">sonnet</span></div>
+  <div class="role">DevOps <span class="m">sonnet</span></div>
+  <div class="role">Security <span class="m">opus</span></div>
+</div>
+
+<h2>How It Works</h2>
+<div class="how">
+  <p>Each agent is an independent <code>ClaudeSDKClient</code> process with its own context window and tool access. Python orchestrator controls turn order, message routing, and stopping criteria. Runs on Claude Max subscription &mdash; no per-token API costs.</p>
+  <p style="margin-top:0.5rem">Roles, prompts, and mode settings are configurable via YAML. Run history and agent sessions persist across restarts.</p>
+</div>
+
+<h2>CLI</h2>
+<pre>orchestra discuss "REST or GraphQL?" --agents architect,developer,reviewer
+orchestra pipeline "Add auth" --steps architect:design,developer:implement,reviewer:review
+orchestra parallel "Build dashboard" -t "developer:frontend" -t "developer:API"
+orchestra consensus "Postgres or Mongo?" --agents architect,developer,devops
+orchestra serve   # start web UI</pre>
+
+<div class="foot">
+  <span>Built with <code style="font-size:0.7rem;color:var(--g)">claude-agent-sdk</code> + Python 3.11</span>
+  <a href="https://github.com/yanhs/orchestra">GitHub</a>
+  <a href="/agents/">Dashboard</a>
+</div>
+
+</div>
+</body>
+</html>
