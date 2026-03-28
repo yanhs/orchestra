@@ -2,18 +2,22 @@
 
 import asyncio
 import json
+import shutil
 from pathlib import Path
 from typing import Any
 
+import yaml
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
+from pydantic import BaseModel
 
 from ..agents.definition import load_config
 from ..orchestrator.coordinator import OrchestraCoordinator
 from ..orchestrator.history import get_run, list_runs, save_run
 
 CONFIG_PATH = Path(__file__).parent.parent.parent / "config" / "agents.yaml"
+CONFIGS_DIR = Path(__file__).parent.parent.parent / "config" / "saved"
 PUBLIC_PATH = Path(__file__).parent.parent.parent / "public"
 
 app = FastAPI(title="Agent Orchestra")
@@ -21,20 +25,39 @@ app = FastAPI(title="Agent Orchestra")
 app.mount("/static", StaticFiles(directory=str(PUBLIC_PATH)), name="static")
 
 
+# ── Helpers ──
+
+def _read_yaml() -> dict:
+    with open(CONFIG_PATH) as f:
+        return yaml.safe_load(f)
+
+
+def _write_yaml(data: dict) -> None:
+    with open(CONFIG_PATH, "w") as f:
+        yaml.dump(data, f, default_flow_style=False, allow_unicode=True, sort_keys=False)
+
+
+# ── Pages ──
+
 @app.get("/")
 async def index():
     return HTMLResponse((PUBLIC_PATH / "index.html").read_text())
 
 
+# ── Config API ──
+
 @app.get("/api/config")
 async def get_config():
-    """Return available agents and modes."""
+    """Return full config: agents with all fields + modes."""
     config = load_config(CONFIG_PATH)
     return {
         "agents": {
             name: {
                 "display_name": role.display_name,
                 "model": role.model,
+                "system_prompt": role.system_prompt,
+                "allowed_tools": role.allowed_tools,
+                "max_turns": role.max_turns,
             }
             for name, role in config.agents.items()
         },
@@ -42,28 +65,113 @@ async def get_config():
     }
 
 
+# ── Agent CRUD ──
+
+class AgentData(BaseModel):
+    display_name: str
+    model: str = "sonnet"
+    system_prompt: str = ""
+    allowed_tools: list[str] = []
+    max_turns: int = 50
+
+
+@app.put("/api/agents/{name}")
+async def upsert_agent(name: str, data: AgentData):
+    """Create or update an agent."""
+    raw = _read_yaml()
+    if "agents" not in raw:
+        raw["agents"] = {}
+    raw["agents"][name] = {
+        "display_name": data.display_name,
+        "model": data.model,
+        "system_prompt": data.system_prompt,
+        "allowed_tools": data.allowed_tools,
+        "max_turns": data.max_turns,
+    }
+    _write_yaml(raw)
+    return {"ok": True, "name": name}
+
+
+@app.delete("/api/agents/{name}")
+async def delete_agent(name: str):
+    """Delete an agent."""
+    raw = _read_yaml()
+    if name in raw.get("agents", {}):
+        del raw["agents"][name]
+        _write_yaml(raw)
+        return {"ok": True}
+    return {"error": "Agent not found"}
+
+
+# ── Saved Configs ──
+
+@app.get("/api/configs")
+async def list_configs():
+    """List saved config presets."""
+    CONFIGS_DIR.mkdir(parents=True, exist_ok=True)
+    return [
+        {"name": f.stem, "modified": f.stat().st_mtime}
+        for f in sorted(CONFIGS_DIR.glob("*.yaml"), key=lambda f: -f.stat().st_mtime)
+    ]
+
+
+@app.post("/api/configs/{name}")
+async def save_config(name: str):
+    """Save current config as a named preset."""
+    CONFIGS_DIR.mkdir(parents=True, exist_ok=True)
+    shutil.copy2(CONFIG_PATH, CONFIGS_DIR / f"{name}.yaml")
+    return {"ok": True, "name": name}
+
+
+@app.post("/api/configs/{name}/load")
+async def load_saved_config(name: str):
+    """Load a saved config preset."""
+    src = CONFIGS_DIR / f"{name}.yaml"
+    if not src.exists():
+        return {"error": "Config not found"}
+    shutil.copy2(src, CONFIG_PATH)
+    return {"ok": True}
+
+
+@app.delete("/api/configs/{name}")
+async def delete_config(name: str):
+    """Delete a saved config."""
+    src = CONFIGS_DIR / f"{name}.yaml"
+    if src.exists():
+        src.unlink()
+        return {"ok": True}
+    return {"error": "Config not found"}
+
+
+# ── History ──
+
 @app.get("/api/history")
 async def api_history(limit: int = 30):
-    """List recent runs."""
     return list_runs(limit=limit)
 
 
 @app.get("/api/history/{run_id}")
 async def api_run(run_id: str):
-    """Get a specific run with transcript."""
     run = get_run(run_id)
     if not run:
         return {"error": "Run not found"}
     return run
 
 
+# ── WebSocket Run ──
+
+# Track live agent activity for the diagram
+active_agents: dict[str, str] = {}  # agent_name -> status ("working"/"idle")
+
+
+@app.get("/api/activity")
+async def get_activity():
+    """Current agent activity status for the diagram."""
+    return active_agents
+
+
 @app.websocket("/ws/run")
 async def ws_run(ws: WebSocket):
-    """WebSocket endpoint for running orchestration.
-
-    Client sends: {mode, topic, agents, options}
-    Server streams: {type, agent, event, text} messages
-    """
     await ws.accept()
 
     try:
@@ -85,6 +193,12 @@ async def ws_run(ws: WebSocket):
         )
 
         async def on_update(agent_name: str, event: str, text: str):
+            # Update activity tracking
+            if event == "start":
+                active_agents[agent_name] = "working"
+            elif event in ("done", "error"):
+                active_agents[agent_name] = "idle"
+
             await ws.send_json({
                 "type": "update",
                 "agent": agent_name,
@@ -127,7 +241,9 @@ async def ws_run(ws: WebSocket):
             await ws.send_json({"type": "error", "text": f"Unknown mode: {mode}"})
             return
 
-        # Save to history
+        # Clear activity
+        active_agents.clear()
+
         run_dir = save_run(result)
 
         await ws.send_json({
@@ -140,8 +256,9 @@ async def ws_run(ws: WebSocket):
         })
 
     except WebSocketDisconnect:
-        pass
+        active_agents.clear()
     except Exception as e:
+        active_agents.clear()
         try:
             await ws.send_json({"type": "error", "text": str(e)})
         except Exception:

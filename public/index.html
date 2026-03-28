@@ -4,419 +4,472 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Agent Orchestra</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
-:root {
-  --bg: #09090b; --surface: #111113; --surface2: #18181b;
-  --border: rgba(255,255,255,0.06); --border2: rgba(255,255,255,0.1);
-  --text: #e4e4e7; --dim: #71717a; --dim2: #a1a1aa;
-  --accent: #818cf8; --accent-dim: rgba(129,140,248,0.12);
-  --green: #4ade80; --yellow: #fbbf24; --red: #f87171; --blue: #60a5fa;
-  --purple: #c084fc; --orange: #fb923c;
-}
-* { margin:0; padding:0; box-sizing:border-box; }
-body { background:var(--bg); color:var(--text); font-family:'Inter',system-ui,sans-serif; height:100vh; display:flex; flex-direction:column; -webkit-font-smoothing:antialiased; }
+:root{--bg:#09090b;--s:#111113;--s2:#18181b;--s3:#1e1e22;--b:rgba(255,255,255,0.06);--b2:rgba(255,255,255,0.1);--t:#e4e4e7;--d:#71717a;--d2:#a1a1aa;--a:#818cf8;--ad:rgba(129,140,248,0.12);--g:#4ade80;--y:#fbbf24;--r:#f87171;--bl:#60a5fa;--p:#c084fc;--o:#fb923c}
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:var(--bg);color:var(--t);font-family:'Inter',system-ui,sans-serif;height:100vh;display:flex;flex-direction:column;-webkit-font-smoothing:antialiased;overflow:hidden}
 
-/* Header */
-.header { padding:0.6rem 1.2rem; border-bottom:1px solid var(--border); display:flex; align-items:center; gap:1rem; background:var(--surface); flex-shrink:0; }
-.header h1 { font-size:0.95rem; font-weight:600; }
-.header h1 span { color:var(--accent); }
-.header .status { margin-left:auto; font-size:0.7rem; color:var(--dim); font-family:'JetBrains Mono',monospace; }
-.header .hist-btn { padding:0.25rem 0.6rem; font-size:0.7rem; background:var(--surface2); border:1px solid var(--border); border-radius:4px; cursor:pointer; color:var(--dim2); }
-.header .hist-btn:hover { border-color:var(--accent); color:var(--accent); }
-.header .hist-btn.active { background:var(--accent-dim); border-color:var(--accent); color:var(--accent); }
+.hdr{padding:0.5rem 1rem;border-bottom:1px solid var(--b);display:flex;align-items:center;gap:0.8rem;background:var(--s);flex-shrink:0}
+.hdr h1{font-size:0.9rem;font-weight:600} .hdr h1 span{color:var(--a)}
+.hdr .st{margin-left:auto;font-size:0.68rem;color:var(--d);font-family:'JetBrains Mono',monospace}
+.hdr-btn{padding:0.2rem 0.55rem;font-size:0.68rem;background:var(--s2);border:1px solid var(--b);border-radius:4px;cursor:pointer;color:var(--d2);transition:all .12s}
+.hdr-btn:hover{border-color:var(--a);color:var(--a)} .hdr-btn.on{background:var(--ad);border-color:var(--a);color:var(--a)}
 
-/* History panel */
-.history-panel { display:none; width:260px; min-width:260px; border-left:1px solid var(--border); background:var(--surface); overflow-y:auto; }
-.history-panel.open { display:flex; flex-direction:column; }
-.hist-item { padding:0.6rem 0.8rem; border-bottom:1px solid var(--border); cursor:pointer; transition:background 0.12s; }
-.hist-item:hover { background:rgba(255,255,255,0.02); }
-.hist-item .hi-mode { font-size:0.65rem; font-weight:600; text-transform:uppercase; color:var(--accent); }
-.hist-item .hi-topic { font-size:0.78rem; color:var(--dim2); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; margin-top:2px; }
-.hist-item .hi-meta { font-size:0.6rem; color:var(--dim); font-family:'JetBrains Mono',monospace; margin-top:3px; }
-
-/* Layout */
-.layout { flex:1; display:flex; overflow:hidden; }
+.lay{flex:1;display:flex;overflow:hidden}
 
 /* Sidebar */
-.sidebar { width:300px; min-width:300px; border-right:1px solid var(--border); display:flex; flex-direction:column; background:var(--surface); }
-.section { padding:0.8rem; border-bottom:1px solid var(--border); }
-.section-title { font-size:0.7rem; font-weight:600; text-transform:uppercase; letter-spacing:0.05em; color:var(--dim); margin-bottom:0.5rem; }
+.sb{width:300px;min-width:300px;border-right:1px solid var(--b);display:flex;flex-direction:column;background:var(--s);overflow-y:auto}
+.sec{padding:0.7rem 0.8rem;border-bottom:1px solid var(--b)}
+.sec-t{font-size:0.65rem;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;color:var(--d);margin-bottom:0.4rem;display:flex;align-items:center;gap:0.4rem}
+.sec-t .act{margin-left:auto;font-size:0.6rem;color:var(--a);cursor:pointer;font-weight:500}
+.sec-t .act:hover{text-decoration:underline}
 
-/* Mode selector */
-.modes { display:grid; grid-template-columns:1fr 1fr; gap:0.35rem; }
-.mode-btn { padding:0.4rem 0.5rem; font-size:0.75rem; font-weight:500; background:var(--surface2); border:1px solid var(--border); border-radius:5px; cursor:pointer; color:var(--dim2); transition:all 0.15s; text-align:center; }
-.mode-btn:hover { border-color:var(--border2); color:var(--text); }
-.mode-btn.active { background:var(--accent-dim); border-color:var(--accent); color:var(--accent); }
+/* Modes */
+.modes{display:grid;grid-template-columns:1fr 1fr;gap:0.3rem}
+.mbtn{padding:0.35rem;font-size:0.72rem;font-weight:500;background:var(--s2);border:1px solid var(--b);border-radius:4px;cursor:pointer;color:var(--d2);text-align:center;transition:all .12s}
+.mbtn:hover{border-color:var(--b2);color:var(--t)} .mbtn.on{background:var(--ad);border-color:var(--a);color:var(--a)}
 
 /* Agent chips */
-.agents-grid { display:flex; flex-wrap:wrap; gap:0.3rem; }
-.agent-chip { padding:0.3rem 0.6rem; font-size:0.72rem; background:var(--surface2); border:1px solid var(--border); border-radius:4px; cursor:pointer; color:var(--dim2); transition:all 0.15s; display:flex; align-items:center; gap:0.3rem; }
-.agent-chip:hover { border-color:var(--border2); }
-.agent-chip.selected { background:var(--accent-dim); border-color:var(--accent); color:var(--accent); }
-.agent-chip .model-tag { font-size:0.6rem; color:var(--dim); font-family:'JetBrains Mono',monospace; }
+.ag-grid{display:flex;flex-wrap:wrap;gap:0.3rem}
+.ag-c{padding:0.25rem 0.5rem;font-size:0.7rem;background:var(--s2);border:1px solid var(--b);border-radius:4px;cursor:pointer;color:var(--d2);transition:all .12s;display:flex;align-items:center;gap:0.25rem;position:relative}
+.ag-c:hover{border-color:var(--b2)} .ag-c.sel{background:var(--ad);border-color:var(--a);color:var(--a)}
+.ag-c .mt{font-size:0.55rem;color:var(--d);font-family:'JetBrains Mono',monospace}
+.ag-c .dot{width:6px;height:6px;border-radius:50%;flex-shrink:0}
+.ag-c .dot.off{background:#3f3f46} .ag-c .dot.working{background:var(--y);box-shadow:0 0 4px rgba(251,191,36,0.5);animation:pulse 1.5s infinite} .ag-c .dot.idle{background:var(--g)}
+.ag-c .edit-ic{display:none;font-size:0.6rem;color:var(--d);margin-left:2px;cursor:pointer}
+.ag-c:hover .edit-ic{display:inline}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+.ag-new{padding:0.25rem 0.5rem;font-size:0.7rem;background:transparent;border:1px dashed var(--b2);border-radius:4px;cursor:pointer;color:var(--d);transition:all .12s}
+.ag-new:hover{border-color:var(--a);color:var(--a)}
 
-/* Topic input */
-.topic-area { flex:1; padding:0.8rem; display:flex; flex-direction:column; gap:0.5rem; }
-.topic-input { width:100%; padding:0.5rem 0.6rem; background:var(--bg); border:1px solid var(--border); border-radius:5px; color:var(--text); font-size:0.8rem; font-family:inherit; resize:vertical; min-height:60px; }
-.topic-input:focus { outline:none; border-color:var(--accent); }
-.topic-input::placeholder { color:var(--dim); }
+/* Config bar */
+.cfg-bar{display:flex;gap:0.3rem;align-items:center;flex-wrap:wrap}
+.cfg-bar select{padding:0.25rem 0.4rem;background:var(--bg);border:1px solid var(--b);border-radius:4px;color:var(--t);font-size:0.7rem;font-family:inherit;min-width:100px}
+.cfg-bar select:focus{outline:none;border-color:var(--a)}
+.cfg-bar .sm{padding:0.2rem 0.45rem;font-size:0.65rem;background:var(--s2);border:1px solid var(--b);border-radius:3px;cursor:pointer;color:var(--d2)}
+.cfg-bar .sm:hover{border-color:var(--a);color:var(--a)}
 
-/* Pipeline/Parallel options */
-.options-area { padding:0 0.8rem 0.8rem; display:none; }
-.opt-row { display:flex; gap:0.3rem; margin-bottom:0.3rem; align-items:center; }
-.opt-row select, .opt-row input { padding:0.3rem 0.5rem; background:var(--bg); border:1px solid var(--border); border-radius:4px; color:var(--text); font-size:0.72rem; font-family:inherit; }
-.opt-row select { min-width:90px; }
-.opt-row input { flex:1; }
-.opt-row select:focus, .opt-row input:focus { outline:none; border-color:var(--accent); }
-.add-btn, .rm-btn { padding:0.2rem 0.5rem; font-size:0.7rem; background:var(--surface2); border:1px solid var(--border); border-radius:4px; cursor:pointer; color:var(--dim2); }
-.add-btn:hover { border-color:var(--accent); color:var(--accent); }
-.rm-btn:hover { border-color:var(--red); color:var(--red); }
+/* Options */
+.opts{padding:0 0.8rem 0.7rem;display:none}
+.orow{display:flex;gap:0.25rem;margin-bottom:0.25rem;align-items:center}
+.orow select,.orow input{padding:0.25rem 0.4rem;background:var(--bg);border:1px solid var(--b);border-radius:4px;color:var(--t);font-size:0.7rem;font-family:inherit}
+.orow select{min-width:80px} .orow input{flex:1}
+.orow select:focus,.orow input:focus{outline:none;border-color:var(--a)}
+.xbtn{padding:0.15rem 0.35rem;font-size:0.65rem;background:var(--s2);border:1px solid var(--b);border-radius:3px;cursor:pointer;color:var(--d2)}
+.xbtn:hover{border-color:var(--r);color:var(--r)}
+.abtn{padding:0.15rem 0.4rem;font-size:0.65rem;background:var(--s2);border:1px solid var(--b);border-radius:3px;cursor:pointer;color:var(--d2)}
+.abtn:hover{border-color:var(--a);color:var(--a)}
 
-/* Run button */
-.run-btn { padding:0.5rem; font-size:0.8rem; font-weight:600; background:var(--accent); color:#000; border:none; border-radius:5px; cursor:pointer; transition:all 0.15s; }
-.run-btn:hover { filter:brightness(1.15); }
-.run-btn:disabled { opacity:0.4; cursor:not-allowed; }
-.run-btn.running { background:var(--red); color:#fff; }
+/* Topic */
+.top-area{padding:0.7rem 0.8rem;display:flex;flex-direction:column;gap:0.4rem;border-top:1px solid var(--b);margin-top:auto}
+.top-in{width:100%;padding:0.4rem 0.5rem;background:var(--bg);border:1px solid var(--b);border-radius:4px;color:var(--t);font-size:0.78rem;font-family:inherit;resize:vertical;min-height:50px}
+.top-in:focus{outline:none;border-color:var(--a)} .top-in::placeholder{color:var(--d)}
+.run{padding:0.45rem;font-size:0.78rem;font-weight:600;background:var(--a);color:#000;border:none;border-radius:5px;cursor:pointer;transition:all .12s}
+.run:hover{filter:brightness(1.15)} .run:disabled{opacity:.4;cursor:not-allowed} .run.stop{background:var(--r);color:#fff}
 
-/* Main output area */
-.main { flex:1; display:flex; flex-direction:column; overflow:hidden; }
-.output { flex:1; overflow-y:auto; padding:1rem; }
-.output::-webkit-scrollbar { width:4px; }
-.output::-webkit-scrollbar-thumb { background:#333; border-radius:2px; }
+/* Main area with tabs */
+.main{flex:1;display:flex;flex-direction:column;overflow:hidden}
+.tabs{display:flex;border-bottom:1px solid var(--b);background:var(--s);flex-shrink:0}
+.tab{padding:0.4rem 0.8rem;font-size:0.72rem;color:var(--d);cursor:pointer;border-bottom:2px solid transparent;transition:all .12s}
+.tab:hover{color:var(--d2)} .tab.on{color:var(--a);border-bottom-color:var(--a)}
 
-/* Agent response cards */
-.resp-card { margin-bottom:0.8rem; border:1px solid var(--border); border-radius:6px; overflow:hidden; }
-.resp-header { padding:0.4rem 0.7rem; background:var(--surface); display:flex; align-items:center; gap:0.5rem; font-size:0.75rem; font-weight:600; }
-.resp-header .agent-label { color:var(--accent); }
-.resp-header .event-label { color:var(--dim); font-weight:400; font-family:'JetBrains Mono',monospace; font-size:0.65rem; }
-.resp-body { padding:0.7rem; font-size:0.8rem; line-height:1.6; white-space:pre-wrap; word-wrap:break-word; color:var(--dim2); }
-.resp-card.event-start { border-color:var(--blue); }
-.resp-card.event-start .resp-header { background:rgba(96,165,250,0.06); }
-.resp-card.event-start .agent-label { color:var(--blue); }
-.resp-card.event-done { border-color:var(--green); }
-.resp-card.event-done .resp-header { background:rgba(74,222,128,0.06); }
-.resp-card.event-done .agent-label { color:var(--green); }
-.resp-card.event-error { border-color:var(--red); }
-.resp-card.event-error .resp-header { background:rgba(248,113,113,0.06); }
-.resp-card.event-error .agent-label { color:var(--red); }
+.panel{flex:1;overflow:hidden;display:none} .panel.on{display:flex;flex-direction:column}
 
-/* Summary card */
-.summary-card { margin-top:0.5rem; border:1px solid var(--yellow); border-radius:6px; overflow:hidden; }
-.summary-card .resp-header { background:rgba(251,191,36,0.08); }
-.summary-card .agent-label { color:var(--yellow); }
+/* Output panel */
+.out{flex:1;overflow-y:auto;padding:0.8rem}
+.out::-webkit-scrollbar{width:4px} .out::-webkit-scrollbar-thumb{background:#333;border-radius:2px}
+.rc{margin-bottom:0.6rem;border:1px solid var(--b);border-radius:5px;overflow:hidden}
+.rc-h{padding:0.35rem 0.6rem;background:var(--s);display:flex;align-items:center;gap:0.4rem;font-size:0.72rem;font-weight:600}
+.rc-h .al{color:var(--a)} .rc-h .el{color:var(--d);font-weight:400;font-family:'JetBrains Mono',monospace;font-size:0.62rem}
+.rc-b{padding:0.6rem;font-size:0.78rem;line-height:1.6;white-space:pre-wrap;word-wrap:break-word;color:var(--d2)}
+.rc.ev-start{border-color:var(--bl)} .rc.ev-start .rc-h{background:rgba(96,165,250,0.06)} .rc.ev-start .al{color:var(--bl)}
+.rc.ev-done{border-color:var(--g)} .rc.ev-done .rc-h{background:rgba(74,222,128,0.06)} .rc.ev-done .al{color:var(--g)}
+.rc.ev-error{border-color:var(--r)} .rc.ev-error .rc-h{background:rgba(248,113,113,0.06)} .rc.ev-error .al{color:var(--r)}
+.sc{border-color:var(--y)} .sc .rc-h{background:rgba(251,191,36,0.08)} .sc .al{color:var(--y)}
+.stats{padding:0.35rem 0.7rem;border-top:1px solid var(--b);background:var(--s);font-size:0.65rem;color:var(--d);font-family:'JetBrains Mono',monospace;flex-shrink:0}
+.ph{flex:1;display:flex;align-items:center;justify-content:center;color:#27272a;font-size:0.8rem}
+@keyframes spin{to{transform:rotate(360deg)}}
+.spinner{width:10px;height:10px;border:2px solid var(--b2);border-top-color:var(--a);border-radius:50%;animation:spin .6s linear infinite}
 
-/* Stats bar */
-.stats { padding:0.4rem 0.8rem; border-top:1px solid var(--border); background:var(--surface); font-size:0.68rem; color:var(--dim); font-family:'JetBrains Mono',monospace; display:flex; gap:1rem; flex-shrink:0; }
+/* Diagram panel */
+.diag{flex:1;overflow:auto;padding:1rem;display:flex;align-items:center;justify-content:center}
+.diag svg{max-width:100%;height:auto}
 
-/* Placeholder */
-.placeholder { flex:1; display:flex; align-items:center; justify-content:center; color:#27272a; font-size:0.85rem; }
+/* Agent editor panel */
+.editor{flex:1;overflow-y:auto;padding:1rem}
+.ed-card{background:var(--s);border:1px solid var(--b);border-radius:6px;padding:1rem;max-width:500px;margin:0 auto}
+.ed-card h3{font-size:0.85rem;margin-bottom:0.8rem;display:flex;align-items:center;gap:0.4rem}
+.ed-card h3 span{color:var(--a)}
+.ed-row{margin-bottom:0.6rem}
+.ed-row label{display:block;font-size:0.68rem;color:var(--d);margin-bottom:0.2rem;font-weight:500;text-transform:uppercase;letter-spacing:0.03em}
+.ed-row input,.ed-row select,.ed-row textarea{width:100%;padding:0.4rem 0.5rem;background:var(--bg);border:1px solid var(--b);border-radius:4px;color:var(--t);font-size:0.78rem;font-family:inherit}
+.ed-row textarea{min-height:120px;resize:vertical;font-size:0.75rem;line-height:1.5}
+.ed-row input:focus,.ed-row select:focus,.ed-row textarea:focus{outline:none;border-color:var(--a)}
+.ed-tools{display:flex;flex-wrap:wrap;gap:0.25rem;margin-top:0.3rem}
+.ed-tool{padding:0.2rem 0.45rem;font-size:0.65rem;background:var(--s2);border:1px solid var(--b);border-radius:3px;cursor:pointer;color:var(--d2)}
+.ed-tool.on{background:var(--ad);border-color:var(--a);color:var(--a)}
+.ed-btns{display:flex;gap:0.4rem;margin-top:1rem}
+.ed-save{padding:0.4rem 1rem;font-size:0.75rem;font-weight:600;background:var(--a);color:#000;border:none;border-radius:4px;cursor:pointer}
+.ed-save:hover{filter:brightness(1.15)}
+.ed-del{padding:0.4rem 0.8rem;font-size:0.75rem;background:transparent;border:1px solid var(--r);color:var(--r);border-radius:4px;cursor:pointer}
+.ed-del:hover{background:rgba(248,113,113,0.1)}
+.ed-cancel{padding:0.4rem 0.8rem;font-size:0.75rem;background:transparent;border:1px solid var(--b);color:var(--d2);border-radius:4px;cursor:pointer}
 
-/* Spinner */
-@keyframes spin { to { transform:rotate(360deg); } }
-.spinner { width:12px; height:12px; border:2px solid var(--border2); border-top-color:var(--accent); border-radius:50%; animation:spin 0.6s linear infinite; }
+/* History panel */
+.hist{display:none;width:240px;min-width:240px;border-left:1px solid var(--b);background:var(--s);overflow-y:auto}
+.hist.open{display:flex;flex-direction:column}
+.hi{padding:0.5rem 0.7rem;border-bottom:1px solid var(--b);cursor:pointer;transition:background .1s}
+.hi:hover{background:rgba(255,255,255,0.02)}
+.hi .hm{font-size:0.6rem;font-weight:600;text-transform:uppercase;color:var(--a)}
+.hi .ht{font-size:0.73rem;color:var(--d2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:1px}
+.hi .hx{font-size:0.58rem;color:var(--d);font-family:'JetBrains Mono',monospace;margin-top:2px}
 
-/* Mobile */
-@media (max-width:768px) {
-  .layout { flex-direction:column; }
-  .sidebar { width:100%; min-width:100%; max-height:45vh; overflow-y:auto; border-right:none; border-bottom:1px solid var(--border); }
-}
+@media(max-width:768px){.lay{flex-direction:column}.sb{width:100%;min-width:100%;max-height:40vh;border-right:none;border-bottom:1px solid var(--b)}.hist{display:none!important}}
 </style>
 </head>
 <body>
 
-<div class="header">
+<div class="hdr">
   <h1><span>Agent</span> Orchestra</h1>
-  <div class="status" id="statusBar"></div>
-  <div class="hist-btn" id="histBtn" onclick="toggleHistory()">History</div>
+  <div class="st" id="statusBar"></div>
+  <div class="hdr-btn" id="histBtn" onclick="toggleHist()">History</div>
 </div>
 
-<div class="layout">
-  <div class="sidebar">
-    <div class="section">
-      <div class="section-title">Mode</div>
-      <div class="modes" id="modeSelector"></div>
+<div class="lay">
+  <div class="sb">
+    <!-- Config -->
+    <div class="sec">
+      <div class="sec-t">Config</div>
+      <div class="cfg-bar">
+        <select id="cfgSel"><option value="">current</option></select>
+        <div class="sm" onclick="saveConfig()">Save</div>
+        <div class="sm" onclick="loadConfig()">Load</div>
+        <div class="sm" onclick="delConfig()">Del</div>
+      </div>
     </div>
-    <div class="section">
-      <div class="section-title">Agents</div>
-      <div class="agents-grid" id="agentSelector"></div>
+    <!-- Mode -->
+    <div class="sec">
+      <div class="sec-t">Mode</div>
+      <div class="modes" id="modeSel"></div>
     </div>
-    <div class="options-area" id="optionsArea"></div>
-    <div class="topic-area">
-      <div class="section-title">Topic</div>
-      <textarea class="topic-input" id="topicInput" placeholder="Enter topic or task..."></textarea>
-      <button class="run-btn" id="runBtn" onclick="run()">Run</button>
+    <!-- Agents -->
+    <div class="sec">
+      <div class="sec-t">Agents <span class="act" onclick="newAgent()">+ New</span></div>
+      <div class="ag-grid" id="agSel"></div>
+    </div>
+    <!-- Mode options -->
+    <div class="opts" id="optsArea"></div>
+    <!-- Topic + Run -->
+    <div class="top-area">
+      <textarea class="top-in" id="topicIn" placeholder="Enter topic or task..."></textarea>
+      <button class="run" id="runBtn" onclick="doRun()">Run</button>
     </div>
   </div>
 
   <div class="main">
-    <div class="output" id="output">
-      <div class="placeholder">Select mode, agents, and topic to start</div>
+    <div class="tabs">
+      <div class="tab on" data-p="output" onclick="switchTab(this)">Output</div>
+      <div class="tab" data-p="diagram" onclick="switchTab(this)">Diagram</div>
+      <div class="tab" data-p="editor" onclick="switchTab(this)">Agent Editor</div>
     </div>
-    <div class="stats" id="statsBar" style="display:none"></div>
+    <div class="panel on" id="p-output">
+      <div class="out" id="output"><div class="ph">Select mode, agents, and topic</div></div>
+      <div class="stats" id="statsBar" style="display:none"></div>
+    </div>
+    <div class="panel" id="p-diagram">
+      <div class="diag" id="diagArea"></div>
+    </div>
+    <div class="panel" id="p-editor">
+      <div class="editor" id="editorArea"><div class="ph">Click an agent chip or + New to edit</div></div>
+    </div>
   </div>
 
-  <div class="history-panel" id="histPanel">
-    <div class="section" style="flex-shrink:0"><div class="section-title">Recent Runs</div></div>
+  <div class="hist" id="histPanel">
+    <div class="sec" style="flex-shrink:0"><div class="sec-t">History</div></div>
     <div id="histList" style="flex:1;overflow-y:auto"></div>
   </div>
 </div>
 
 <script>
-const MODES = {
-  discuss:   { label:'Discussion', desc:'Round-robin debate' },
-  pipeline:  { label:'Pipeline', desc:'Sequential handoff' },
-  parallel:  { label:'Parallel', desc:'Fan-out / fan-in' },
-  consensus: { label:'Consensus', desc:'Voting' },
-};
-
+const BASE = '/agents';
+const MODES = {discuss:'Discussion',pipeline:'Pipeline',parallel:'Parallel',consensus:'Consensus'};
+const ALL_TOOLS = ['Read','Write','Edit','Bash','Glob','Grep','WebSearch','WebFetch'];
 const PIPELINE_ACTIONS = ['design','implement','review','test'];
+const MODEL_COLORS = {opus:'#c084fc',sonnet:'#60a5fa',haiku:'#4ade80'};
 
-let agents = {};
-let selectedMode = 'discuss';
-let selectedAgents = new Set();
-let ws = null;
-let running = false;
+let agents={}, selectedMode='discuss', selectedAgents=new Set(), ws=null, running=false, editingAgent=null;
+let pipeSteps=[{agent:'architect',action:'design'},{agent:'developer',action:'implement'},{agent:'reviewer',action:'review'}];
+let parTasks=[{agent:'developer',description:''}];
+let agentActivity={};
 
-// Dynamic options for pipeline/parallel
-let pipelineSteps = [{agent:'architect',action:'design'},{agent:'developer',action:'implement'},{agent:'reviewer',action:'review'}];
-let parallelTasks = [{agent:'developer',description:''}];
-
-// Init
-async function init() {
-  try {
-    const r = await fetch('/agents/api/config');
-    const data = await r.json();
-    agents = data.agents;
-    renderModes();
-    renderAgents();
-    // Default selection
-    selectedAgents = new Set(['architect','developer','reviewer']);
-    renderAgents();
-  } catch(e) {
-    document.getElementById('statusBar').textContent = 'Failed to load config';
-  }
+// ── Init ──
+async function init(){
+  try{
+    const d=await(await fetch(BASE+'/api/config')).json();
+    agents=d.agents;
+    selectedAgents=new Set(Object.keys(agents).slice(0,3));
+    render();
+    loadConfigs();
+    drawDiagram();
+    setInterval(pollActivity,3000);
+  }catch(e){document.getElementById('statusBar').textContent='Failed to load'}
 }
 
-function renderModes() {
-  const el = document.getElementById('modeSelector');
-  el.innerHTML = Object.entries(MODES).map(([k,v]) =>
-    `<div class="mode-btn ${k===selectedMode?'active':''}" onclick="selectMode('${k}')">${v.label}</div>`
-  ).join('');
+function render(){renderModes();renderAgents();renderOpts()}
+
+// ── Modes ──
+function renderModes(){
+  document.getElementById('modeSel').innerHTML=Object.entries(MODES).map(([k,v])=>
+    `<div class="mbtn ${k===selectedMode?'on':''}" onclick="selMode('${k}')">${v}</div>`).join('');
+}
+function selMode(m){selectedMode=m;render()}
+
+// ── Agents ──
+function renderAgents(){
+  const el=document.getElementById('agSel');
+  el.innerHTML=Object.entries(agents).map(([k,v])=>{
+    const st=agentActivity[v.display_name]||'off';
+    return `<div class="ag-c ${selectedAgents.has(k)?'sel':''}" onclick="toggleAg(event,'${k}')">
+      <span class="dot ${st}"></span>${v.display_name} <span class="mt">${v.model}</span>
+      <span class="edit-ic" onclick="event.stopPropagation();editAgent('${k}')">&#9998;</span>
+    </div>`;
+  }).join('')+`<div class="ag-new" onclick="newAgent()">+</div>`;
+}
+function toggleAg(e,n){if(e.target.classList.contains('edit-ic'))return;selectedAgents.has(n)?selectedAgents.delete(n):selectedAgents.add(n);renderAgents()}
+
+// ── Options ──
+function renderOpts(){
+  const a=document.getElementById('optsArea');
+  if(selectedMode==='pipeline'){
+    a.style.display='block';
+    a.innerHTML='<div class="sec-t">Steps</div>'+pipeSteps.map((s,i)=>
+      `<div class="orow"><select onchange="pipeSteps[${i}].agent=this.value">${agOpts(s.agent)}</select><select onchange="pipeSteps[${i}].action=this.value">${PIPELINE_ACTIONS.map(x=>`<option ${x===s.action?'selected':''}>${x}</option>`).join('')}</select><span class="xbtn" onclick="pipeSteps.splice(${i},1);renderOpts()">x</span></div>`
+    ).join('')+`<span class="abtn" onclick="pipeSteps.push({agent:'developer',action:'implement'});renderOpts()">+ step</span>`;
+  }else if(selectedMode==='parallel'){
+    a.style.display='block';
+    a.innerHTML='<div class="sec-t">Subtasks</div>'+parTasks.map((t,i)=>
+      `<div class="orow"><select onchange="parTasks[${i}].agent=this.value">${agOpts(t.agent)}</select><input value="${esc(t.description)}" placeholder="subtask..." onchange="parTasks[${i}].description=this.value"><span class="xbtn" onclick="parTasks.splice(${i},1);renderOpts()">x</span></div>`
+    ).join('')+`<span class="abtn" onclick="parTasks.push({agent:'developer',description:''});renderOpts()">+ task</span>`;
+  }else{a.style.display='none';a.innerHTML=''}
+}
+function agOpts(s){return Object.entries(agents).map(([k,v])=>`<option value="${k}" ${k===s?'selected':''}>${v.display_name}</option>`).join('')}
+
+// ── Config Save/Load ──
+async function loadConfigs(){
+  const cfgs=await(await fetch(BASE+'/api/configs')).json();
+  const sel=document.getElementById('cfgSel');
+  sel.innerHTML='<option value="">current</option>'+cfgs.map(c=>`<option value="${c.name}">${c.name}</option>`).join('');
+}
+async function saveConfig(){
+  const name=prompt('Config name:');if(!name)return;
+  await fetch(BASE+'/api/configs/'+encodeURIComponent(name),{method:'POST'});
+  loadConfigs();
+}
+async function loadConfig(){
+  const name=document.getElementById('cfgSel').value;if(!name)return;
+  await fetch(BASE+'/api/configs/'+encodeURIComponent(name)+'/load',{method:'POST'});
+  const d=await(await fetch(BASE+'/api/config')).json();agents=d.agents;selectedAgents=new Set(Object.keys(agents).slice(0,3));render();drawDiagram();
+}
+async function delConfig(){
+  const name=document.getElementById('cfgSel').value;if(!name)return;
+  if(!confirm('Delete config "'+name+'"?'))return;
+  await fetch(BASE+'/api/configs/'+encodeURIComponent(name),{method:'DELETE'});
+  loadConfigs();
 }
 
-function selectMode(m) {
-  selectedMode = m;
-  renderModes();
-  renderOptions();
-}
-
-function renderAgents() {
-  const el = document.getElementById('agentSelector');
-  el.innerHTML = Object.entries(agents).map(([k,v]) =>
-    `<div class="agent-chip ${selectedAgents.has(k)?'selected':''}" onclick="toggleAgent('${k}')">
-      ${v.display_name} <span class="model-tag">${v.model}</span>
-    </div>`
-  ).join('');
-}
-
-function toggleAgent(name) {
-  if (selectedAgents.has(name)) selectedAgents.delete(name);
-  else selectedAgents.add(name);
-  renderAgents();
-}
-
-function renderOptions() {
-  const area = document.getElementById('optionsArea');
-  if (selectedMode === 'pipeline') {
-    area.style.display = 'block';
-    area.innerHTML = '<div class="section-title">Pipeline Steps</div>' + pipelineSteps.map((s,i) =>
-      `<div class="opt-row">
-        <select onchange="pipelineSteps[${i}].agent=this.value">${agentOpts(s.agent)}</select>
-        <select onchange="pipelineSteps[${i}].action=this.value">${PIPELINE_ACTIONS.map(a=>`<option ${a===s.action?'selected':''}>${a}</option>`).join('')}</select>
-        <button class="rm-btn" onclick="pipelineSteps.splice(${i},1);renderOptions()">x</button>
-      </div>`
-    ).join('') + `<button class="add-btn" onclick="pipelineSteps.push({agent:'developer',action:'implement'});renderOptions()">+ step</button>`;
-  } else if (selectedMode === 'parallel') {
-    area.style.display = 'block';
-    area.innerHTML = '<div class="section-title">Subtasks</div>' + parallelTasks.map((t,i) =>
-      `<div class="opt-row">
-        <select onchange="parallelTasks[${i}].agent=this.value">${agentOpts(t.agent)}</select>
-        <input value="${esc(t.description)}" placeholder="subtask..." onchange="parallelTasks[${i}].description=this.value">
-        <button class="rm-btn" onclick="parallelTasks.splice(${i},1);renderOptions()">x</button>
-      </div>`
-    ).join('') + `<button class="add-btn" onclick="parallelTasks.push({agent:'developer',description:''});renderOptions()">+ task</button>`;
-  } else {
-    area.style.display = 'none';
-    area.innerHTML = '';
-  }
-}
-
-function agentOpts(sel) {
-  return Object.entries(agents).map(([k,v]) => `<option value="${k}" ${k===sel?'selected':''}>${v.display_name}</option>`).join('');
-}
-
-function esc(s) { return s.replace(/"/g,'&quot;').replace(/</g,'&lt;'); }
-
-function run() {
-  if (running) { stop(); return; }
-
-  const topic = document.getElementById('topicInput').value.trim();
-  if (!topic) return;
-
-  const output = document.getElementById('output');
-  output.innerHTML = '';
-  document.getElementById('statsBar').style.display = 'none';
-
-  const btn = document.getElementById('runBtn');
-  btn.textContent = 'Stop';
-  btn.classList.add('running');
-  running = true;
-
-  const proto = location.protocol === 'https:' ? 'wss:' : 'ws:';
-  ws = new WebSocket(`${proto}//${location.host}/agents/ws/run`);
-
-  ws.onopen = () => {
-    const msg = {
-      mode: selectedMode,
-      topic,
-      agents: [...selectedAgents],
-      options: {},
-    };
-    if (selectedMode === 'pipeline') msg.options.steps = pipelineSteps;
-    if (selectedMode === 'parallel') msg.options.tasks = parallelTasks;
-    ws.send(JSON.stringify(msg));
-    document.getElementById('statusBar').textContent = 'running...';
-  };
-
-  ws.onmessage = (e) => {
-    const data = JSON.parse(e.data);
-    if (data.type === 'update') {
-      addCard(data.agent, data.event, data.text);
-    } else if (data.type === 'result') {
-      if (data.summary) addSummary(data.summary);
-      showStats(data);
-      finish();
-    } else if (data.type === 'error') {
-      addCard('Error', 'error', data.text);
-      finish();
-    }
-  };
-
-  ws.onclose = () => { if (running) finish(); };
-  ws.onerror = () => { addCard('Error', 'error', 'WebSocket connection failed'); finish(); };
-}
-
-function stop() {
-  if (ws) ws.close();
-  finish();
-}
-
-function finish() {
-  running = false;
-  const btn = document.getElementById('runBtn');
-  btn.textContent = 'Run';
-  btn.classList.remove('running');
-  document.getElementById('statusBar').textContent = '';
-}
-
-function addCard(agent, event, text) {
-  const output = document.getElementById('output');
-  // For 'start' events, show compact indicator
-  if (event === 'start') {
-    const card = document.createElement('div');
-    card.className = 'resp-card event-start';
-    card.innerHTML = `<div class="resp-header"><span class="agent-label">${esc(agent)}</span><span class="event-label">${esc(text)}</span><div class="spinner"></div></div>`;
-    card.id = 'active-' + agent.replace(/\s/g,'');
-    output.appendChild(card);
-    output.scrollTop = output.scrollHeight;
-    return;
-  }
-
-  // Remove the start indicator for this agent
-  const active = document.getElementById('active-' + agent.replace(/\s/g,''));
-  if (active) active.remove();
-
-  const card = document.createElement('div');
-  card.className = `resp-card event-${event}`;
-  card.innerHTML = `<div class="resp-header"><span class="agent-label">${esc(agent)}</span><span class="event-label">${event}</span></div><div class="resp-body">${formatMd(text)}</div>`;
-  output.appendChild(card);
-  output.scrollTop = output.scrollHeight;
-}
-
-function addSummary(text) {
-  const output = document.getElementById('output');
-  const card = document.createElement('div');
-  card.className = 'resp-card summary-card';
-  card.innerHTML = `<div class="resp-header"><span class="agent-label">Summary</span></div><div class="resp-body">${formatMd(text)}</div>`;
-  output.appendChild(card);
-  output.scrollTop = output.scrollHeight;
-}
-
-function showStats(data) {
-  const bar = document.getElementById('statsBar');
-  bar.style.display = 'flex';
-  bar.textContent = `${data.responses} responses | $${(data.cost||0).toFixed(4)} | ${((data.duration_ms||0)/1000).toFixed(1)}s`;
-}
-
-function formatMd(text) {
-  // Minimal markdown: bold, code, headers, lists
-  return text
-    .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
-    .replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>')
-    .replace(/`([^`]+)`/g,'<code style="background:rgba(255,255,255,0.06);padding:1px 4px;border-radius:3px;font-size:0.78em">$1</code>')
-    .replace(/^### (.+)$/gm,'<strong style="color:var(--text);font-size:0.85rem">$1</strong>')
-    .replace(/^## (.+)$/gm,'<strong style="color:var(--text);font-size:0.9rem">$1</strong>')
-    .replace(/^- (.+)$/gm,'&nbsp;&nbsp;&#8226; $1')
-    .replace(/\n/g,'<br>');
-}
-
-// History
-let histOpen = false;
-
-function toggleHistory() {
-  histOpen = !histOpen;
-  document.getElementById('histPanel').classList.toggle('open', histOpen);
-  document.getElementById('histBtn').classList.toggle('active', histOpen);
-  if (histOpen) loadHistory();
-}
-
-async function loadHistory() {
-  try {
-    const r = await fetch('/agents/api/history');
-    const runs = await r.json();
-    const el = document.getElementById('histList');
-    if (!runs.length) { el.innerHTML = '<div style="padding:1rem;color:var(--dim);font-size:0.8rem">No runs yet</div>'; return; }
-    el.innerHTML = runs.map(r => `
-      <div class="hist-item" onclick="loadRun('${r.id}')">
-        <div class="hi-mode">${r.mode}</div>
-        <div class="hi-topic">${esc(r.topic||'')}</div>
-        <div class="hi-meta">${r.agents?.length||0} agents | $${(r.cost||0).toFixed(3)} | ${((r.duration_ms||0)/1000).toFixed(0)}s</div>
+// ── Agent Editor ──
+function editAgent(name){
+  editingAgent=name;
+  const a=agents[name]||{};
+  switchTab(document.querySelector('[data-p="editor"]'));
+  const tools=a.allowed_tools||[];
+  document.getElementById('editorArea').innerHTML=`
+    <div class="ed-card">
+      <h3><span>&#9998;</span> ${name?'Edit':'New'} Agent</h3>
+      <div class="ed-row"><label>ID (lowercase)</label><input id="ed-id" value="${esc(name)}" ${name?'readonly style="opacity:0.5"':''}></div>
+      <div class="ed-row"><label>Display Name</label><input id="ed-dn" value="${esc(a.display_name||'')}"></div>
+      <div class="ed-row"><label>Model</label><select id="ed-mod"><option ${a.model==='opus'?'selected':''}>opus</option><option ${a.model==='sonnet'?'selected':''}>sonnet</option><option ${a.model==='haiku'?'selected':''}>haiku</option></select></div>
+      <div class="ed-row"><label>Max Turns</label><input id="ed-mt" type="number" value="${a.max_turns||50}"></div>
+      <div class="ed-row"><label>Tools</label><div class="ed-tools">${ALL_TOOLS.map(t=>`<div class="ed-tool ${tools.includes(t)?'on':''}" onclick="this.classList.toggle('on')" data-t="${t}">${t}</div>`).join('')}</div></div>
+      <div class="ed-row"><label>System Prompt</label><textarea id="ed-sp">${esc(a.system_prompt||'')}</textarea></div>
+      <div class="ed-btns">
+        <button class="ed-save" onclick="saveAgent()">Save</button>
+        ${name?`<button class="ed-del" onclick="delAgent('${name}')">Delete</button>`:''}
+        <button class="ed-cancel" onclick="editingAgent=null;document.getElementById('editorArea').innerHTML='<div class=ph>Click an agent chip or + New to edit</div>'">Cancel</button>
       </div>
-    `).join('');
-  } catch(e) {}
+    </div>`;
+}
+function newAgent(){editAgent('')}
+
+async function saveAgent(){
+  const id=(document.getElementById('ed-id').value||'').trim().toLowerCase().replace(/[^a-z0-9_]/g,'');
+  if(!id){alert('ID required');return}
+  const tools=[...document.querySelectorAll('.ed-tool.on')].map(e=>e.dataset.t);
+  const body={
+    display_name:document.getElementById('ed-dn').value.trim()||id,
+    model:document.getElementById('ed-mod').value,
+    system_prompt:document.getElementById('ed-sp').value,
+    allowed_tools:tools,
+    max_turns:parseInt(document.getElementById('ed-mt').value)||50,
+  };
+  await fetch(BASE+'/api/agents/'+id,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+  const d=await(await fetch(BASE+'/api/config')).json();agents=d.agents;
+  if(!selectedAgents.has(id))selectedAgents.add(id);
+  render();drawDiagram();
+  editAgent(id);
 }
 
-async function loadRun(id) {
-  try {
-    const r = await fetch('/agents/api/history/' + id);
-    const run = await r.json();
-    if (run.error) return;
-    const output = document.getElementById('output');
-    output.innerHTML = '';
-    if (run.transcript) {
-      const card = document.createElement('div');
-      card.className = 'resp-card event-done';
-      card.innerHTML = `<div class="resp-header"><span class="agent-label">${run.mode||''} run</span><span class="event-label">${id}</span></div><div class="resp-body">${formatMd(run.transcript)}</div>`;
-      output.appendChild(card);
-    }
-    if (run.summary) addSummary(run.summary);
-    const bar = document.getElementById('statsBar');
-    bar.style.display = 'flex';
-    bar.textContent = `${run.responses||0} responses | $${(run.cost||0).toFixed(4)} | ${((run.duration_ms||0)/1000).toFixed(1)}s`;
-  } catch(e) {}
+async function delAgent(name){
+  if(!confirm('Delete agent "'+name+'"?'))return;
+  await fetch(BASE+'/api/agents/'+name,{method:'DELETE'});
+  const d=await(await fetch(BASE+'/api/config')).json();agents=d.agents;
+  selectedAgents.delete(name);render();drawDiagram();
+  document.getElementById('editorArea').innerHTML='<div class="ph">Agent deleted</div>';
 }
+
+// ── Diagram ──
+function drawDiagram(){
+  const area=document.getElementById('diagArea');
+  const names=Object.entries(agents);
+  const n=names.length;
+  if(!n){area.innerHTML='<div class="ph">No agents</div>';return}
+
+  const W=600,H=400,cx=W/2,cy=H/2,R=140;
+  let svg=`<svg viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg" style="font-family:Inter,sans-serif">`;
+  // Background
+  svg+=`<rect width="${W}" height="${H}" fill="#09090b" rx="8"/>`;
+  // Center: coordinator
+  svg+=`<circle cx="${cx}" cy="${cy}" r="28" fill="#18181b" stroke="#818cf8" stroke-width="1.5"/>`;
+  svg+=`<text x="${cx}" y="${cy+1}" text-anchor="middle" dominant-baseline="middle" fill="#818cf8" font-size="9" font-weight="600">Coordinator</text>`;
+
+  // Mode label
+  svg+=`<text x="${cx}" y="24" text-anchor="middle" fill="#71717a" font-size="10">${MODES[selectedMode]||selectedMode} mode</text>`;
+
+  names.forEach(([k,v],i)=>{
+    const angle=(2*Math.PI*i/n)-Math.PI/2;
+    const x=cx+R*Math.cos(angle), y=cy+R*Math.sin(angle);
+    const isSel=selectedAgents.has(k);
+    const st=agentActivity[v.display_name]||'off';
+    const mc=MODEL_COLORS[v.model]||'#a1a1aa';
+
+    // Line to center
+    if(isSel) svg+=`<line x1="${cx}" y1="${cy}" x2="${x}" y2="${y}" stroke="${st==='working'?'#fbbf24':'#27272a'}" stroke-width="${st==='working'?1.5:0.8}" ${st==='working'?'stroke-dasharray="4 3"':''}/>`;
+
+    // Node
+    const fill=isSel?'#18181b':'#111113';
+    const stroke=st==='working'?'#fbbf24':isSel?mc:'#27272a';
+    const sw=st==='working'?2:1;
+    svg+=`<circle cx="${x}" cy="${y}" r="24" fill="${fill}" stroke="${stroke}" stroke-width="${sw}"/>`;
+
+    // Activity glow
+    if(st==='working') svg+=`<circle cx="${x}" cy="${y}" r="24" fill="none" stroke="#fbbf24" stroke-width="1" opacity="0.3"><animate attributeName="r" from="24" to="32" dur="1.5s" repeatCount="indefinite"/><animate attributeName="opacity" from="0.3" to="0" dur="1.5s" repeatCount="indefinite"/></circle>`;
+
+    // Name + model
+    svg+=`<text x="${x}" y="${y-3}" text-anchor="middle" fill="${isSel?'#e4e4e7':'#52525b'}" font-size="8.5" font-weight="500">${v.display_name}</text>`;
+    svg+=`<text x="${x}" y="${y+8}" text-anchor="middle" fill="${mc}" font-size="6.5" font-family="JetBrains Mono,monospace">${v.model}</text>`;
+
+    // Status dot
+    const dc=st==='working'?'#fbbf24':st==='idle'?'#4ade80':'#3f3f46';
+    svg+=`<circle cx="${x+16}" cy="${y-16}" r="3.5" fill="${dc}"/>`;
+  });
+
+  // Mode-specific arrows for selected agents
+  const selArr=[...selectedAgents].filter(k=>agents[k]);
+  if(selectedMode==='pipeline'&&selArr.length>1){
+    for(let i=0;i<selArr.length-1;i++){
+      const idx1=names.findIndex(([k])=>k===selArr[i]);
+      const idx2=names.findIndex(([k])=>k===selArr[i+1]);
+      if(idx1<0||idx2<0)continue;
+      const a1=(2*Math.PI*idx1/n)-Math.PI/2, a2=(2*Math.PI*idx2/n)-Math.PI/2;
+      const x1=cx+R*Math.cos(a1),y1=cy+R*Math.sin(a1),x2=cx+R*Math.cos(a2),y2=cy+R*Math.sin(a2);
+      const mx=(x1+x2)/2+15*Math.cos((a1+a2)/2+0.3), my=(y1+y2)/2+15*Math.sin((a1+a2)/2+0.3);
+      svg+=`<path d="M${x1+20*Math.cos(a2-a1>0?0.3:-0.3)} ${y1+20*Math.sin(a2-a1>0?0.3:-0.3)} Q${mx} ${my} ${x2-20*Math.cos(a2-a1>0?0.3:-0.3)} ${y2-20*Math.sin(a2-a1>0?0.3:-0.3)}" fill="none" stroke="#4ade8044" stroke-width="1.5" marker-end="url(#arrow)"/>`;
+    }
+    svg+=`<defs><marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 0L10 5L0 10z" fill="#4ade80"/></marker></defs>`;
+  }
+
+  svg+=`</svg>`;
+  area.innerHTML=svg;
+}
+
+async function pollActivity(){
+  try{
+    const d=await(await fetch(BASE+'/api/activity')).json();
+    const changed=JSON.stringify(d)!==JSON.stringify(agentActivity);
+    agentActivity=d;
+    if(changed){renderAgents();drawDiagram()}
+  }catch(e){}
+}
+
+// ── Tabs ──
+function switchTab(el){
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('on'));
+  document.querySelectorAll('.panel').forEach(p=>p.classList.remove('on'));
+  el.classList.add('on');
+  document.getElementById('p-'+el.dataset.p).classList.add('on');
+  if(el.dataset.p==='diagram')drawDiagram();
+}
+
+// ── Run ──
+function doRun(){
+  if(running){if(ws)ws.close();return}
+  const topic=document.getElementById('topicIn').value.trim();if(!topic)return;
+  const out=document.getElementById('output');out.innerHTML='';
+  document.getElementById('statsBar').style.display='none';
+  switchTab(document.querySelector('[data-p="output"]'));
+  const btn=document.getElementById('runBtn');btn.textContent='Stop';btn.classList.add('stop');running=true;
+  const proto=location.protocol==='https:'?'wss:':'ws:';
+  ws=new WebSocket(`${proto}//${location.host}${BASE}/ws/run`);
+  ws.onopen=()=>{
+    ws.send(JSON.stringify({mode:selectedMode,topic,agents:[...selectedAgents],options:selectedMode==='pipeline'?{steps:pipeSteps}:selectedMode==='parallel'?{tasks:parTasks}:{}}));
+    document.getElementById('statusBar').textContent='running...';
+  };
+  ws.onmessage=e=>{
+    const d=JSON.parse(e.data);
+    if(d.type==='update'){
+      addCard(d.agent,d.event,d.text);
+      if(d.event==='start')agentActivity[d.agent]='working';
+      else if(d.event==='done'||d.event==='error')agentActivity[d.agent]='idle';
+      renderAgents();drawDiagram();
+    }else if(d.type==='result'){
+      if(d.summary)addSum(d.summary);showStats(d);fin();
+    }else if(d.type==='error'){addCard('Error','error',d.text);fin()}
+  };
+  ws.onclose=()=>{if(running)fin()};
+  ws.onerror=()=>{addCard('Error','error','WebSocket failed');fin()};
+}
+function fin(){running=false;agentActivity={};renderAgents();drawDiagram();document.getElementById('runBtn').textContent='Run';document.getElementById('runBtn').classList.remove('stop');document.getElementById('statusBar').textContent=''}
+
+function addCard(ag,ev,txt){
+  const out=document.getElementById('output');
+  if(ev==='start'){const c=document.createElement('div');c.className='rc ev-start';c.id='a-'+ag.replace(/\s/g,'');c.innerHTML=`<div class="rc-h"><span class="al">${esc(ag)}</span><span class="el">${esc(txt)}</span><div class="spinner"></div></div>`;out.appendChild(c);out.scrollTop=out.scrollHeight;return}
+  const a=document.getElementById('a-'+ag.replace(/\s/g,''));if(a)a.remove();
+  const c=document.createElement('div');c.className=`rc ev-${ev}`;c.innerHTML=`<div class="rc-h"><span class="al">${esc(ag)}</span><span class="el">${ev}</span></div><div class="rc-b">${fmtMd(txt)}</div>`;out.appendChild(c);out.scrollTop=out.scrollHeight;
+}
+function addSum(txt){const out=document.getElementById('output');const c=document.createElement('div');c.className='rc sc';c.innerHTML=`<div class="rc-h"><span class="al">Summary</span></div><div class="rc-b">${fmtMd(txt)}</div>`;out.appendChild(c);out.scrollTop=out.scrollHeight}
+function showStats(d){const b=document.getElementById('statsBar');b.style.display='block';b.textContent=`${d.responses} responses | $${(d.cost||0).toFixed(4)} | ${((d.duration_ms||0)/1000).toFixed(1)}s`}
+
+// ── History ──
+let histOpen=false;
+function toggleHist(){histOpen=!histOpen;document.getElementById('histPanel').classList.toggle('open',histOpen);document.getElementById('histBtn').classList.toggle('on',histOpen);if(histOpen)loadHist()}
+async function loadHist(){
+  const runs=await(await fetch(BASE+'/api/history')).json();
+  document.getElementById('histList').innerHTML=runs.length?runs.map(r=>`<div class="hi" onclick="loadRun('${r.id}')"><div class="hm">${r.mode}</div><div class="ht">${esc(r.topic||'')}</div><div class="hx">${r.agents?.length||0}ag $${(r.cost||0).toFixed(3)} ${((r.duration_ms||0)/1000).toFixed(0)}s</div></div>`).join(''):'<div style="padding:1rem;color:var(--d);font-size:0.8rem">No runs</div>';
+}
+async function loadRun(id){
+  const r=await(await fetch(BASE+'/api/history/'+id)).json();if(r.error)return;
+  switchTab(document.querySelector('[data-p="output"]'));
+  const out=document.getElementById('output');out.innerHTML='';
+  if(r.transcript){const c=document.createElement('div');c.className='rc ev-done';c.innerHTML=`<div class="rc-h"><span class="al">${r.mode} run</span><span class="el">${id}</span></div><div class="rc-b">${fmtMd(r.transcript)}</div>`;out.appendChild(c)}
+  if(r.summary)addSum(r.summary);
+  document.getElementById('statsBar').style.display='block';
+  document.getElementById('statsBar').textContent=`${r.responses||0} responses | $${(r.cost||0).toFixed(4)} | ${((r.duration_ms||0)/1000).toFixed(1)}s`;
+}
+
+// ── Helpers ──
+function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;')}
+function fmtMd(t){return esc(t).replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>').replace(/`([^`]+)`/g,'<code style="background:rgba(255,255,255,0.06);padding:1px 4px;border-radius:3px;font-size:.78em">$1</code>').replace(/^### (.+)$/gm,'<strong style="color:var(--t);font-size:.85rem">$1</strong>').replace(/^## (.+)$/gm,'<strong style="color:var(--t);font-size:.9rem">$1</strong>').replace(/^- (.+)$/gm,'&nbsp;&nbsp;&#8226; $1').replace(/\n/g,'<br>')}
 
 init();
 </script>
