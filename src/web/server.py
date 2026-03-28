@@ -99,8 +99,6 @@ class GenerateRequest(BaseModel):
 @app.post("/api/agents/generate")
 async def generate_agent(req: GenerateRequest):
     """Use Claude to auto-generate agent config from a role name."""
-    from claude_agent_sdk import ClaudeAgentOptions, ClaudeSDKClient, AssistantMessage, ResultMessage, TextBlock
-
     prompt = f"""Generate a JSON config for an AI agent with the role: "{req.role_name}"
 
 Return ONLY valid JSON (no markdown, no explanation) with these fields:
@@ -110,42 +108,12 @@ Return ONLY valid JSON (no markdown, no explanation) with these fields:
   "model": "<opus for complex analytical roles, sonnet for most roles, haiku for simple roles>",
   "max_turns": <number 20-50>,
   "allowed_tools": [<subset of: "Read", "Write", "Edit", "Bash", "Glob", "Grep", "WebSearch", "WebFetch">],
-  "system_prompt": "<2-5 bullet points describing the role, what it does, how it should behave. Start with 'You are a...'>"
-}}
-
-Choose tools that match the role. Read-only roles get Read/Glob/Grep. Coding roles get Write/Edit/Bash too. Research roles get WebSearch/WebFetch."""
-
-    options = ClaudeAgentOptions(
-        model="haiku",
-        max_turns=1,
-        permission_mode="plan",
-    )
+  "system_prompt": "<2-5 bullet points describing the role>"
+}}"""
 
     try:
-        client = ClaudeSDKClient(options)
-        content = ""
-        try:
-            await client.connect()
-            await client.query(prompt)
-            async for msg in client.receive_messages():
-                if isinstance(msg, ResultMessage):
-                    if msg.result:
-                        content = msg.result
-                    break
-                elif isinstance(msg, AssistantMessage):
-                    for block in msg.content or []:
-                        if isinstance(block, TextBlock):
-                            content += block.text
-        finally:
-            await client.disconnect()
-
-        # Parse JSON from response (handle markdown code blocks)
-        text = content.strip()
-        if text.startswith("```"):
-            text = text.split("\n", 1)[1] if "\n" in text else text[3:]
-            text = text.rsplit("```", 1)[0]
-        result = json.loads(text.strip())
-        return result
+        content = await _call_claude(prompt, model="haiku")
+        return _parse_json(content)
 
     except Exception as e:
         return {"error": str(e)}
@@ -155,53 +123,115 @@ class AutoPlanRequest(BaseModel):
     topic: str
 
 
-@app.post("/api/auto-plan")
-async def auto_plan(req: AutoPlanRequest):
-    """AI analyzes the task and picks optimal agents + mode."""
+PLAN_PROMPT_TEMPLATE = """Analyze this task and propose exactly 3 plan variants — from FAST to THOROUGH.
+
+TASK: "{topic}"
+
+EXISTING AGENTS (reuse if suitable): {existing}
+
+AVAILABLE MODES:
+- pipeline: Sequential handoff. Actions can be ANY verb: "brainstorm", "evaluate", "select", "design", "implement", "review", "test", "analyze", "critique", etc.
+- discuss: All agents debate simultaneously in rounds.
+- parallel: Agents work on DIFFERENT subtasks at the same time.
+- consensus: Agents vote independently on a question with predefined options.
+
+Return ONLY a valid JSON array of 3 plans:
+[
+  {{
+    "label": "<short name, e.g. 'Quick' / 'Balanced' / 'Deep'>",
+    "description": "<1-2 sentences: what this variant does, how long, what quality>",
+    "mode": "<discuss|pipeline|parallel|consensus>",
+    "reasoning": "<why this mode and agents for this variant>",
+    "agents": [
+      {{
+        "id": "<lowercase_snake_case>",
+        "display_name": "<name>",
+        "model": "<opus|sonnet|haiku>",
+        "max_turns": <number>,
+        "allowed_tools": [<subset of: "Read","Write","Edit","Bash","Glob","Grep","WebSearch","WebFetch">],
+        "system_prompt": "<task-specific role instructions>"
+      }}
+    ],
+    "options": {{"rounds": <number>}}
+  }}
+]
+
+VARIANT RULES:
+1. **Fast** (first): minimal agents (2), haiku/sonnet models, 1 round, quick result. Sacrifice depth for speed.
+2. **Balanced** (second): moderate agents (3-4), sonnet models, 2 rounds. Good tradeoff.
+3. **Deep** (third): many agents (5-8), opus for key roles, 3+ rounds. Maximum quality, thorough analysis.
+
+GENERAL RULES:
+- For pipeline: add "steps" in options: [{{"agent":"id","action":"<verb>"}}]
+- For parallel: add "tasks" in options: [{{"agent":"id","description":"subtask"}}]
+- Each agent's system_prompt must be specific to THIS task
+- Reuse existing agents by ID if they fit
+- IMPORTANT: ALL text (label, description, reasoning, display_name, system_prompt) MUST be in the SAME LANGUAGE as the TASK"""
+
+
+async def _call_claude(prompt: str, model: str = "opus") -> str:
+    """Helper: call Claude and return text content."""
     from claude_agent_sdk import ClaudeAgentOptions, ClaudeSDKClient, AssistantMessage, ResultMessage, TextBlock
 
-    # List existing agents for context
+    options = ClaudeAgentOptions(model=model, max_turns=1, permission_mode="plan")
+    client = ClaudeSDKClient(options)
+    content = ""
+    try:
+        await client.connect()
+        await client.query(prompt)
+        async for msg in client.receive_messages():
+            if isinstance(msg, ResultMessage):
+                if msg.result:
+                    content = msg.result
+                break
+            elif isinstance(msg, AssistantMessage):
+                for block in msg.content or []:
+                    if isinstance(block, TextBlock):
+                        content += block.text
+    finally:
+        await client.disconnect()
+    return content
+
+
+def _parse_json(text: str):
+    """Parse JSON from Claude response, handling markdown code blocks."""
+    text = text.strip()
+    if text.startswith("```"):
+        text = text.split("\n", 1)[1] if "\n" in text else text[3:]
+        text = text.rsplit("```", 1)[0]
+    return json.loads(text.strip())
+
+
+@app.post("/api/auto-plans")
+async def auto_plans(req: AutoPlanRequest):
+    """Generate 3 plan variants: fast, balanced, deep."""
     config = load_config(CONFIG_PATH)
     existing = {name: {"display_name": r.display_name, "model": r.model}
                 for name, r in config.agents.items()}
 
-    prompt = f"""Analyze this task and decide which AI agents and interaction mode to use.
+    prompt = PLAN_PROMPT_TEMPLATE.format(topic=req.topic, existing=json.dumps(existing))
 
-TASK: "{req.topic}"
+    try:
+        content = await _call_claude(prompt, model="opus")
+        plans = _parse_json(content)
+        if not isinstance(plans, list):
+            return {"error": "Expected array of plans"}
+        return plans
+    except Exception as e:
+        return {"error": str(e)}
 
-EXISTING AGENTS (reuse if suitable): {json.dumps(existing)}
 
-AVAILABLE MODES:
-- pipeline: BEST for multi-stage tasks. Agents pass results to next agent. Actions can be ANY verb: "brainstorm", "evaluate", "select", "design", "implement", "review", "test", "analyze", "critique", "summarize", etc. Use this for tasks like "generate ideas then pick best" or "research then build then review".
-- discuss: All agents debate simultaneously in rounds. Good for open questions, opinions, architecture decisions.
-- parallel: Agents work on DIFFERENT subtasks at the same time. Good for splitting independent work.
-- consensus: Agents vote independently on a question with predefined options. Only use when options are ALREADY KNOWN.
-
-Return ONLY valid JSON:
-{{
-  "mode": "<discuss|pipeline|parallel|consensus>",
-  "reasoning": "<1-2 sentences why this mode and these agents>",
-  "agents": [
-    {{
-      "id": "<lowercase_snake_case>",
-      "display_name": "<name>",
-      "model": "<opus|sonnet|haiku>",
-      "max_turns": <number>,
-      "allowed_tools": [<subset of: "Read","Write","Edit","Bash","Glob","Grep","WebSearch","WebFetch">],
-      "system_prompt": "<role-specific instructions tailored to this exact task. Tell the agent exactly what to do, what to produce, what format to use>"
-    }}
-  ],
-  "options": {{"rounds": <number 1-5, based on task complexity>}}
-}}
-
-Rules:
-- NEVER default to exactly 3 agents. Pick the RIGHT number: simple → 2, debates → 4-5, complex → 5-8, large → 7-10
-- For pipeline: add "steps" in options: [{{"agent":"id","action":"<any action verb>"}}]. Actions are NOT limited to design/implement/review/test — use whatever fits: "brainstorm", "evaluate", "rank", "select", "research", "write", "critique", etc.
-- For parallel: add "tasks" in options: [{{"agent":"id","description":"subtask"}}]
-- NEVER use consensus when the task requires generating ideas first — use pipeline instead (generate → evaluate → select)
-- Each agent's system_prompt must be specific to THIS task, not generic
-- Reuse existing agents by ID if they fit, create new ones if needed
-- IMPORTANT: "reasoning", "display_name", and "system_prompt" MUST be in the same language as the TASK"""
+@app.post("/api/auto-plan")
+async def auto_plan(req: AutoPlanRequest):
+    """Single plan (backward compat). Returns the balanced variant."""
+    result = await auto_plans(req)
+    if isinstance(result, dict) and result.get("error"):
+        return result
+    if isinstance(result, list) and len(result) >= 2:
+        return result[1]  # balanced
+    if isinstance(result, list) and len(result) >= 1:
+        return result[0]
+    return {"error": "No plans generated"}
 
     options = ClaudeAgentOptions(
         model="opus",
