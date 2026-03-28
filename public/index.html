@@ -9,609 +9,425 @@
 :root{--bg:#09090b;--s:#111113;--s2:#18181b;--s3:#1e1e22;--b:rgba(255,255,255,0.06);--b2:rgba(255,255,255,0.1);--t:#e4e4e7;--d:#71717a;--d2:#a1a1aa;--a:#818cf8;--ad:rgba(129,140,248,0.12);--g:#4ade80;--y:#fbbf24;--r:#f87171;--bl:#60a5fa;--p:#c084fc;--o:#fb923c}
 *{margin:0;padding:0;box-sizing:border-box}
 body{background:var(--bg);color:var(--t);font-family:'Inter',system-ui,sans-serif;height:100vh;display:flex;flex-direction:column;-webkit-font-smoothing:antialiased;overflow:hidden}
+.mono{font-family:'JetBrains Mono',monospace}
 
+/* Header */
 .hdr{padding:0.5rem 1rem;border-bottom:1px solid var(--b);display:flex;align-items:center;gap:0.8rem;background:var(--s);flex-shrink:0}
 .hdr h1{font-size:0.9rem;font-weight:600} .hdr h1 span{color:var(--a)}
-.hdr .st{margin-left:auto;font-size:0.68rem;color:var(--d);font-family:'JetBrains Mono',monospace}
-.hdr-btn{padding:0.2rem 0.55rem;font-size:0.68rem;background:var(--s2);border:1px solid var(--b);border-radius:4px;cursor:pointer;color:var(--d2);transition:all .12s}
-.hdr-btn:hover{border-color:var(--a);color:var(--a)} .hdr-btn.on{background:var(--ad);border-color:var(--a);color:var(--a)}
+.hdr-sp{flex:1}
+.hb{padding:0.2rem 0.55rem;font-size:0.68rem;background:var(--s2);border:1px solid var(--b);border-radius:4px;cursor:pointer;color:var(--d2);transition:all .12s}
+.hb:hover{border-color:var(--a);color:var(--a)} .hb.on{background:var(--ad);border-color:var(--a);color:var(--a)}
+.hb-r{color:#fff;background:rgba(248,113,113,0.15);border-color:var(--r);font-weight:600}
 
-.lay{flex:1;display:flex;overflow:hidden}
+/* ── STATE: TOPIC ── */
+.topic-view{flex:1;display:none;align-items:center;justify-content:center;background:var(--s)}
+body.st-topic .topic-view{display:flex}
+body.st-topic .work-view{display:none}
+.tv-box{width:100%;max-width:560px;padding:2rem}
+.tv-box h2{font-size:1.4rem;font-weight:600;margin-bottom:0.3rem;color:var(--t)}
+.tv-box h2 span{color:var(--a)}
+.tv-box p{font-size:0.82rem;color:var(--d2);margin-bottom:1.2rem}
+.tv-ta{width:100%;padding:0.7rem 0.8rem;background:var(--bg);border:1px solid var(--b2);border-radius:6px;color:var(--t);font-size:0.9rem;font-family:inherit;resize:vertical;min-height:80px;line-height:1.5}
+.tv-ta:focus{outline:none;border-color:var(--a)}
+.tv-ta::placeholder{color:#52525b}
+.tv-btns{display:flex;gap:0.5rem;margin-top:0.7rem}
+.btn-plan{flex:1;padding:0.55rem;font-size:0.85rem;font-weight:600;background:var(--a);color:#000;border:none;border-radius:6px;cursor:pointer;transition:all .15s}
+.btn-plan:hover{filter:brightness(1.15)} .btn-plan:disabled{opacity:.35;cursor:not-allowed}
+.tv-manual{margin-top:0.8rem;text-align:center;font-size:0.72rem}
+.tv-manual a{color:var(--d);cursor:pointer;text-decoration:none} .tv-manual a:hover{color:var(--a)}
 
-/* Sidebar */
-.sb{width:300px;min-width:300px;border-right:1px solid var(--b);display:flex;flex-direction:column;background:var(--s);overflow-y:auto}
-.sec{padding:0.7rem 0.8rem;border-bottom:1px solid var(--b)}
-.sec-t{font-size:0.65rem;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;color:var(--d);margin-bottom:0.4rem;display:flex;align-items:center;gap:0.4rem}
-.sec-t .act{margin-left:auto;font-size:0.6rem;color:var(--a);cursor:pointer;font-weight:500}
-.sec-t .act:hover{text-decoration:underline}
+/* ── STATE: WORK (plan-ready / running / done) ── */
+.work-view{flex:1;display:flex;overflow:hidden}
+body.st-topic .work-view{display:none}
+body:not(.st-topic) .work-view{display:flex}
 
-/* Modes */
-.modes{display:grid;grid-template-columns:1fr 1fr;gap:0.3rem}
-.mbtn{padding:0.35rem;font-size:0.72rem;font-weight:500;background:var(--s2);border:1px solid var(--b);border-radius:4px;cursor:pointer;color:var(--d2);text-align:center;transition:all .12s}
-.mbtn:hover{border-color:var(--b2);color:var(--t)} .mbtn.on{background:var(--ad);border-color:var(--a);color:var(--a)}
+/* Plan Card (left) */
+.pc{width:380px;min-width:380px;border-right:1px solid var(--b);background:var(--s);display:flex;flex-direction:column;overflow:hidden}
+.pc-scroll{flex:1;overflow-y:auto;padding:0.8rem}
+.pc-scroll::-webkit-scrollbar{width:4px} .pc-scroll::-webkit-scrollbar-thumb{background:#333;border-radius:2px}
+body.st-running .pc-scroll{opacity:0.5;pointer-events:none}
 
-/* Agent chips */
-.ag-grid{display:flex;flex-wrap:wrap;gap:0.3rem}
-.ag-c{padding:0.25rem 0.5rem;font-size:0.7rem;background:var(--s2);border:1px solid var(--b);border-radius:4px;cursor:pointer;color:var(--d2);transition:all .12s;display:flex;align-items:center;gap:0.25rem;position:relative}
-.ag-c:hover{border-color:var(--b2)} .ag-c.sel{background:var(--ad);border-color:var(--a);color:var(--a)}
-.ag-c .mt{font-size:0.55rem;color:var(--d);font-family:'JetBrains Mono',monospace}
-.ag-c .dot{width:6px;height:6px;border-radius:50%;flex-shrink:0}
-.ag-c .dot.off{background:#3f3f46} .ag-c .dot.working{background:var(--y);box-shadow:0 0 4px rgba(251,191,36,0.5);animation:pulse 1.5s infinite} .ag-c .dot.idle{background:var(--g)}
-.ag-c .edit-ic{display:none;font-size:0.6rem;color:var(--d);margin-left:2px;cursor:pointer}
-.ag-c:hover .edit-ic{display:inline}
-@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
-.ag-new{padding:0.25rem 0.5rem;font-size:0.7rem;background:transparent;border:1px dashed var(--b2);border-radius:4px;cursor:pointer;color:var(--d);transition:all .12s}
-.ag-new:hover{border-color:var(--a);color:var(--a)}
+/* Plan sections */
+.ps{margin-bottom:0.7rem}
+.ps-label{font-size:0.6rem;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;color:var(--d);margin-bottom:0.3rem}
 
-/* Config bar */
-.cfg-bar{display:flex;gap:0.3rem;align-items:center;flex-wrap:wrap}
-.cfg-bar select{padding:0.25rem 0.4rem;background:var(--bg);border:1px solid var(--b);border-radius:4px;color:var(--t);font-size:0.7rem;font-family:inherit;min-width:100px}
-.cfg-bar select:focus{outline:none;border-color:var(--a)}
-.cfg-bar .sm{padding:0.2rem 0.45rem;font-size:0.65rem;background:var(--s2);border:1px solid var(--b);border-radius:3px;cursor:pointer;color:var(--d2)}
-.cfg-bar .sm:hover{border-color:var(--a);color:var(--a)}
+/* Topic in plan */
+.pc-topic{font-size:0.82rem;color:var(--t);padding:0.4rem 0.5rem;background:var(--bg);border:1px solid var(--b);border-radius:4px;cursor:pointer;word-wrap:break-word}
+.pc-topic:hover{border-color:var(--b2)}
+.pc-topic-edit{width:100%;padding:0.4rem 0.5rem;background:var(--bg);border:1px solid var(--a);border-radius:4px;color:var(--t);font-size:0.82rem;font-family:inherit;resize:vertical;min-height:40px}
 
-/* Options */
-.opts{padding:0 0.8rem 0.7rem;display:none}
-.orow{display:flex;gap:0.25rem;margin-bottom:0.25rem;align-items:center}
-.orow select,.orow input{padding:0.25rem 0.4rem;background:var(--bg);border:1px solid var(--b);border-radius:4px;color:var(--t);font-size:0.7rem;font-family:inherit}
-.orow select{min-width:80px} .orow input{flex:1}
-.orow select:focus,.orow input:focus{outline:none;border-color:var(--a)}
-.xbtn{padding:0.15rem 0.35rem;font-size:0.65rem;background:var(--s2);border:1px solid var(--b);border-radius:3px;cursor:pointer;color:var(--d2)}
-.xbtn:hover{border-color:var(--r);color:var(--r)}
-.abtn{padding:0.15rem 0.4rem;font-size:0.65rem;background:var(--s2);border:1px solid var(--b);border-radius:3px;cursor:pointer;color:var(--d2)}
-.abtn:hover{border-color:var(--a);color:var(--a)}
+/* Reasoning */
+.pc-reason{font-size:0.72rem;color:var(--d);line-height:1.5;padding:0.4rem 0.5rem;background:var(--bg);border-radius:4px;border:1px solid var(--b)}
 
-/* Topic */
-.top-area{padding:0.7rem 0.8rem;display:flex;flex-direction:column;gap:0.4rem;border-top:1px solid var(--b);margin-top:auto}
-.top-in{width:100%;padding:0.4rem 0.5rem;background:var(--bg);border:1px solid var(--b);border-radius:4px;color:var(--t);font-size:0.78rem;font-family:inherit;resize:vertical;min-height:50px}
-.top-in:focus{outline:none;border-color:var(--a)} .top-in::placeholder{color:var(--d)}
-.run{padding:0.45rem;font-size:0.78rem;font-weight:600;background:var(--a);color:#000;border:none;border-radius:5px;cursor:pointer;transition:all .12s}
-.run:hover{filter:brightness(1.15)} .run:disabled{opacity:.4;cursor:not-allowed} .run.stop{background:var(--r);color:#fff}
+/* Mode badge */
+.mode-badge{display:inline-block;position:relative}
+.mode-sel{padding:0.3rem 0.7rem;font-size:0.75rem;font-weight:600;background:var(--ad);border:1px solid var(--a);border-radius:5px;color:var(--a);cursor:pointer;appearance:none;font-family:inherit}
+.mode-sel:focus{outline:none}
+.mode-sel option{background:var(--s2);color:var(--t)}
 
-/* Main area with tabs */
-.main{flex:1;display:flex;flex-direction:column;overflow:hidden}
-.tabs{display:flex;border-bottom:1px solid var(--b);background:var(--s);flex-shrink:0}
-.tab{padding:0.4rem 0.8rem;font-size:0.72rem;color:var(--d);cursor:pointer;border-bottom:2px solid transparent;transition:all .12s}
-.tab:hover{color:var(--d2)} .tab.on{color:var(--a);border-bottom-color:var(--a)}
+/* Agent cards */
+.ag-card{background:var(--bg);border:1px solid var(--b);border-radius:5px;margin-bottom:0.35rem;overflow:hidden}
+.ag-head{padding:0.35rem 0.5rem;display:flex;align-items:center;gap:0.35rem;cursor:pointer;font-size:0.75rem}
+.ag-head:hover{background:rgba(255,255,255,0.015)}
+.ag-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0}
+.ag-name{font-weight:500;flex:1}
+.ag-mtag{font-size:0.6rem;color:var(--d);font-family:'JetBrains Mono',monospace;padding:1px 5px;background:var(--s2);border-radius:3px}
+.ag-x{font-size:0.7rem;color:var(--d);cursor:pointer;padding:0 3px} .ag-x:hover{color:var(--r)}
+.ag-chev{font-size:0.55rem;color:var(--d);transition:transform .15s}
+.ag-card.open .ag-chev{transform:rotate(180deg)}
+.ag-body{display:none;padding:0.5rem;border-top:1px solid var(--b)}
+.ag-card.open .ag-body{display:block}
+.ag-row{margin-bottom:0.4rem}
+.ag-row label{display:block;font-size:0.6rem;color:var(--d);margin-bottom:0.15rem;font-weight:500;text-transform:uppercase;letter-spacing:0.03em}
+.ag-row textarea{width:100%;padding:0.35rem 0.4rem;background:var(--s);border:1px solid var(--b);border-radius:4px;color:var(--t);font-size:0.72rem;font-family:inherit;resize:vertical;min-height:60px;line-height:1.4}
+.ag-row select,.ag-row input[type=number]{padding:0.25rem 0.4rem;background:var(--s);border:1px solid var(--b);border-radius:4px;color:var(--t);font-size:0.72rem;font-family:inherit}
+.ag-row textarea:focus,.ag-row select:focus,.ag-row input:focus{outline:none;border-color:var(--a)}
+.ag-tools{display:flex;flex-wrap:wrap;gap:0.2rem}
+.ag-tool{padding:0.15rem 0.4rem;font-size:0.6rem;background:var(--s);border:1px solid var(--b);border-radius:3px;cursor:pointer;color:var(--d2)}
+.ag-tool.on{background:var(--ad);border-color:var(--a);color:var(--a)}
 
-.panel{flex:1;overflow:hidden;display:none} .panel.on{display:flex;flex-direction:column}
+/* Add agent */
+.add-ag{display:flex;gap:0.3rem;align-items:center;margin-top:0.35rem}
+.add-ag input{flex:1;padding:0.3rem 0.5rem;background:var(--bg);border:1px solid var(--b);border-radius:4px;color:var(--t);font-size:0.72rem;font-family:inherit}
+.add-ag input:focus{outline:none;border-color:var(--a)}
+.add-ag input::placeholder{color:#52525b}
+.add-ag button{padding:0.3rem 0.6rem;font-size:0.68rem;font-weight:600;background:var(--a);color:#000;border:none;border-radius:4px;cursor:pointer;white-space:nowrap}
+.add-ag button:disabled{opacity:.4}
 
-/* Output panel */
+/* Mode options */
+.opt-step{display:flex;gap:0.25rem;margin-bottom:0.25rem;align-items:center}
+.opt-step select,.opt-step input{padding:0.25rem 0.4rem;background:var(--bg);border:1px solid var(--b);border-radius:4px;color:var(--t);font-size:0.7rem;font-family:inherit}
+.opt-step select{min-width:80px} .opt-step input{flex:1}
+.opt-step select:focus,.opt-step input:focus{outline:none;border-color:var(--a)}
+.opt-x{padding:0.1rem 0.3rem;font-size:0.6rem;color:var(--d);cursor:pointer;border:1px solid var(--b);border-radius:3px;background:var(--s2)}
+.opt-x:hover{color:var(--r);border-color:var(--r)}
+.opt-add{padding:0.15rem 0.45rem;font-size:0.62rem;color:var(--d2);cursor:pointer;border:1px solid var(--b);border-radius:3px;background:var(--s2)}
+.opt-add:hover{border-color:var(--a);color:var(--a)}
+
+/* Run button area */
+.pc-run{padding:0.7rem 0.8rem;border-top:1px solid var(--b)}
+.btn-run{width:100%;padding:0.5rem;font-size:0.82rem;font-weight:600;background:var(--a);color:#000;border:none;border-radius:6px;cursor:pointer;transition:all .12s}
+.btn-run:hover{filter:brightness(1.15)} .btn-run:disabled{opacity:.35;cursor:not-allowed}
+.btn-run.stop{background:var(--r);color:#fff}
+
+/* Right: output area */
+.out-area{flex:1;display:flex;flex-direction:column;background:var(--s);overflow:hidden}
+.out-tabs{display:flex;border-bottom:1px solid var(--b);background:var(--s2);flex-shrink:0}
+.otab{padding:0.35rem 0.7rem;font-size:0.7rem;color:var(--d);cursor:pointer;border-bottom:2px solid transparent;transition:all .1s}
+.otab:hover{color:var(--d2)} .otab.on{color:var(--a);border-bottom-color:var(--a)}
+.opanel{flex:1;overflow:hidden;display:none} .opanel.on{display:flex;flex-direction:column}
 .out{flex:1;overflow-y:auto;padding:0.8rem;background:var(--s)}
 .out::-webkit-scrollbar{width:4px} .out::-webkit-scrollbar-thumb{background:#333;border-radius:2px}
-.rc{margin-bottom:0.6rem;border:1px solid var(--b);border-radius:5px;overflow:hidden}
-.rc-h{padding:0.35rem 0.6rem;background:var(--s);display:flex;align-items:center;gap:0.4rem;font-size:0.72rem;font-weight:600}
-.rc-h .al{color:var(--a)} .rc-h .el{color:var(--d);font-weight:400;font-family:'JetBrains Mono',monospace;font-size:0.62rem}
-.rc-b{padding:0.6rem;font-size:0.78rem;line-height:1.6;white-space:pre-wrap;word-wrap:break-word;color:var(--d2)}
+.diag{flex:1;overflow:auto;padding:1rem;display:flex;align-items:center;justify-content:center;background:var(--s)}
+.stats{padding:0.3rem 0.7rem;border-top:1px solid var(--b);background:var(--s2);font-size:0.64rem;color:var(--d);font-family:'JetBrains Mono',monospace;flex-shrink:0}
+.ph{flex:1;display:flex;align-items:center;justify-content:center;color:#27272a;font-size:0.8rem}
+
+/* Cards in output */
+.rc{margin-bottom:0.5rem;border:1px solid var(--b);border-radius:5px;overflow:hidden}
+.rc-h{padding:0.3rem 0.5rem;background:var(--s2);display:flex;align-items:center;gap:0.4rem;font-size:0.7rem;font-weight:600}
+.rc-h .al{color:var(--a)} .rc-h .el{color:var(--d);font-weight:400;font-family:'JetBrains Mono',monospace;font-size:0.6rem}
+.rc-b{padding:0.5rem;font-size:0.75rem;line-height:1.6;white-space:pre-wrap;word-wrap:break-word;color:var(--d2)}
 .rc.ev-start{border-color:var(--bl)} .rc.ev-start .rc-h{background:rgba(96,165,250,0.06)} .rc.ev-start .al{color:var(--bl)}
 .rc.ev-done{border-color:var(--g)} .rc.ev-done .rc-h{background:rgba(74,222,128,0.06)} .rc.ev-done .al{color:var(--g)}
 .rc.ev-error{border-color:var(--r)} .rc.ev-error .rc-h{background:rgba(248,113,113,0.06)} .rc.ev-error .al{color:var(--r)}
 .sc{border-color:var(--y)} .sc .rc-h{background:rgba(251,191,36,0.08)} .sc .al{color:var(--y)}
-.stats{padding:0.35rem 0.7rem;border-top:1px solid var(--b);background:var(--s);font-size:0.65rem;color:var(--d);font-family:'JetBrains Mono',monospace;flex-shrink:0}
-.ph{flex:1;display:flex;align-items:center;justify-content:center;color:#27272a;font-size:0.8rem}
 @keyframes spin{to{transform:rotate(360deg)}}
 .spinner{width:10px;height:10px;border:2px solid var(--b2);border-top-color:var(--a);border-radius:50%;animation:spin .6s linear infinite}
-
-/* Diagram panel */
-.diag{flex:1;overflow:auto;padding:1rem;display:flex;align-items:center;justify-content:center;background:var(--s)}
-.diag svg{max-width:100%;height:auto}
-
-/* Agent editor panel */
-.editor{flex:1;overflow-y:auto;padding:1rem;background:var(--s)}
-.ed-card{background:var(--s);border:1px solid var(--b);border-radius:6px;padding:1rem;max-width:500px;margin:0 auto}
-.ed-card h3{font-size:0.85rem;margin-bottom:0.8rem;display:flex;align-items:center;gap:0.4rem}
-.ed-card h3 span{color:var(--a)}
-.ed-row{margin-bottom:0.6rem}
-.ed-row label{display:block;font-size:0.68rem;color:var(--d);margin-bottom:0.2rem;font-weight:500;text-transform:uppercase;letter-spacing:0.03em}
-.ed-row input,.ed-row select,.ed-row textarea{width:100%;padding:0.4rem 0.5rem;background:var(--bg);border:1px solid var(--b);border-radius:4px;color:var(--t);font-size:0.78rem;font-family:inherit}
-.ed-row textarea{min-height:120px;resize:vertical;font-size:0.75rem;line-height:1.5}
-.ed-row input:focus,.ed-row select:focus,.ed-row textarea:focus{outline:none;border-color:var(--a)}
-.ed-tools{display:flex;flex-wrap:wrap;gap:0.25rem;margin-top:0.3rem}
-.ed-tool{padding:0.2rem 0.45rem;font-size:0.65rem;background:var(--s2);border:1px solid var(--b);border-radius:3px;cursor:pointer;color:var(--d2)}
-.ed-tool.on{background:var(--ad);border-color:var(--a);color:var(--a)}
-.ed-btns{display:flex;gap:0.4rem;margin-top:1rem}
-.ed-save{padding:0.4rem 1rem;font-size:0.75rem;font-weight:600;background:var(--a);color:#000;border:none;border-radius:4px;cursor:pointer}
-.ed-save:hover{filter:brightness(1.15)}
-.ed-del{padding:0.4rem 0.8rem;font-size:0.75rem;background:transparent;border:1px solid var(--r);color:var(--r);border-radius:4px;cursor:pointer}
-.ed-del:hover{background:rgba(248,113,113,0.1)}
-.ed-cancel{padding:0.4rem 0.8rem;font-size:0.75rem;background:transparent;border:1px solid var(--b);color:var(--d2);border-radius:4px;cursor:pointer}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
 
 /* History panel */
-.hist{display:none;width:240px;min-width:240px;border-left:1px solid var(--b);background:var(--s);overflow-y:auto}
+.hist{display:none;width:240px;min-width:240px;border-left:1px solid var(--b);background:var(--s);overflow-y:auto;flex-shrink:0}
 .hist.open{display:flex;flex-direction:column}
-.hi{padding:0.5rem 0.7rem;border-bottom:1px solid var(--b);cursor:pointer;transition:background .1s}
+.hi{padding:0.45rem 0.6rem;border-bottom:1px solid var(--b);cursor:pointer;transition:background .1s}
 .hi:hover{background:rgba(255,255,255,0.02)}
-.hi .hm{font-size:0.6rem;font-weight:600;text-transform:uppercase;color:var(--a)}
-.hi .ht{font-size:0.73rem;color:var(--d2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:1px}
-.hi .hx{font-size:0.58rem;color:var(--d);font-family:'JetBrains Mono',monospace;margin-top:2px}
+.hi .hm{font-size:0.58rem;font-weight:600;text-transform:uppercase;color:var(--a)}
+.hi .ht{font-size:0.7rem;color:var(--d2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:1px}
+.hi .hx{font-size:0.55rem;color:var(--d);font-family:'JetBrains Mono',monospace;margin-top:2px}
 
-@media(max-width:768px){.lay{flex-direction:column}.sb{width:100%;min-width:100%;max-height:40vh;border-right:none;border-bottom:1px solid var(--b)}.hist{display:none!important}}
+@media(max-width:768px){.pc{width:100%;min-width:100%;max-height:45vh;border-right:none;border-bottom:1px solid var(--b)}.work-view{flex-direction:column}.hist{display:none!important}}
 </style>
 </head>
-<body>
+<body class="st-topic">
 
 <div class="hdr">
   <h1><span>Agent</span> Orchestra</h1>
-  <div class="st" id="statusBar"></div>
-  <div class="hdr-btn" onclick="fullReset()" style="color:#fff;background:rgba(248,113,113,0.15);border-color:var(--r);font-weight:600">Reset</div>
-  <div class="hdr-btn" id="histBtn" onclick="toggleHist()">History</div>
+  <div class="hdr-sp"></div>
+  <div class="hb hb-r" onclick="fullReset()">Reset</div>
+  <div class="hb" id="histBtn" onclick="toggleHist()">History</div>
 </div>
 
-<div class="lay">
-  <div class="sb">
-    <!-- Config -->
-    <div class="sec">
-      <div class="sec-t">Config</div>
-      <div class="cfg-bar">
-        <select id="cfgSel"><option value="">current</option></select>
-        <div class="sm" onclick="saveConfig()">Save</div>
-        <div class="sm" onclick="loadConfig()">Load</div>
-        <div class="sm" onclick="delConfig()">Del</div>
-      </div>
+<!-- STATE: TOPIC ENTRY -->
+<div class="topic-view">
+  <div class="tv-box">
+    <h2><span>Agent</span> Orchestra</h2>
+    <p>Describe what you want to discuss, build, analyze, or decide. AI will assemble the right team and plan.</p>
+    <textarea class="tv-ta" id="topicIn" placeholder="e.g. Предложи 20 бизнес-идей и выбери 2 лучших..." oninput="document.getElementById('btnPlan').disabled=!this.value.trim()"></textarea>
+    <div class="tv-btns">
+      <button class="btn-plan" id="btnPlan" onclick="doPlan()" disabled>Plan</button>
     </div>
-    <!-- Mode -->
-    <div class="sec">
-      <div class="sec-t">Mode</div>
-      <div class="modes" id="modeSel"></div>
-    </div>
-    <!-- Agents -->
-    <div class="sec">
-      <div class="sec-t">Agents <span class="act" onclick="delAllAgents()" style="color:var(--r)">Clear</span></div>
-      <div class="ag-grid" id="agSel"></div>
-    </div>
-    <!-- Mode options -->
-    <div class="opts" id="optsArea"></div>
-    <!-- Rounds -->
-    <div class="sec" style="padding:0.4rem 0.8rem;border-bottom:none">
-      <div style="display:flex;align-items:center;gap:0.4rem">
-        <span style="font-size:0.65rem;color:var(--d);font-weight:600;text-transform:uppercase;letter-spacing:0.05em">Rounds</span>
-        <input id="roundsIn" type="number" value="2" min="1" max="10" style="width:50px;padding:0.2rem 0.4rem;background:var(--bg);border:1px solid var(--b);border-radius:4px;color:var(--t);font-size:0.72rem;font-family:inherit;text-align:center">
-      </div>
-    </div>
-    <!-- Auto assign status -->
-    <div id="autoStatus" style="display:none;padding:0 0.8rem 0.5rem;font-size:0.7rem;color:var(--d)"></div>
-    <!-- Topic + Run -->
-    <div class="top-area">
-      <textarea class="top-in" id="topicIn" placeholder="Enter topic or task..."></textarea>
-      <div style="display:flex;gap:0.3rem">
-        <button class="run" id="assignBtn" onclick="autoAssign()" style="display:none;flex:1;background:var(--s2);color:var(--a);border:1px solid var(--a)">Assign agents</button>
-        <button class="run" id="runBtn" onclick="doRun()" style="flex:1">Run</button>
-      </div>
+    <div class="tv-manual"><a onclick="goManual()">or configure manually</a></div>
+  </div>
+</div>
+
+<!-- STATE: WORK (plan-ready / running / done) -->
+<div class="work-view">
+  <div class="pc">
+    <div class="pc-scroll" id="planCard"></div>
+    <div class="pc-run">
+      <button class="btn-run" id="btnRun" onclick="doRun()">Run</button>
     </div>
   </div>
-
-  <div class="main">
-    <div class="tabs">
-      <div class="tab on" data-p="output" onclick="switchTab(this)">Output</div>
-      <div class="tab" data-p="diagram" onclick="switchTab(this)">Diagram</div>
-      <div class="tab" data-p="editor" onclick="switchTab(this)">Agent Editor</div>
+  <div class="out-area">
+    <div class="out-tabs">
+      <div class="otab on" data-p="output" onclick="switchTab(this)">Output</div>
+      <div class="otab" data-p="diagram" onclick="switchTab(this)">Diagram</div>
     </div>
-    <div class="panel on" id="p-output">
-      <div class="out" id="output"><div class="ph">Select mode, agents, and topic</div></div>
+    <div class="opanel on" id="p-output">
+      <div class="out" id="output"><div class="ph">Plan is ready. Press Run to start.</div></div>
       <div class="stats" id="statsBar" style="display:none"></div>
     </div>
-    <div class="panel" id="p-diagram">
+    <div class="opanel" id="p-diagram">
       <div class="diag" id="diagArea"></div>
     </div>
-    <div class="panel" id="p-editor">
-      <div class="editor" id="editorArea"><div class="ph">Click an agent to edit</div></div>
-    </div>
   </div>
-
   <div class="hist" id="histPanel">
-    <div class="sec" style="flex-shrink:0"><div class="sec-t">History</div></div>
+    <div style="padding:0.5rem 0.6rem;border-bottom:1px solid var(--b);font-size:0.6rem;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;color:var(--d)">History</div>
     <div id="histList" style="flex:1;overflow-y:auto"></div>
   </div>
 </div>
 
 <script>
-const BASE = '/agents';
-const MODES = {auto:'Auto',discuss:'Discussion',pipeline:'Pipeline',parallel:'Parallel',consensus:'Consensus'};
-const ALL_TOOLS = ['Read','Write','Edit','Bash','Glob','Grep','WebSearch','WebFetch'];
-const PIPELINE_ACTIONS = ['design','implement','review','test'];
-const MODEL_COLORS = {opus:'#c084fc',sonnet:'#60a5fa',haiku:'#4ade80'};
+const BASE='/agents';
+const ALL_TOOLS=['Read','Write','Edit','Bash','Glob','Grep','WebSearch','WebFetch'];
+const MC={opus:'#c084fc',sonnet:'#60a5fa',haiku:'#4ade80'};
+const MODE_NAMES={discuss:'Discussion',pipeline:'Pipeline',parallel:'Parallel',consensus:'Consensus'};
 
-// No hardcoded templates — AI generates configs from any role name
+// ── State ──
+let S={
+  phase:'topic', // topic|planning|plan-ready|running|done
+  topic:'',
+  plan:null, // {mode,reasoning,agents[],options:{rounds,steps[],tasks[]}}
+  agents:{}, // global registry
+  ws:null,
+  agentActivity:{},
+};
 
-let agents={}, selectedMode='auto', selectedAgents=new Set(), ws=null, running=false, editingAgent=null;
-let pipeSteps=[{agent:'architect',action:'design'},{agent:'developer',action:'implement'},{agent:'reviewer',action:'review'}];
-let parTasks=[{agent:'developer',description:''}];
-let agentActivity={};
+// ── Phase transitions ──
+function setPhase(p){
+  S.phase=p;
+  document.body.className='st-'+p;
+  if(p==='topic')document.body.className='st-topic';
+  else document.body.className=''; // work view
+  renderPlan();
+}
 
 // ── Init ──
 async function init(){
-  try{
-    const d=await(await fetch(BASE+'/api/config')).json();
-    agents=d.agents;
-    selectedAgents=new Set(Object.keys(agents));
-    render();
-    loadConfigs();
-    drawDiagram();
-    setInterval(pollActivity,3000);
-  }catch(e){document.getElementById('statusBar').textContent='Failed to load'}
+  const d=await(await fetch(BASE+'/api/config')).json();
+  S.agents=d.agents;
+  setInterval(pollActivity,3000);
 }
 
-let autoAssigned=false;
-function render(){renderModes();renderAgents();renderOpts();document.getElementById('assignBtn').style.display=(selectedMode==='auto'||autoAssigned)?'block':'none'}
-
-// ── Modes ──
-function renderModes(){
-  document.getElementById('modeSel').innerHTML=Object.entries(MODES).map(([k,v])=>
-    `<div class="mbtn ${k===selectedMode?'on':''}" onclick="selMode('${k}')">${v}</div>`).join('');
-}
-function selMode(m){selectedMode=m;render();
-  document.getElementById('assignBtn').style.display=m==='auto'?'block':'none';
-  document.getElementById('autoStatus').style.display='none';
-}
-
-// ── Agents ──
-function renderAgents(){
-  const el=document.getElementById('agSel');
-  el.innerHTML=Object.entries(agents).map(([k,v])=>{
-    const st=agentActivity[v.display_name]||'off';
-    return `<div class="ag-c ${selectedAgents.has(k)?'sel':''}" onclick="toggleAg(event,'${k}')">
-      <span class="dot ${st}"></span>${v.display_name} <span class="mt">${v.model}</span>
-      <span class="edit-ic" onclick="event.stopPropagation();editAgent('${k}')">&#9998;</span>
-      <span class="edit-ic" onclick="event.stopPropagation();quickDelAgent('${k}')" style="color:var(--r)">&times;</span>
-    </div>`;
-  }).join('')+`<div class="ag-new" onclick="newAgent()">+</div>`;
-}
-function toggleAg(e,n){if(e.target.classList.contains('edit-ic'))return;selectedAgents.has(n)?selectedAgents.delete(n):selectedAgents.add(n);renderAgents()}
-async function quickDelAgent(name){
-  await fetch(BASE+'/api/agents/'+name,{method:'DELETE'});
-  const d=await(await fetch(BASE+'/api/config')).json();agents=d.agents;
-  selectedAgents.delete(name);render();drawDiagram();
-}
-async function delAllAgents(){
-  await Promise.all(Object.keys(agents).map(k=>fetch(BASE+'/api/agents/'+k,{method:'DELETE'})));
-  agents={};selectedAgents.clear();render();drawDiagram();
-}
-async function resetAgents(){
-  await fetch(BASE+'/api/agents/reset',{method:'POST'});
-  const d=await(await fetch(BASE+'/api/config')).json();agents=d.agents;
-  selectedAgents=new Set(Object.keys(agents));render();drawDiagram();
-}
-async function fullReset(){
-  // Stop any running task
-  if(running){if(ws){ws.onclose=null;ws.close();ws=null}fin()}
-  // Reset agents to defaults
-  await fetch(BASE+'/api/agents/reset',{method:'POST'});
-  const d=await(await fetch(BASE+'/api/config')).json();agents=d.agents;
-  selectedAgents=new Set(Object.keys(agents));
-  // Clear UI
-  selectedMode='auto';autoPlan=null;autoAssigned=false;
-  document.getElementById('output').innerHTML='<div class="ph">Select mode, agents, and topic</div>';
-  document.getElementById('statsBar').style.display='none';
-  document.getElementById('topicIn').value='';
-  document.getElementById('autoStatus').style.display='none';
-  document.getElementById('editorArea').innerHTML='<div class="ph">Click an agent to edit</div>';
-  render();drawDiagram();
-}
-
-// ── Options ──
-function renderOpts(){
-  const a=document.getElementById('optsArea');
-  if(selectedMode==='pipeline'){
-    a.style.display='block';
-    a.innerHTML='<div class="sec-t">Steps</div>'+pipeSteps.map((s,i)=>
-      `<div class="orow"><select onchange="pipeSteps[${i}].agent=this.value">${agOpts(s.agent)}</select><select onchange="pipeSteps[${i}].action=this.value">${PIPELINE_ACTIONS.map(x=>`<option ${x===s.action?'selected':''}>${x}</option>`).join('')}</select><span class="xbtn" onclick="pipeSteps.splice(${i},1);renderOpts()">x</span></div>`
-    ).join('')+`<span class="abtn" onclick="pipeSteps.push({agent:'developer',action:'implement'});renderOpts()">+ step</span>`;
-  }else if(selectedMode==='parallel'){
-    a.style.display='block';
-    a.innerHTML='<div class="sec-t">Subtasks</div>'+parTasks.map((t,i)=>
-      `<div class="orow"><select onchange="parTasks[${i}].agent=this.value">${agOpts(t.agent)}</select><input value="${esc(t.description)}" placeholder="subtask..." onchange="parTasks[${i}].description=this.value"><span class="xbtn" onclick="parTasks.splice(${i},1);renderOpts()">x</span></div>`
-    ).join('')+`<span class="abtn" onclick="parTasks.push({agent:'developer',description:''});renderOpts()">+ task</span>`;
-  }else{a.style.display='none';a.innerHTML=''}
-}
-function agOpts(s){return Object.entries(agents).map(([k,v])=>`<option value="${k}" ${k===s?'selected':''}>${v.display_name}</option>`).join('')}
-
-// ── Config Save/Load ──
-async function loadConfigs(){
-  const cfgs=await(await fetch(BASE+'/api/configs')).json();
-  const sel=document.getElementById('cfgSel');
-  sel.innerHTML='<option value="">current</option>'+cfgs.map(c=>`<option value="${c.name}">${c.name}${c.runs?' ('+c.runs+' runs)':''}</option>`).join('');
-}
-async function saveConfig(){
-  const name=prompt('Config name:');if(!name)return;
-  await fetch(BASE+'/api/configs/'+encodeURIComponent(name),{method:'POST'});
-  loadConfigs();
-}
-async function loadConfig(){
-  const name=document.getElementById('cfgSel').value;if(!name)return;
-  const r=await(await fetch(BASE+'/api/configs/'+encodeURIComponent(name)+'/load',{method:'POST'})).json();
-  const d=await(await fetch(BASE+'/api/config')).json();agents=d.agents;selectedAgents=new Set(Object.keys(agents));render();drawDiagram();
-  if(histOpen)loadHist();
-  document.getElementById('autoStatus').style.display='block';
-  document.getElementById('autoStatus').innerHTML=`<span style="color:var(--g)">&#10003;</span> Loaded "${esc(name)}" — ${r.runs||0} conversations restored`;
-  setTimeout(()=>{document.getElementById('autoStatus').style.display='none'},4000);
-}
-async function delConfig(){
-  const name=document.getElementById('cfgSel').value;if(!name)return;
-  if(!confirm('Delete config "'+name+'"?'))return;
-  await fetch(BASE+'/api/configs/'+encodeURIComponent(name),{method:'DELETE'});
-  loadConfigs();
-}
-
-// ── Agent Editor ──
-function editAgent(name){
-  editAgentWithData(name, agents[name]||{}, false);
-}
-function editAgentWithData(name, a, isNew){
-  editingAgent=name;
-  switchTab(document.querySelector('[data-p="editor"]'));
-  const tools=a.allowed_tools||[];
-  const idReadonly=name&&!isNew;
-  document.getElementById('editorArea').innerHTML=`
-    <div class="ed-card">
-      <h3><span>&#9998;</span> ${idReadonly?'Edit':'New'} Agent</h3>
-      <div class="ed-row"><label>ID (lowercase)</label><input id="ed-id" value="${esc(name)}" ${idReadonly?'readonly style="opacity:0.5"':'placeholder="e.g. my_agent"'}></div>
-      <div class="ed-row"><label>Display Name</label><input id="ed-dn" value="${esc(a.display_name||'')}"></div>
-      <div class="ed-row"><label>Model</label><select id="ed-mod"><option ${a.model==='opus'?'selected':''}>opus</option><option ${a.model==='sonnet'?'selected':''}>sonnet</option><option ${a.model==='haiku'?'selected':''}>haiku</option></select></div>
-      <div class="ed-row"><label>Max Turns</label><input id="ed-mt" type="number" value="${a.max_turns||50}"></div>
-      <div class="ed-row"><label>Tools</label><div class="ed-tools">${ALL_TOOLS.map(t=>`<div class="ed-tool ${tools.includes(t)?'on':''}" onclick="this.classList.toggle('on')" data-t="${t}">${t}</div>`).join('')}</div></div>
-      <div class="ed-row"><label>System Prompt</label><textarea id="ed-sp">${esc(a.system_prompt||'')}</textarea></div>
-      <div class="ed-btns">
-        <button class="ed-save" onclick="saveAgent()">Save</button>
-        ${idReadonly?`<button class="ed-del" onclick="delAgent('${name}')">Delete</button>`:''}
-        <button class="ed-cancel" onclick="editingAgent=null;document.getElementById('editorArea').innerHTML='<div class=ph>Click an agent to edit</div>'">Cancel</button>
-      </div>
-    </div>`;
-}
-function newAgent(){
-  switchTab(document.querySelector('[data-p="editor"]'));
-  document.getElementById('editorArea').innerHTML=`
-    <div class="ed-card">
-      <h3><span>+</span> New Agent</h3>
-      <p style="font-size:0.78rem;color:var(--d2);margin-bottom:0.8rem">Enter any role name and click Auto-fill. AI will generate the config.</p>
-      <div style="display:flex;gap:0.4rem;align-items:center">
-        <input id="newRoleName" style="flex:1;padding:0.45rem 0.6rem;background:var(--bg);border:1px solid var(--b);border-radius:5px;color:var(--t);font-size:0.85rem;font-family:inherit" placeholder="e.g. Marketing Analyst, Database Expert, API Designer...">
-        <button id="autoFillBtn" onclick="autoFillAgent()" style="padding:0.45rem 0.9rem;font-size:0.78rem;font-weight:600;background:var(--a);color:#000;border:none;border-radius:5px;cursor:pointer;white-space:nowrap;transition:all .12s">Auto-fill</button>
-      </div>
-      <div id="autoFillStatus" style="margin-top:0.5rem;font-size:0.72rem;color:var(--d)"></div>
-    </div>`;
-  setTimeout(()=>document.getElementById('newRoleName')?.focus(),100);
-}
-
-async function autoFillAgent(){
-  const name=document.getElementById('newRoleName').value.trim();
-  if(!name)return;
-  const btn=document.getElementById('autoFillBtn');
-  const status=document.getElementById('autoFillStatus');
-  btn.disabled=true;btn.textContent='Generating...';btn.style.opacity='0.5';
-  status.innerHTML='<div style="display:flex;align-items:center;gap:0.4rem"><div class="spinner"></div> AI is generating config for "'+esc(name)+'"...</div>';
-  try{
-    const r=await fetch(BASE+'/api/agents/generate',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({role_name:name})});
-    const data=await r.json();
-    if(data.error){status.textContent='Error: '+data.error;btn.disabled=false;btn.textContent='Auto-fill';btn.style.opacity='1';return}
-    editAgentWithData(data.id||'',{
-      display_name:data.display_name||name,
-      model:data.model||'sonnet',
-      system_prompt:data.system_prompt||'',
-      allowed_tools:data.allowed_tools||['Read','Glob','Grep'],
-      max_turns:data.max_turns||50,
-    },true);
-  }catch(e){
-    status.textContent='Error: '+e.message;
-    btn.disabled=false;btn.textContent='Auto-fill';btn.style.opacity='1';
-  }
-}
-
-async function saveAgent(){
-  const id=(document.getElementById('ed-id').value||'').trim().toLowerCase().replace(/[^a-z0-9_]/g,'');
-  if(!id){alert('ID required');return}
-  const tools=[...document.querySelectorAll('.ed-tool.on')].map(e=>e.dataset.t);
-  const body={
-    display_name:document.getElementById('ed-dn').value.trim()||id,
-    model:document.getElementById('ed-mod').value,
-    system_prompt:document.getElementById('ed-sp').value,
-    allowed_tools:tools,
-    max_turns:parseInt(document.getElementById('ed-mt').value)||50,
-  };
-  await fetch(BASE+'/api/agents/'+id,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
-  const d=await(await fetch(BASE+'/api/config')).json();agents=d.agents;
-  if(!selectedAgents.has(id))selectedAgents.add(id);
-  render();drawDiagram();
-  editAgent(id);
-}
-
-async function delAgent(name){
-  await fetch(BASE+'/api/agents/'+name,{method:'DELETE'});
-  const d=await(await fetch(BASE+'/api/config')).json();agents=d.agents;
-  selectedAgents.delete(name);render();drawDiagram();
-  document.getElementById('editorArea').innerHTML='<div class="ph">Agent deleted</div>';
-}
-
-// ── Diagram ──
-function drawDiagram(){
-  const area=document.getElementById('diagArea');
-  const names=Object.entries(agents);
-  const n=names.length;
-  if(!n){area.innerHTML='<div class="ph">No agents</div>';return}
-
-  const W=600,H=400,cx=W/2,cy=H/2,R=140;
-  let svg=`<svg viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg" style="font-family:Inter,sans-serif">`;
-  // Background
-  svg+=`<rect width="${W}" height="${H}" fill="#09090b" rx="8"/>`;
-  // Center: coordinator
-  svg+=`<circle cx="${cx}" cy="${cy}" r="28" fill="#18181b" stroke="#818cf8" stroke-width="1.5"/>`;
-  svg+=`<text x="${cx}" y="${cy+1}" text-anchor="middle" dominant-baseline="middle" fill="#818cf8" font-size="9" font-weight="600">Coordinator</text>`;
-
-  // Mode label
-  svg+=`<text x="${cx}" y="24" text-anchor="middle" fill="#71717a" font-size="10">${MODES[selectedMode]||selectedMode} mode</text>`;
-
-  names.forEach(([k,v],i)=>{
-    const angle=(2*Math.PI*i/n)-Math.PI/2;
-    const x=cx+R*Math.cos(angle), y=cy+R*Math.sin(angle);
-    const isSel=selectedAgents.has(k);
-    const st=agentActivity[v.display_name]||'off';
-    const mc=MODEL_COLORS[v.model]||'#a1a1aa';
-
-    // Line to center
-    if(isSel) svg+=`<line x1="${cx}" y1="${cy}" x2="${x}" y2="${y}" stroke="${st==='working'?'#fbbf24':'#27272a'}" stroke-width="${st==='working'?1.5:0.8}" ${st==='working'?'stroke-dasharray="4 3"':''}/>`;
-
-    // Node
-    const fill=isSel?'#18181b':'#111113';
-    const stroke=st==='working'?'#fbbf24':isSel?mc:'#27272a';
-    const sw=st==='working'?2:1;
-    svg+=`<circle cx="${x}" cy="${y}" r="24" fill="${fill}" stroke="${stroke}" stroke-width="${sw}"/>`;
-
-    // Activity glow
-    if(st==='working') svg+=`<circle cx="${x}" cy="${y}" r="24" fill="none" stroke="#fbbf24" stroke-width="1" opacity="0.3"><animate attributeName="r" from="24" to="32" dur="1.5s" repeatCount="indefinite"/><animate attributeName="opacity" from="0.3" to="0" dur="1.5s" repeatCount="indefinite"/></circle>`;
-
-    // Name + model
-    svg+=`<text x="${x}" y="${y-3}" text-anchor="middle" fill="${isSel?'#e4e4e7':'#52525b'}" font-size="8.5" font-weight="500">${v.display_name}</text>`;
-    svg+=`<text x="${x}" y="${y+8}" text-anchor="middle" fill="${mc}" font-size="6.5" font-family="JetBrains Mono,monospace">${v.model}</text>`;
-
-    // Status dot
-    const dc=st==='working'?'#fbbf24':st==='idle'?'#4ade80':'#3f3f46';
-    svg+=`<circle cx="${x+16}" cy="${y-16}" r="3.5" fill="${dc}"/>`;
-  });
-
-  // Mode-specific arrows for selected agents
-  const selArr=[...selectedAgents].filter(k=>agents[k]);
-  if(selectedMode==='pipeline'&&selArr.length>1){
-    for(let i=0;i<selArr.length-1;i++){
-      const idx1=names.findIndex(([k])=>k===selArr[i]);
-      const idx2=names.findIndex(([k])=>k===selArr[i+1]);
-      if(idx1<0||idx2<0)continue;
-      const a1=(2*Math.PI*idx1/n)-Math.PI/2, a2=(2*Math.PI*idx2/n)-Math.PI/2;
-      const x1=cx+R*Math.cos(a1),y1=cy+R*Math.sin(a1),x2=cx+R*Math.cos(a2),y2=cy+R*Math.sin(a2);
-      const mx=(x1+x2)/2+15*Math.cos((a1+a2)/2+0.3), my=(y1+y2)/2+15*Math.sin((a1+a2)/2+0.3);
-      svg+=`<path d="M${x1+20*Math.cos(a2-a1>0?0.3:-0.3)} ${y1+20*Math.sin(a2-a1>0?0.3:-0.3)} Q${mx} ${my} ${x2-20*Math.cos(a2-a1>0?0.3:-0.3)} ${y2-20*Math.sin(a2-a1>0?0.3:-0.3)}" fill="none" stroke="#4ade8044" stroke-width="1.5" marker-end="url(#arrow)"/>`;
-    }
-    svg+=`<defs><marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 0L10 5L0 10z" fill="#4ade80"/></marker></defs>`;
-  }
-
-  svg+=`</svg>`;
-  area.innerHTML=svg;
-}
-
-async function pollActivity(){
-  try{
-    const d=await(await fetch(BASE+'/api/activity')).json();
-    const changed=JSON.stringify(d)!==JSON.stringify(agentActivity);
-    agentActivity=d;
-    if(changed){renderAgents();drawDiagram()}
-  }catch(e){}
-}
-
-// ── Tabs ──
-function switchTab(el){
-  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('on'));
-  document.querySelectorAll('.panel').forEach(p=>p.classList.remove('on'));
-  el.classList.add('on');
-  document.getElementById('p-'+el.dataset.p).classList.add('on');
-  if(el.dataset.p==='diagram')drawDiagram();
-}
-
-// ── Run ──
-let autoPlan=null; // cached plan from autoAssign
-
-async function autoAssign(){
+// ── PLAN ──
+async function doPlan(){
   const topic=document.getElementById('topicIn').value.trim();
-  if(!topic){document.getElementById('autoStatus').style.display='block';document.getElementById('autoStatus').textContent='Enter a topic first';return}
-  const btn=document.getElementById('assignBtn');
-  btn.disabled=true;btn.textContent='Planning...';
-  document.getElementById('autoStatus').style.display='block';
-  document.getElementById('autoStatus').innerHTML='<div style="display:flex;align-items:center;gap:0.4rem"><div class="spinner"></div> AI is choosing agents and mode...</div>';
+  if(!topic)return;
+  S.topic=topic;
+  S.phase='planning';
+  document.getElementById('btnPlan').disabled=true;
+  document.getElementById('btnPlan').textContent='Planning...';
   try{
     const r=await fetch(BASE+'/api/auto-plan',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({topic})});
     const plan=await r.json();
-    if(plan.error){document.getElementById('autoStatus').textContent='Error: '+plan.error;btn.disabled=false;btn.textContent='Assign agents';return}
+    if(plan.error){alert('Error: '+plan.error);S.phase='topic';document.getElementById('btnPlan').disabled=false;document.getElementById('btnPlan').textContent='Plan';return}
     // Create missing agents
     for(const ag of plan.agents||[]){
-      if(!agents[ag.id]){
-        await fetch(BASE+'/api/agents/'+ag.id,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(ag)});
-      }
+      if(!S.agents[ag.id])await fetch(BASE+'/api/agents/'+ag.id,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(ag)});
     }
-    const d=await(await fetch(BASE+'/api/config')).json();agents=d.agents;
-    const agIds=(plan.agents||[]).map(a=>a.id);
-    selectedAgents=new Set(agIds);
-    selectedMode=plan.mode||'discuss';
-    autoAssigned=true;
-    autoPlan=plan;
-    if(plan.options?.rounds)document.getElementById('roundsIn').value=plan.options.rounds;
-    render();drawDiagram();
-    // Show assigned info
-    const agNames=(plan.agents||[]).map(a=>a.display_name).join(', ');
-    document.getElementById('autoStatus').style.display='block';
-    document.getElementById('autoStatus').innerHTML=`<span style="color:var(--g)">&#10003;</span> <b style="color:var(--t)">${MODES[plan.mode]||plan.mode}</b> &mdash; ${agNames}<br><span style="color:var(--d2)">${plan.reasoning||''}</span>`;
-    // Keep assign button visible but update text
-    document.getElementById('assignBtn').style.display='block';
-  }catch(e){document.getElementById('autoStatus').textContent='Error: '+e.message}
-  btn.disabled=false;btn.textContent='Assign agents';
+    const d=await(await fetch(BASE+'/api/config')).json();S.agents=d.agents;
+    S.plan=plan;
+    S.plan.options=S.plan.options||{};
+    setPhase('plan-ready');
+  }catch(e){
+    alert('Planning failed: '+e.message);
+    S.phase='topic';
+  }
+  document.getElementById('btnPlan').disabled=false;
+  document.getElementById('btnPlan').textContent='Plan';
 }
 
+function goManual(){
+  S.topic=document.getElementById('topicIn').value.trim();
+  S.plan={mode:'discuss',reasoning:'',agents:[],options:{rounds:2}};
+  setPhase('plan-ready');
+}
+
+// ── RENDER PLAN CARD ──
+function renderPlan(){
+  if(S.phase==='topic'||!S.plan)return;
+  const P=S.plan;
+  const el=document.getElementById('planCard');
+  const readonly=S.phase==='running';
+
+  let h='';
+  // Topic
+  h+=`<div class="ps"><div class="ps-label">Topic</div><div class="pc-topic" onclick="if('${S.phase}'!=='running')editTopic()">${esc(S.topic)}</div></div>`;
+  // Reasoning
+  if(P.reasoning)h+=`<div class="ps"><div class="ps-label">AI Reasoning</div><div class="pc-reason">${esc(P.reasoning)}</div></div>`;
+  // Mode
+  h+=`<div class="ps"><div class="ps-label">Mode</div><div class="mode-badge"><select class="mode-sel" onchange="S.plan.mode=this.value;renderPlan()">${Object.entries(MODE_NAMES).map(([k,v])=>`<option value="${k}" ${P.mode===k?'selected':''}>${v}</option>`).join('')}</select></div></div>`;
+  // Agents
+  h+=`<div class="ps"><div class="ps-label">Agents (${P.agents.length})</div>`;
+  P.agents.forEach((a,i)=>{
+    const mc=MC[a.model]||'#a1a1aa';
+    const st=S.agentActivity[a.display_name]||'off';
+    const dotCl=st==='working'?'background:var(--y);animation:pulse 1.5s infinite':st==='idle'?'background:var(--g)':'background:#3f3f46';
+    h+=`<div class="ag-card" id="ag-${i}">
+      <div class="ag-head" onclick="document.getElementById('ag-${i}').classList.toggle('open')">
+        <span class="ag-dot" style="${dotCl}"></span>
+        <span class="ag-name">${esc(a.display_name)}</span>
+        <span class="ag-mtag" style="color:${mc}">${a.model}</span>
+        <span class="ag-x" onclick="event.stopPropagation();S.plan.agents.splice(${i},1);renderPlan()">&times;</span>
+        <span class="ag-chev">&#9660;</span>
+      </div>
+      <div class="ag-body">
+        <div class="ag-row"><label>System Prompt</label><textarea oninput="S.plan.agents[${i}].system_prompt=this.value">${esc(a.system_prompt||'')}</textarea></div>
+        <div class="ag-row"><label>Model</label><select onchange="S.plan.agents[${i}].model=this.value;renderPlan()"><option ${a.model==='opus'?'selected':''}>opus</option><option ${a.model==='sonnet'?'selected':''}>sonnet</option><option ${a.model==='haiku'?'selected':''}>haiku</option></select></div>
+        <div class="ag-row"><label>Tools</label><div class="ag-tools">${ALL_TOOLS.map(t=>`<div class="ag-tool ${(a.allowed_tools||[]).includes(t)?'on':''}" onclick="toggleTool(${i},'${t}')">${t}</div>`).join('')}</div></div>
+        <div class="ag-row"><label>Max Turns</label><input type="number" value="${a.max_turns||50}" onchange="S.plan.agents[${i}].max_turns=parseInt(this.value)" style="width:60px"></div>
+      </div>
+    </div>`;
+  });
+  h+=`<div class="add-ag"><input id="addAgIn" placeholder="Role name (e.g. Data Analyst)..." onkeydown="if(event.key==='Enter')addAgent()"><button onclick="addAgent()" id="addAgBtn">+ Add</button></div>`;
+  h+=`</div>`;
+  // Mode options
+  h+=`<div class="ps"><div class="ps-label">Options</div>`;
+  if(P.mode==='pipeline'){
+    const steps=P.options.steps||[];
+    steps.forEach((s,i)=>{
+      h+=`<div class="opt-step"><select onchange="S.plan.options.steps[${i}].agent=this.value">${agOpts(s.agent)}</select><span style="color:var(--d);font-size:0.7rem">→</span><input value="${esc(s.action||'')}" placeholder="action..." onchange="S.plan.options.steps[${i}].action=this.value"><span class="opt-x" onclick="S.plan.options.steps.splice(${i},1);renderPlan()">×</span></div>`;
+    });
+    h+=`<span class="opt-add" onclick="if(!S.plan.options.steps)S.plan.options.steps=[];S.plan.options.steps.push({agent:S.plan.agents[0]?.id||'',action:''});renderPlan()">+ step</span>`;
+  }else if(P.mode==='parallel'){
+    const tasks=P.options.tasks||[];
+    tasks.forEach((t,i)=>{
+      h+=`<div class="opt-step"><select onchange="S.plan.options.tasks[${i}].agent=this.value">${agOpts(t.agent)}</select><input value="${esc(t.description||'')}" placeholder="subtask..." onchange="S.plan.options.tasks[${i}].description=this.value"><span class="opt-x" onclick="S.plan.options.tasks.splice(${i},1);renderPlan()">×</span></div>`;
+    });
+    h+=`<span class="opt-add" onclick="if(!S.plan.options.tasks)S.plan.options.tasks=[];S.plan.options.tasks.push({agent:S.plan.agents[0]?.id||'',description:''});renderPlan()">+ task</span>`;
+  }else{
+    const rounds=P.options.rounds||2;
+    h+=`<div style="display:flex;align-items:center;gap:0.4rem"><span style="font-size:0.72rem;color:var(--d2)">Rounds</span><input type="number" value="${rounds}" min="1" max="10" style="width:50px;padding:0.25rem 0.4rem;background:var(--bg);border:1px solid var(--b);border-radius:4px;color:var(--t);font-size:0.72rem;text-align:center" onchange="S.plan.options.rounds=parseInt(this.value)"></div>`;
+  }
+  h+=`</div>`;
+  el.innerHTML=h;
+  drawDiagram();
+}
+
+function editTopic(){
+  const el=document.querySelector('.pc-topic');
+  if(!el)return;
+  const ta=document.createElement('textarea');
+  ta.className='pc-topic-edit';ta.value=S.topic;
+  ta.onblur=function(){S.topic=this.value;renderPlan()};
+  ta.onkeydown=function(e){if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();this.blur()}};
+  el.replaceWith(ta);ta.focus();
+}
+
+function toggleTool(agIdx,tool){
+  const a=S.plan.agents[agIdx];
+  if(!a.allowed_tools)a.allowed_tools=[];
+  const idx=a.allowed_tools.indexOf(tool);
+  if(idx>=0)a.allowed_tools.splice(idx,1);else a.allowed_tools.push(tool);
+  renderPlan();
+}
+
+function agOpts(sel){
+  return S.plan.agents.map(a=>`<option value="${a.id}" ${a.id===sel?'selected':''}>${a.display_name}</option>`).join('');
+}
+
+// ── ADD AGENT ──
+async function addAgent(){
+  const inp=document.getElementById('addAgIn');
+  const btn=document.getElementById('addAgBtn');
+  const name=inp.value.trim();if(!name)return;
+  btn.disabled=true;btn.textContent='...';
+  try{
+    const r=await fetch(BASE+'/api/agents/generate',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({role_name:name})});
+    const ag=await r.json();
+    if(ag.error){btn.textContent='+ Add';btn.disabled=false;return}
+    // Save to backend
+    await fetch(BASE+'/api/agents/'+ag.id,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(ag)});
+    const d=await(await fetch(BASE+'/api/config')).json();S.agents=d.agents;
+    S.plan.agents.push(ag);
+    inp.value='';
+    renderPlan();
+  }catch(e){}
+  btn.textContent='+ Add';btn.disabled=false;
+}
+
+// ── RUN ──
 async function doRun(){
-  if(running){if(ws){ws.onclose=null;ws.onerror=null;ws.onmessage=null;ws.close();ws=null}fin();addCard('System','error','Stopped by user');return}
-  const topic=document.getElementById('topicIn').value.trim();if(!topic)return;
-  const out=document.getElementById('output');out.innerHTML='';
+  if(S.phase==='running'){
+    if(S.ws){S.ws.onclose=null;S.ws.onerror=null;S.ws.onmessage=null;S.ws.close();S.ws=null}
+    setPhase('done');addCard('System','error','Stopped');return;
+  }
+  if(!S.plan||!S.plan.agents.length)return;
+  document.getElementById('output').innerHTML='';
   document.getElementById('statsBar').style.display='none';
   switchTab(document.querySelector('[data-p="output"]'));
-  document.getElementById('assignBtn').style.display='none';
-  const btn=document.getElementById('runBtn');btn.textContent='Stop';btn.classList.add('stop');running=true;
+  setPhase('running');
+  const btn=document.getElementById('btnRun');btn.textContent='Stop';btn.classList.add('stop');
 
-  // Auto mode: use cached plan from autoAssign, or plan now
-  let mode=selectedMode, agList=[...selectedAgents], opts={};
-  if(selectedMode==='auto'||autoPlan){
-    if(autoPlan){
-      // Use cached plan from "Assign agents" button
-      mode=autoPlan.mode||'discuss';
-      agList=(autoPlan.agents||[]).map(a=>a.id);
-      opts=autoPlan.options||{};
-      const agNames=(autoPlan.agents||[]).map(a=>a.display_name).join(', ');
-      addCard('Auto','done',`Mode: **${MODES[mode]||mode}**\nAgents: ${agNames}\n${autoPlan.reasoning||''}`);
-      autoPlan=null;
-    }else{
-      // No pre-plan, do it now
-      document.getElementById('statusBar').textContent='planning...';
-      addCard('Auto','start','AI is analyzing the task and choosing agents + mode...');
-      try{
-        const r=await fetch(BASE+'/api/auto-plan',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({topic})});
-        const plan=await r.json();
-        if(plan.error){addCard('Auto','error',plan.error);fin();return}
-        for(const ag of plan.agents||[]){
-          if(!agents[ag.id]) await fetch(BASE+'/api/agents/'+ag.id,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(ag)});
-        }
-        const d=await(await fetch(BASE+'/api/config')).json();agents=d.agents;
-        agList=(plan.agents||[]).map(a=>a.id);
-        selectedAgents=new Set(agList);
-        mode=plan.mode||'discuss';
-        opts=plan.options||{};
-        render();drawDiagram();
-        const agNames=(plan.agents||[]).map(a=>a.display_name).join(', ');
-        addCard('Auto','done',`Mode: **${MODES[mode]||mode}**\nAgents: ${agNames}\n${plan.reasoning||''}`);
-      }catch(e){addCard('Auto','error','Planning failed: '+e.message);fin();return}
-    }
+  // Ensure agents exist on backend
+  for(const ag of S.plan.agents){
+    await fetch(BASE+'/api/agents/'+ag.id,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(ag)});
   }
-  if(mode==='auto'){fin();return}
-
-  if(mode==='pipeline')opts.steps=opts.steps||pipeSteps;
-  if(mode==='parallel')opts.tasks=opts.tasks||parTasks;
 
   const proto=location.protocol==='https:'?'wss:':'ws:';
-  ws=new WebSocket(`${proto}//${location.host}${BASE}/ws/run`);
-  ws.onopen=()=>{
-    opts.rounds=parseInt(document.getElementById('roundsIn').value)||2;
-    ws.send(JSON.stringify({mode,topic,agents:agList,options:opts}));
-    document.getElementById('statusBar').textContent='running...';
+  S.ws=new WebSocket(`${proto}//${location.host}${BASE}/ws/run`);
+  S.ws.onopen=()=>{
+    S.ws.send(JSON.stringify({
+      mode:S.plan.mode,
+      topic:S.topic,
+      agents:S.plan.agents.map(a=>a.id),
+      options:S.plan.options,
+    }));
   };
-  ws.onmessage=e=>{
+  S.ws.onmessage=e=>{
     const d=JSON.parse(e.data);
     if(d.type==='update'){
       addCard(d.agent,d.event,d.text);
-      if(d.event==='start')agentActivity[d.agent]='working';
-      else if(d.event==='done'||d.event==='error')agentActivity[d.agent]='idle';
-      renderAgents();drawDiagram();
+      if(d.event==='start')S.agentActivity[d.agent]='working';
+      else if(d.event==='done'||d.event==='error')S.agentActivity[d.agent]='idle';
+      drawDiagram();
     }else if(d.type==='result'){
       if(d.summary)addSum(d.summary);showStats(d);fin();
     }else if(d.type==='error'){addCard('Error','error',d.text);fin()}
   };
-  ws.onclose=()=>{if(running)fin()};
-  ws.onerror=()=>{addCard('Error','error','WebSocket failed');fin()};
+  S.ws.onclose=()=>{if(S.phase==='running')fin()};
+  S.ws.onerror=()=>{addCard('Error','error','Connection failed');fin()};
 }
-function fin(){running=false;autoAssigned=false;agentActivity={};renderAgents();drawDiagram();document.getElementById('runBtn').textContent='Run';document.getElementById('runBtn').classList.remove('stop');document.getElementById('statusBar').textContent=''}
 
+function fin(){
+  S.agentActivity={};S.ws=null;
+  setPhase('done');
+  const btn=document.getElementById('btnRun');btn.textContent='Run';btn.classList.remove('stop');
+}
+
+// ── RESET ──
+function fullReset(){
+  if(S.ws){S.ws.onclose=null;S.ws.close();S.ws=null}
+  S.plan=null;S.topic='';S.agentActivity={};
+  document.getElementById('topicIn').value='';
+  document.getElementById('btnPlan').disabled=true;
+  document.getElementById('btnPlan').textContent='Plan';
+  document.getElementById('output').innerHTML='<div class="ph">Plan is ready. Press Run to start.</div>';
+  document.getElementById('statsBar').style.display='none';
+  setPhase('topic');
+  document.body.className='st-topic';
+}
+
+// ── OUTPUT HELPERS ──
 function addCard(ag,ev,txt){
   const out=document.getElementById('output');
   if(ev==='start'){const c=document.createElement('div');c.className='rc ev-start';c.id='a-'+ag.replace(/\s/g,'');c.innerHTML=`<div class="rc-h"><span class="al">${esc(ag)}</span><span class="el">${esc(txt)}</span><div class="spinner"></div></div>`;out.appendChild(c);out.scrollTop=out.scrollHeight;return}
@@ -621,12 +437,46 @@ function addCard(ag,ev,txt){
 function addSum(txt){const out=document.getElementById('output');const c=document.createElement('div');c.className='rc sc';c.innerHTML=`<div class="rc-h"><span class="al">Summary</span></div><div class="rc-b">${fmtMd(txt)}</div>`;out.appendChild(c);out.scrollTop=out.scrollHeight}
 function showStats(d){const b=document.getElementById('statsBar');b.style.display='block';b.textContent=`${d.responses} responses | $${(d.cost||0).toFixed(4)} | ${((d.duration_ms||0)/1000).toFixed(1)}s`}
 
-// ── History ──
+// ── TABS ──
+function switchTab(el){document.querySelectorAll('.otab').forEach(t=>t.classList.remove('on'));document.querySelectorAll('.opanel').forEach(p=>p.classList.remove('on'));el.classList.add('on');document.getElementById('p-'+el.dataset.p).classList.add('on');if(el.dataset.p==='diagram')drawDiagram()}
+
+// ── DIAGRAM ──
+function drawDiagram(){
+  const area=document.getElementById('diagArea');
+  if(!S.plan||!S.plan.agents.length){area.innerHTML='<div class="ph">No agents</div>';return}
+  const ags=S.plan.agents,n=ags.length,W=600,H=400,cx=W/2,cy=H/2,R=140;
+  let svg=`<svg viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg" style="font-family:Inter,sans-serif">`;
+  svg+=`<rect width="${W}" height="${H}" fill="#111113" rx="8"/>`;
+  svg+=`<circle cx="${cx}" cy="${cy}" r="28" fill="#18181b" stroke="#818cf8" stroke-width="1.5"/>`;
+  svg+=`<text x="${cx}" y="${cy+1}" text-anchor="middle" dominant-baseline="middle" fill="#818cf8" font-size="9" font-weight="600">Coordinator</text>`;
+  svg+=`<text x="${cx}" y="24" text-anchor="middle" fill="#71717a" font-size="10">${MODE_NAMES[S.plan.mode]||S.plan.mode}</text>`;
+  ags.forEach((a,i)=>{
+    const angle=(2*Math.PI*i/n)-Math.PI/2;
+    const x=cx+R*Math.cos(angle),y=cy+R*Math.sin(angle);
+    const st=S.agentActivity[a.display_name]||'off';
+    const mc=MC[a.model]||'#a1a1aa';
+    svg+=`<line x1="${cx}" y1="${cy}" x2="${x}" y2="${y}" stroke="${st==='working'?'#fbbf24':'#27272a'}" stroke-width="${st==='working'?1.5:0.8}"/>`;
+    svg+=`<circle cx="${x}" cy="${y}" r="24" fill="#18181b" stroke="${st==='working'?'#fbbf24':mc}" stroke-width="${st==='working'?2:1}"/>`;
+    if(st==='working')svg+=`<circle cx="${x}" cy="${y}" r="24" fill="none" stroke="#fbbf24" stroke-width="1" opacity="0.3"><animate attributeName="r" from="24" to="32" dur="1.5s" repeatCount="indefinite"/><animate attributeName="opacity" from="0.3" to="0" dur="1.5s" repeatCount="indefinite"/></circle>`;
+    svg+=`<text x="${x}" y="${y-3}" text-anchor="middle" fill="#e4e4e7" font-size="8.5" font-weight="500">${a.display_name}</text>`;
+    svg+=`<text x="${x}" y="${y+8}" text-anchor="middle" fill="${mc}" font-size="6.5" font-family="JetBrains Mono,monospace">${a.model}</text>`;
+    const dc=st==='working'?'#fbbf24':st==='idle'?'#4ade80':'#3f3f46';
+    svg+=`<circle cx="${x+16}" cy="${y-16}" r="3.5" fill="${dc}"/>`;
+  });
+  svg+=`</svg>`;area.innerHTML=svg;
+}
+
+async function pollActivity(){
+  if(S.phase!=='running')return;
+  try{const d=await(await fetch(BASE+'/api/activity')).json();S.agentActivity=d;drawDiagram()}catch(e){}
+}
+
+// ── HISTORY ──
 let histOpen=false;
 function toggleHist(){histOpen=!histOpen;document.getElementById('histPanel').classList.toggle('open',histOpen);document.getElementById('histBtn').classList.toggle('on',histOpen);if(histOpen)loadHist()}
 async function loadHist(){
   const runs=await(await fetch(BASE+'/api/history')).json();
-  document.getElementById('histList').innerHTML=runs.length?runs.map(r=>`<div class="hi" onclick="loadRun('${r.id}')"><div class="hm">${r.mode}</div><div class="ht">${esc(r.topic||'')}</div><div class="hx">${r.agents?.length||0}ag $${(r.cost||0).toFixed(3)} ${((r.duration_ms||0)/1000).toFixed(0)}s</div></div>`).join(''):'<div style="padding:1rem;color:var(--d);font-size:0.8rem">No runs</div>';
+  document.getElementById('histList').innerHTML=runs.length?runs.map(r=>`<div class="hi" onclick="loadRun('${r.id}')"><div class="hm">${r.mode}</div><div class="ht">${esc(r.topic||'')}</div><div class="hx">${r.agents?.length||0}ag $${(r.cost||0).toFixed(3)}</div></div>`).join(''):'<div style="padding:1rem;color:var(--d);font-size:0.75rem">No runs</div>';
 }
 async function loadRun(id){
   const r=await(await fetch(BASE+'/api/history/'+id)).json();if(r.error)return;
@@ -638,7 +488,7 @@ async function loadRun(id){
   document.getElementById('statsBar').textContent=`${r.responses||0} responses | $${(r.cost||0).toFixed(4)} | ${((r.duration_ms||0)/1000).toFixed(1)}s`;
 }
 
-// ── Helpers ──
+// ── HELPERS ──
 function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;')}
 function fmtMd(t){return esc(t).replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>').replace(/`([^`]+)`/g,'<code style="background:rgba(255,255,255,0.06);padding:1px 4px;border-radius:3px;font-size:.78em">$1</code>').replace(/^### (.+)$/gm,'<strong style="color:var(--t);font-size:.85rem">$1</strong>').replace(/^## (.+)$/gm,'<strong style="color:var(--t);font-size:.9rem">$1</strong>').replace(/^- (.+)$/gm,'&nbsp;&nbsp;&#8226; $1').replace(/\n/g,'<br>')}
 
