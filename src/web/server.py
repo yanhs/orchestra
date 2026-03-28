@@ -195,7 +195,7 @@ Return ONLY valid JSON:
 }}
 
 Rules:
-- Pick as many agents as the task requires (2-10). Simple questions need 2-3, complex projects may need 5-8. Don't force exactly 3
+- NEVER default to exactly 3 agents. Analyze the task and pick the RIGHT number: simple yes/no → 2, debates → 4-5, complex projects → 5-8, large systems → 7-10. Each agent must have a distinct role
 - Reuse existing agents by ID if they fit (keep same config)
 - Create new ones only if needed, with task-specific prompts
 - For pipeline mode, add "steps" in options: [{{"agent":"id","action":"design|implement|review|test"}}]
