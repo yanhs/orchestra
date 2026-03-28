@@ -131,5 +131,6 @@ class DiscussionMode(BaseMode):
             "1. **Key decisions / agreements** — what the team aligned on\n"
             "2. **Open questions / disagreements** — unresolved points\n"
             "3. **Action items** — concrete next steps\n\n"
-            "Be concise. Use bullet points."
+            "Be concise. Use bullet points.\n"
+            "IMPORTANT: Write the summary in the SAME LANGUAGE as the discussion topic above."
         )

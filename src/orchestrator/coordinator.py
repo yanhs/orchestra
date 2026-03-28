@@ -79,7 +79,7 @@ class OrchestraCoordinator:
                         name="_summarizer",
                         display_name="Summarizer",
                         model="sonnet",
-                        system_prompt="You summarize discussions. Structure: 1) Key decisions 2) Open questions 3) Action items. Be concise.",
+                        system_prompt="You summarize discussions. Structure: 1) Key decisions 2) Open questions 3) Action items. Be concise. Always respond in the same language as the discussion topic.",
                         allowed_tools=[],
                         max_turns=10,
                     ),
