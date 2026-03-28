@@ -213,6 +213,7 @@ body.st-choose .topic-view,body.st-choose .work-view{display:none}
     <div class="pc-scroll" id="planCard"></div>
     <div class="pc-run">
       <button class="btn-run" id="btnRun" onclick="doRun()">Run</button>
+      <div id="otherVariants" style="text-align:center;margin-top:0.4rem;font-size:0.68rem"><a style="color:var(--d);cursor:pointer" onclick="renderVariants();setPhase('choose')">other variants</a></div>
     </div>
   </div>
   <div class="out-area">
@@ -268,6 +269,7 @@ async function init(){
 
 // ── PLAN ──
 let planVariants=[];
+let taskAnalysis=null;
 
 async function doPlan(){
   const topic=document.getElementById('topicIn').value.trim();
@@ -280,13 +282,23 @@ async function doPlan(){
     const text=await r.text();
     let data;
     try{data=JSON.parse(text)}catch(pe){alert('Invalid response: '+text.slice(0,200));btn.disabled=false;btn.textContent='Plan';return}
-    if(!Array.isArray(data)){
-      if(data.error){alert('Error: '+data.error)}else{alert('Unexpected response')}
-      btn.disabled=false;btn.textContent='Plan';return;
+    if(data.error){alert('Error: '+data.error);btn.disabled=false;btn.textContent='Plan';return}
+    // Support both {analysis, plans} and plain array
+    if(data.plans){
+      taskAnalysis=data.analysis||null;
+      planVariants=data.plans;
+    }else if(Array.isArray(data)){
+      taskAnalysis=null;
+      planVariants=data;
+    }else{alert('Unexpected response');btn.disabled=false;btn.textContent='Plan';return}
+    // Auto-select recommended
+    const recIdx=planVariants.findIndex(p=>p.recommended);
+    if(recIdx>=0){
+      await pickVariant(recIdx);
+    }else{
+      renderVariants();
+      setPhase('choose');
     }
-    planVariants=data;
-    renderVariants();
-    setPhase('choose');
   }catch(e){
     alert('Planning failed: '+e.message);
   }
@@ -347,7 +359,21 @@ function renderPlan(){
   // Topic
   h+=`<div class="ps"><div class="ps-label">Topic</div><div class="pc-topic" onclick="if('${S.phase}'!=='running')editTopic()">${esc(S.topic)}</div></div>`;
   // Reasoning
-  if(P.reasoning)h+=`<div class="ps"><div class="ps-label">AI Reasoning</div><div class="pc-reason">${esc(P.reasoning)}</div></div>`;
+  // Task analysis
+  if(taskAnalysis){
+    const a=taskAnalysis;
+    let ah=`<div class="ps"><div class="ps-label">Task Analysis <span style="font-size:0.55rem;color:var(--d);cursor:pointer" onclick="this.parentElement.parentElement.querySelector('.ta-body').style.display=this.parentElement.parentElement.querySelector('.ta-body').style.display==='none'?'block':'none'">▼</span></div><div class="ta-body" style="display:block">`;
+    if(a.understood_task)ah+=`<div class="pc-reason" style="margin-bottom:0.4rem"><strong style="color:var(--t)">${esc(a.understood_task)}</strong></div>`;
+    if(a.phases&&a.phases.length){
+      ah+=`<div style="display:flex;flex-wrap:wrap;gap:0.2rem;margin-bottom:0.4rem">`;
+      a.phases.forEach((p,i)=>ah+=`<span style="padding:0.15rem 0.4rem;font-size:0.62rem;background:var(--bg);border:1px solid var(--b);border-radius:3px;color:var(--a)">${i+1}. ${esc(p)}</span>`);
+      ah+=`</div>`;
+    }
+    if(a.complexity)ah+=`<span style="font-size:0.6rem;color:var(--d);font-family:'JetBrains Mono',monospace">complexity: ${esc(a.complexity)}</span>`;
+    ah+=`</div></div>`;
+    h+=ah;
+  }
+  if(P.reasoning)h+=`<div class="ps"><div class="ps-label">Plan Reasoning</div><div class="pc-reason">${esc(P.reasoning)}</div></div>`;
   // Mode
   h+=`<div class="ps"><div class="ps-label">Mode</div><div class="mode-badge"><select class="mode-sel" onchange="S.plan.mode=this.value;renderPlan()">${Object.entries(MODE_NAMES).map(([k,v])=>`<option value="${k}" ${P.mode===k?'selected':''}>${v}</option>`).join('')}</select></div></div>`;
   // Agents

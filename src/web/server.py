@@ -138,9 +138,32 @@ class AutoPlanRequest(BaseModel):
     topic: str
 
 
-PLAN_PROMPT_TEMPLATE = """Analyze this task and propose exactly 5 plan variants — from FASTEST to MAXIMUM QUALITY.
+ANALYZE_PROMPT = """You are a task analyst. Analyze the user's request and produce a structured understanding.
 
-TASK: "{topic}"
+USER REQUEST: "{topic}"
+
+Return ONLY valid JSON:
+{{
+  "understood_task": "<restate what the user actually wants in 2-3 clear sentences>",
+  "phases": ["<phase 1 name>", "<phase 2 name>", ...],
+  "phase_descriptions": ["<what phase 1 should accomplish>", "<what phase 2 should accomplish>", ...],
+  "complexity": "<simple|moderate|complex|ambitious>",
+  "key_challenges": ["<challenge 1>", "<challenge 2>", ...],
+  "success_criteria": "<what does a good result look like>"
+}}
+
+Rules:
+- Decompose ANY task into logical phases (even simple ones have at least 1-2 phases)
+- Be specific about what each phase produces
+- ALL text MUST be in the SAME LANGUAGE as the USER REQUEST"""
+
+
+PLAN_PROMPT_TEMPLATE = """Based on this task analysis, propose exactly 5 plan variants — from FASTEST to MAXIMUM QUALITY.
+
+ORIGINAL REQUEST: "{topic}"
+
+TASK ANALYSIS:
+{analysis}
 
 EXISTING AGENTS (reuse if suitable): {existing}
 
@@ -246,19 +269,30 @@ def _parse_json(text: str):
 
 @app.post("/api/auto-plans")
 async def auto_plans(req: AutoPlanRequest):
-    """Generate 3 plan variants: fast, balanced, deep."""
+    """Two-stage planning: analyze task, then generate 5 variants."""
     config = load_config(CONFIG_PATH)
     existing = {name: {"display_name": r.display_name, "model": r.model}
                 for name, r in config.agents.items()}
 
-    prompt = PLAN_PROMPT_TEMPLATE.format(topic=req.topic, existing=json.dumps(existing))
-
     try:
+        # Stage 1: Analyze the prompt
+        analyze_prompt = ANALYZE_PROMPT.format(topic=req.topic)
+        analysis_raw = await _call_claude(analyze_prompt, model="opus")
+        analysis = _parse_json(analysis_raw)
+
+        # Stage 2: Generate plans based on analysis
+        prompt = PLAN_PROMPT_TEMPLATE.format(
+            topic=req.topic,
+            analysis=json.dumps(analysis, ensure_ascii=False, indent=2),
+            existing=json.dumps(existing),
+        )
         content = await _call_claude(prompt, model="opus")
         plans = _parse_json(content)
         if not isinstance(plans, list):
             return {"error": "Expected array of plans"}
-        return plans
+
+        # Attach analysis to response
+        return {"analysis": analysis, "plans": plans}
     except Exception as e:
         return {"error": str(e)}
 
@@ -269,11 +303,14 @@ async def auto_plan(req: AutoPlanRequest):
     result = await auto_plans(req)
     if isinstance(result, dict) and result.get("error"):
         return result
-    if isinstance(result, list) and len(result) >= 3:
-        return result[2]  # balanced (middle of 5)
-    if isinstance(result, list) and len(result) >= 1:
-        return result[0]
-    return {"error": "No plans generated"}
+    plans = result.get("plans", []) if isinstance(result, dict) else result
+    if not plans:
+        return {"error": "No plans generated"}
+    # Return recommended or middle
+    for p in plans:
+        if p.get("recommended"):
+            return p
+    return plans[len(plans)//2]
 
     options = ClaudeAgentOptions(
         model="opus",
