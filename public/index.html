@@ -597,9 +597,33 @@ function fullReset(){
 // ── OUTPUT HELPERS ──
 function addCard(ag,ev,txt){
   const out=document.getElementById('output');
-  if(ev==='start'){const c=document.createElement('div');c.className='rc ev-start';c.id='a-'+ag.replace(/\s/g,'');c.innerHTML=`<div class="rc-h"><span class="al">${esc(ag)}</span><span class="el">${esc(txt)}</span><div class="spinner"></div></div>`;out.appendChild(c);out.scrollTop=out.scrollHeight;return}
-  const a=document.getElementById('a-'+ag.replace(/\s/g,''));if(a)a.remove();
-  const c=document.createElement('div');c.className=`rc ev-${ev}`;c.innerHTML=`<div class="rc-h"><span class="al">${esc(ag)}</span><span class="el">${ev}</span></div><div class="rc-b">${fmtMd(txt)}</div>`;out.appendChild(c);out.scrollTop=out.scrollHeight;
+  const cid='a-'+ag.replace(/\s/g,'');
+
+  if(ev==='start'){
+    const c=document.createElement('div');c.className='rc ev-start';c.id=cid;
+    c.innerHTML=`<div class="rc-h"><span class="al">${esc(ag)}</span><span class="el">${esc(txt)}</span><div class="spinner"></div></div><div class="rc-b rc-live" style="font-size:0.7rem;color:var(--d);max-height:150px;overflow-y:auto"></div>`;
+    out.appendChild(c);out.scrollTop=out.scrollHeight;return;
+  }
+
+  if(ev==='progress'){
+    // Live update — append to active card
+    const active=document.getElementById(cid);
+    if(active){
+      const live=active.querySelector('.rc-live');
+      if(live){
+        live.innerHTML=fmtMd(txt);
+        live.scrollTop=live.scrollHeight;
+        out.scrollTop=out.scrollHeight;
+      }
+    }
+    return;
+  }
+
+  // done/error — replace active card with final
+  const a=document.getElementById(cid);if(a)a.remove();
+  const c=document.createElement('div');c.className=`rc ev-${ev}`;
+  c.innerHTML=`<div class="rc-h"><span class="al">${esc(ag)}</span><span class="el">${ev}</span></div><div class="rc-b">${fmtMd(txt)}</div>`;
+  out.appendChild(c);out.scrollTop=out.scrollHeight;
 }
 function addSum(txt){const out=document.getElementById('output');const c=document.createElement('div');c.className='rc sc';c.innerHTML=`<div class="rc-h"><span class="al">Summary</span></div><div class="rc-b">${fmtMd(txt)}</div>`;out.appendChild(c);out.scrollTop=out.scrollHeight}
 function showStats(d){const b=document.getElementById('statsBar');b.style.display='block';b.textContent=`${d.responses} responses | $${(d.cost||0).toFixed(4)} | ${((d.duration_ms||0)/1000).toFixed(1)}s`}

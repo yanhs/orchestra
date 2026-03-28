@@ -55,8 +55,13 @@ class ParallelMode(BaseMode):
                     f"## Your Subtask\n{task.description}\n\n"
                     "Focus only on your subtask. Be thorough and specific."
                 )
+                async def _stream(name, text):
+                    if on_update:
+                        r = on_update(name, "progress", text)
+                        if asyncio.iscoroutine(r):
+                            await r
                 try:
-                    response = await asyncio.wait_for(task.agent.run(prompt), timeout=180)
+                    response = await asyncio.wait_for(task.agent.run(prompt, on_stream=_stream), timeout=180)
                 except asyncio.TimeoutError:
                     from ..agents.client import AgentResponse
                     response = AgentResponse(

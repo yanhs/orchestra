@@ -270,16 +270,28 @@ You are a manager — delegate the work to agents. Plan a stage now."""
             )
         elif mode == "pipeline":
             steps = options.get("steps", [{"agent": a, "action": "process"} for a in agent_ids])
+            parsed = []
+            for s in steps:
+                if isinstance(s, dict):
+                    parsed.append((s.get("agent", agent_ids[0] if agent_ids else ""), s.get("action", "process")))
+                elif isinstance(s, str):
+                    parsed.append((agent_ids[0] if agent_ids else "", s))
             return await coordinator.pipeline(
                 topic=self.goal,
-                steps=[(s["agent"], s["action"]) for s in steps],
+                steps=parsed or [(a, "process") for a in agent_ids],
                 on_update=self.on_update,
             )
         elif mode == "parallel":
             tasks = options.get("tasks", [{"agent": a, "description": "work"} for a in agent_ids])
+            parsed = []
+            for t in tasks:
+                if isinstance(t, dict):
+                    parsed.append((t.get("agent", agent_ids[0] if agent_ids else ""), t.get("description", "work")))
+                elif isinstance(t, str):
+                    parsed.append((agent_ids[0] if agent_ids else "", t))
             return await coordinator.parallel(
                 topic=self.goal,
-                tasks=[(t["agent"], t["description"]) for t in tasks],
+                tasks=parsed or [(a, "work") for a in agent_ids],
                 on_update=self.on_update,
             )
         elif mode == "consensus":

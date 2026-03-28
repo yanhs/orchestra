@@ -56,7 +56,14 @@ class PipelineMode(BaseMode):
                     await r
 
             prompt = self._build_prompt(topic, transcript, step, step_num)
-            response = await agent.run(prompt)
+
+            async def _stream(name, text):
+                if on_update:
+                    r = on_update(name, "progress", text)
+                    if asyncio.iscoroutine(r):
+                        await r
+
+            response = await agent.run(prompt, on_stream=_stream)
 
             if response.is_error:
                 if on_update:

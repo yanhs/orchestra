@@ -49,8 +49,16 @@ class DiscussionMode(BaseMode):
             # All agents work in parallel within a round
             async def run_agent(agent: AgentClient) -> tuple[AgentClient, AgentResponse]:
                 prompt = self._build_prompt(topic, transcript, agent, round_num)
+
+                # Stream callback for live progress
+                async def _stream(name, text):
+                    if on_update:
+                        r = on_update(name, "progress", text)
+                        if asyncio.iscoroutine(r):
+                            await r
+
                 try:
-                    response = await asyncio.wait_for(agent.run(prompt), timeout=180)
+                    response = await asyncio.wait_for(agent.run(prompt, on_stream=_stream), timeout=180)
                 except asyncio.TimeoutError:
                     response = AgentResponse(
                         agent_name=agent.display_name,
