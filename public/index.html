@@ -224,7 +224,7 @@ async function init(){
   }catch(e){document.getElementById('statusBar').textContent='Failed to load'}
 }
 
-function render(){renderModes();renderAgents();renderOpts()}
+function render(){renderModes();renderAgents();renderOpts();document.getElementById('assignBtn').style.display=selectedMode==='auto'?'block':'none'}
 
 // ── Modes ──
 function renderModes(){
