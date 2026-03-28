@@ -92,6 +92,65 @@ async def upsert_agent(name: str, data: AgentData):
     return {"ok": True, "name": name}
 
 
+class GenerateRequest(BaseModel):
+    role_name: str
+
+
+@app.post("/api/agents/generate")
+async def generate_agent(req: GenerateRequest):
+    """Use Claude to auto-generate agent config from a role name."""
+    from claude_agent_sdk import ClaudeAgentOptions, ClaudeSDKClient, AssistantMessage, ResultMessage, TextBlock
+
+    prompt = f"""Generate a JSON config for an AI agent with the role: "{req.role_name}"
+
+Return ONLY valid JSON (no markdown, no explanation) with these fields:
+{{
+  "id": "<lowercase_snake_case id>",
+  "display_name": "<short display name>",
+  "model": "<opus for complex analytical roles, sonnet for most roles, haiku for simple roles>",
+  "max_turns": <number 20-50>,
+  "allowed_tools": [<subset of: "Read", "Write", "Edit", "Bash", "Glob", "Grep", "WebSearch", "WebFetch">],
+  "system_prompt": "<2-5 bullet points describing the role, what it does, how it should behave. Start with 'You are a...'>"
+}}
+
+Choose tools that match the role. Read-only roles get Read/Glob/Grep. Coding roles get Write/Edit/Bash too. Research roles get WebSearch/WebFetch."""
+
+    options = ClaudeAgentOptions(
+        model="haiku",
+        max_turns=1,
+        permission_mode="plan",
+    )
+
+    try:
+        client = ClaudeSDKClient(options)
+        content = ""
+        try:
+            await client.connect()
+            await client.query(prompt)
+            async for msg in client.receive_messages():
+                if isinstance(msg, ResultMessage):
+                    if msg.result:
+                        content = msg.result
+                    break
+                elif isinstance(msg, AssistantMessage):
+                    for block in msg.content or []:
+                        if isinstance(block, TextBlock):
+                            content += block.text
+        finally:
+            await client.disconnect()
+
+        # Parse JSON from response (handle markdown code blocks)
+        text = content.strip()
+        if text.startswith("```"):
+            text = text.split("\n", 1)[1] if "\n" in text else text[3:]
+            text = text.rsplit("```", 1)[0]
+        result = json.loads(text.strip())
+        return result
+
+    except Exception as e:
+        return {"error": str(e)}
+
+
 @app.delete("/api/agents/{name}")
 async def delete_agent(name: str):
     """Delete an agent."""

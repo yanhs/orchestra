@@ -198,20 +198,7 @@ const ALL_TOOLS = ['Read','Write','Edit','Bash','Glob','Grep','WebSearch','WebFe
 const PIPELINE_ACTIONS = ['design','implement','review','test'];
 const MODEL_COLORS = {opus:'#c084fc',sonnet:'#60a5fa',haiku:'#4ade80'};
 
-// Role templates for auto-fill on new agent
-const ROLE_TEMPLATES = {
-  architect: {display_name:'Architect',model:'opus',allowed_tools:['Read','Glob','Grep','WebSearch','WebFetch'],system_prompt:'You are a senior software architect.\n- Analyze system design, architecture decisions, and trade-offs\n- Propose clean, scalable architectures\n- Evaluate technology choices\n- Identify potential problems early\nBe concise and specific. Cite files and line numbers when referencing code.'},
-  developer: {display_name:'Developer',model:'sonnet',allowed_tools:['Read','Write','Edit','Bash','Glob','Grep'],system_prompt:'You are a senior software developer.\n- Focus on practical implementation details\n- Write clean, well-tested code following existing patterns\n- Identify implementation challenges and propose solutions\n- Consider performance, maintainability, and developer experience\nBe concise and specific. Show code snippets when relevant.'},
-  reviewer: {display_name:'Reviewer',model:'opus',allowed_tools:['Read','Glob','Grep','Bash'],system_prompt:'You are a meticulous code reviewer.\n- Find bugs, security issues, performance problems, and design flaws\n- Challenge assumptions and identify edge cases\n- Rate issues by severity: critical / major / minor / nit\n- Be constructively critical\nBe concise. Cite specific files and line numbers.'},
-  pm: {display_name:'PM',model:'sonnet',allowed_tools:['Read','WebSearch','WebFetch'],system_prompt:'You are a product manager.\n- Translate technical discussions into clear requirements and decisions\n- Summarize key points, agreements, and disagreements\n- Identify missing requirements or unclear specifications\n- Prioritize by user impact\nBe concise. Focus on actionable outcomes.'},
-  tester: {display_name:'Tester',model:'sonnet',allowed_tools:['Read','Write','Edit','Bash','Glob','Grep'],system_prompt:'You are a QA engineer and test architect.\n- Write comprehensive tests (unit, integration, e2e)\n- Identify edge cases and boundary conditions\n- Verify implementations meet requirements\nBe thorough. Cover happy paths, error paths, and edge cases.'},
-  devops: {display_name:'DevOps',model:'sonnet',allowed_tools:['Read','Write','Edit','Bash','Glob','Grep'],system_prompt:'You are a DevOps engineer.\n- Handle CI/CD pipelines, Docker, deployment scripts\n- Set up monitoring, logging, and alerting\n- Focus on reliability, security, and automation\nBe practical. Prefer battle-tested tools over cutting-edge.'},
-  security: {display_name:'Security Analyst',model:'opus',allowed_tools:['Read','Glob','Grep','Bash','WebSearch'],system_prompt:'You are a security analyst.\n- Perform threat modeling and vulnerability assessment\n- Check for OWASP Top 10, CWE common weaknesses\n- Review authentication, authorization, and data handling\n- Identify secrets exposure and injection risks\nBe specific. Cite exact code locations and CVE references.'},
-  writer: {display_name:'Tech Writer',model:'sonnet',allowed_tools:['Read','Write','Edit','Glob','Grep'],system_prompt:'You are a technical writer.\n- Write clear documentation, READMEs, and API docs\n- Explain complex concepts simply\n- Create code examples and tutorials\n- Maintain consistent terminology and style\nBe clear and concise. Use examples.'},
-  analyst: {display_name:'Data Analyst',model:'sonnet',allowed_tools:['Read','Bash','Glob','Grep','WebSearch'],system_prompt:'You are a data analyst.\n- Analyze data patterns and metrics\n- Write queries and data pipelines\n- Create reports and visualizations\n- Identify trends and anomalies\nBe data-driven. Show evidence for conclusions.'},
-  designer: {display_name:'UX Designer',model:'sonnet',allowed_tools:['Read','WebSearch','WebFetch'],system_prompt:'You are a UX designer.\n- Design user flows and interfaces\n- Focus on usability and accessibility\n- Review implementations from a user perspective\n- Suggest improvements based on UX best practices\nBe specific. Describe concrete UI changes.'},
-  custom: {display_name:'',model:'sonnet',allowed_tools:['Read','Glob','Grep'],system_prompt:''},
-};
+// No hardcoded templates — AI generates configs from any role name
 
 let agents={}, selectedMode='discuss', selectedAgents=new Set(), ws=null, running=false, editingAgent=null;
 let pipeSteps=[{agent:'architect',action:'design'},{agent:'developer',action:'implement'},{agent:'reviewer',action:'review'}];
@@ -320,35 +307,41 @@ function editAgentWithData(name, a, isNew){
 }
 function newAgent(){
   switchTab(document.querySelector('[data-p="editor"]'));
-  const existing=new Set(Object.keys(agents));
-  const available=Object.entries(ROLE_TEMPLATES).filter(([k])=>k==='custom'||!existing.has(k));
   document.getElementById('editorArea').innerHTML=`
     <div class="ed-card">
       <h3><span>+</span> New Agent</h3>
-      <p style="font-size:0.78rem;color:var(--d2);margin-bottom:0.8rem">Choose a role template. All fields will be auto-filled.</p>
-      <div style="display:flex;flex-wrap:wrap;gap:0.4rem">
-        ${available.map(([k,v])=>{
-          const mc=MODEL_COLORS[v.model]||'#a1a1aa';
-          return `<div style="padding:0.5rem 0.8rem;background:var(--s2);border:1px solid var(--b);border-radius:5px;cursor:pointer;transition:all .12s;min-width:120px" onclick="createFromTemplate('${k}')" onmouseover="this.style.borderColor='${mc}'" onmouseout="this.style.borderColor='var(--b)'">
-            <div style="font-size:0.8rem;font-weight:500;color:var(--t)">${v.display_name||'Custom'}</div>
-            <div style="font-size:0.62rem;color:${mc};font-family:'JetBrains Mono',monospace;margin-top:2px">${v.model} ${k==='custom'?'':'| '+v.allowed_tools.length+' tools'}</div>
-          </div>`;
-        }).join('')}
+      <p style="font-size:0.78rem;color:var(--d2);margin-bottom:0.8rem">Enter any role name and click Auto-fill. AI will generate the config.</p>
+      <div style="display:flex;gap:0.4rem;align-items:center">
+        <input id="newRoleName" style="flex:1;padding:0.45rem 0.6rem;background:var(--bg);border:1px solid var(--b);border-radius:5px;color:var(--t);font-size:0.85rem;font-family:inherit" placeholder="e.g. Marketing Analyst, Database Expert, API Designer...">
+        <button id="autoFillBtn" onclick="autoFillAgent()" style="padding:0.45rem 0.9rem;font-size:0.78rem;font-weight:600;background:var(--a);color:#000;border:none;border-radius:5px;cursor:pointer;white-space:nowrap;transition:all .12s">Auto-fill</button>
       </div>
+      <div id="autoFillStatus" style="margin-top:0.5rem;font-size:0.72rem;color:var(--d)"></div>
     </div>`;
+  setTimeout(()=>document.getElementById('newRoleName')?.focus(),100);
 }
-function createFromTemplate(tplKey){
-  const tpl=ROLE_TEMPLATES[tplKey];
-  const id=tplKey==='custom'?'':tplKey;
-  // Pre-fill agent data and open editor
-  const fakeAgent={
-    display_name:tpl.display_name,
-    model:tpl.model,
-    system_prompt:tpl.system_prompt,
-    allowed_tools:tpl.allowed_tools,
-    max_turns:50,
-  };
-  editAgentWithData(id,fakeAgent,tplKey==='custom');
+
+async function autoFillAgent(){
+  const name=document.getElementById('newRoleName').value.trim();
+  if(!name)return;
+  const btn=document.getElementById('autoFillBtn');
+  const status=document.getElementById('autoFillStatus');
+  btn.disabled=true;btn.textContent='Generating...';btn.style.opacity='0.5';
+  status.innerHTML='<div style="display:flex;align-items:center;gap:0.4rem"><div class="spinner"></div> AI is generating config for "'+esc(name)+'"...</div>';
+  try{
+    const r=await fetch(BASE+'/api/agents/generate',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({role_name:name})});
+    const data=await r.json();
+    if(data.error){status.textContent='Error: '+data.error;btn.disabled=false;btn.textContent='Auto-fill';btn.style.opacity='1';return}
+    editAgentWithData(data.id||'',{
+      display_name:data.display_name||name,
+      model:data.model||'sonnet',
+      system_prompt:data.system_prompt||'',
+      allowed_tools:data.allowed_tools||['Read','Glob','Grep'],
+      max_turns:data.max_turns||50,
+    },true);
+  }catch(e){
+    status.textContent='Error: '+e.message;
+    btn.disabled=false;btn.textContent='Auto-fill';btn.style.opacity='1';
+  }
 }
 
 async function saveAgent(){
