@@ -577,117 +577,130 @@ async def get_activity():
     return active_agents
 
 
-@app.websocket("/ws/run")
-async def ws_run(ws: WebSocket):
-    await ws.accept()
+from ..orchestrator.jobs import job_manager, Job
+
+
+async def _run_job_task(job: Job):
+    """Background task that runs the supervised orchestration."""
+    from ..orchestrator.supervisor import SupervisedRun
+
+    async def on_update(agent_name: str, event: str, text: str):
+        if event == "start":
+            active_agents[agent_name] = "working"
+        elif event in ("done", "error"):
+            active_agents[agent_name] = "idle"
+        job.add_event(agent_name, event, text)
 
     try:
-        msg = await ws.receive_json()
-        mode = msg.get("mode", "discuss")
-        topic = msg.get("topic", "")
-        agent_names = msg.get("agents", [])
-        options = msg.get("options", {})
-        project_path = msg.get("project_path")
-
-        if not topic:
-            await ws.send_json({"type": "error", "text": "No topic provided"})
-            return
-
-        config = load_config(CONFIG_PATH)
-        coordinator = OrchestraCoordinator(
-            config=config,
-            project_path=Path(project_path) if project_path else None,
-        )
-
-        async def on_update(agent_name: str, event: str, text: str):
-            # Update activity tracking
-            if event == "start":
-                active_agents[agent_name] = "working"
-            elif event in ("done", "error"):
-                active_agents[agent_name] = "idle"
-
-            await ws.send_json({
-                "type": "update",
-                "agent": agent_name,
-                "event": event,
-                "text": text,
-            })
-
-        if mode == "discuss":
-            result = await coordinator.discuss(
-                topic=topic,
-                agent_names=agent_names or None,
-                rounds=options.get("rounds"),
-                on_update=on_update,
-            )
-        elif mode == "pipeline":
-            steps = options.get("steps")
-            parsed_steps = None
-            if steps:
-                parsed_steps = [(s["agent"], s["action"]) for s in steps]
-            result = await coordinator.pipeline(
-                topic=topic,
-                steps=parsed_steps,
-                on_update=on_update,
-            )
-        elif mode == "parallel":
-            tasks = options.get("tasks", [])
-            parsed_tasks = [(t["agent"], t["description"]) for t in tasks]
-            result = await coordinator.parallel(
-                topic=topic,
-                tasks=parsed_tasks,
-                on_update=on_update,
-            )
-        elif mode == "consensus":
-            result = await coordinator.consensus(
-                topic=topic,
-                agent_names=agent_names or None,
-                on_update=on_update,
-            )
-        elif mode == "custom":
-            workflow = options.get("workflow", [])
-            if not workflow:
-                await ws.send_json({"type": "error", "text": "Custom mode requires workflow stages"})
-                return
-            result = await coordinator.custom(
-                topic=topic,
-                workflow=workflow,
-                on_update=on_update,
-            )
-        elif mode == "supervised":
-            print(f"[WS] Starting supervised run: {topic[:80]}")
-            from ..orchestrator.supervisor import SupervisedRun
-            supervised = SupervisedRun(
-                goal=topic,
-                on_update=on_update,
-                project_path=Path(project_path) if project_path else None,
-            )
-            result = await supervised.run()
-            print(f"[WS] Supervised run complete: {len(result.responses)} responses")
-        else:
-            await ws.send_json({"type": "error", "text": f"Unknown mode: {mode}"})
-            return
-
-        # Clear activity
+        supervised = SupervisedRun(goal=job.goal, on_update=on_update)
+        result = await supervised.run()
         active_agents.clear()
-
         run_dir = save_run(result)
-
-        await ws.send_json({
-            "type": "result",
+        job.finish("done", {
             "summary": result.summary,
             "cost": result.total_cost,
             "duration_ms": result.total_duration_ms,
             "responses": len(result.responses),
             "run_id": run_dir.name,
         })
-
-    except WebSocketDisconnect:
+    except asyncio.CancelledError:
         active_agents.clear()
+        job.finish("stopped")
     except Exception as e:
         import traceback
         traceback.print_exc()
         active_agents.clear()
+        job.add_event("System", "error", str(e))
+        job.finish("error", {"error": str(e)})
+
+
+# ── Job API ──
+
+@app.get("/api/jobs")
+async def list_jobs():
+    return job_manager.list_all()
+
+
+@app.get("/api/jobs/current")
+async def current_job():
+    job = job_manager.get_running()
+    if job:
+        return job.to_summary()
+    return {"status": "idle"}
+
+
+@app.post("/api/jobs/{job_id}/stop")
+async def stop_job(job_id: str):
+    if job_manager.stop(job_id):
+        return {"ok": True}
+    return {"error": "Job not found or not running"}
+
+
+# ── WebSocket ──
+
+@app.websocket("/ws/run")
+async def ws_run(ws: WebSocket):
+    await ws.accept()
+
+    try:
+        msg = await ws.receive_json()
+        action = msg.get("action", "start")  # start | attach
+        topic = msg.get("topic", "")
+        job_id = msg.get("job_id")
+
+        if action == "attach" and job_id:
+            # Reconnect to existing job
+            job = job_manager.get(job_id)
+            if not job:
+                await ws.send_json({"type": "error", "text": "Job not found"})
+                return
+            # Send all past events first (replay)
+            for ev in job.events:
+                await ws.send_json({"type": "update", "agent": ev.agent, "event": ev.event, "text": ev.text})
+            if job.status != "running":
+                # Job already finished
+                await ws.send_json({"type": "result", **(job.result or {})})
+                return
+        elif action == "start":
+            if not topic:
+                await ws.send_json({"type": "error", "text": "No topic provided"})
+                return
+            # Check if already running
+            existing = job_manager.get_running()
+            if existing:
+                await ws.send_json({"type": "error", "text": f"Job already running: {existing.id}"})
+                return
+            # Create background job
+            job = job_manager.create(goal=topic)
+            job._task = asyncio.create_task(_run_job_task(job))
+            await ws.send_json({"type": "job_created", "job_id": job.id})
+        else:
+            await ws.send_json({"type": "error", "text": "Invalid action"})
+            return
+
+        # Subscribe to live events
+        queue = job.subscribe()
+        try:
+            while True:
+                ev = await queue.get()
+                if ev is None:
+                    # Job finished
+                    await ws.send_json({"type": "result", **(job.result or {})})
+                    break
+                await ws.send_json({
+                    "type": "update",
+                    "agent": ev.agent,
+                    "event": ev.event,
+                    "text": ev.text,
+                })
+        finally:
+            job.unsubscribe(queue)
+
+    except WebSocketDisconnect:
+        pass  # Job continues in background!
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
         try:
             await ws.send_json({"type": "error", "text": str(e)})
         except Exception:

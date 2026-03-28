@@ -264,6 +264,20 @@ async function init(){
   const d=await(await fetch(BASE+'/api/config')).json();
   S.agents=d.agents;
   setInterval(pollActivity,3000);
+  // Check for running job — reconnect if found
+  try{
+    const cur=await(await fetch(BASE+'/api/jobs/current')).json();
+    if(cur.status==='running'&&cur.id){
+      S.topic=cur.goal||'';
+      S.plan={mode:'supervised',reasoning:'Reconnecting...',agents:[],options:{}};
+      document.getElementById('output').innerHTML='';
+      setPhase('running');
+      document.getElementById('btnRun').textContent='Stop';
+      document.getElementById('btnRun').classList.add('stop');
+      attachToJob(cur.id);
+      return;
+    }
+  }catch(e){}
 }
 
 // ── PLAN ──
@@ -513,30 +527,50 @@ async function doSupervised(){
   document.getElementById('statsBar').style.display='none';
   setPhase('running');
   const btn=document.getElementById('btnRun');btn.textContent='Stop';btn.classList.add('stop');
+  connectWS({action:'start',topic});
+}
+
+function attachToJob(jobId){
+  connectWS({action:'attach',job_id:jobId});
+}
+
+function connectWS(msg){
   const proto=location.protocol==='https:'?'wss:':'ws:';
   S.ws=new WebSocket(`${proto}//${location.host}${BASE}/ws/run`);
-  S.ws.onopen=()=>{
-    S.ws.send(JSON.stringify({mode:'supervised',topic,agents:[],options:{}}));
-  };
+  S.ws.onopen=()=>{S.ws.send(JSON.stringify(msg))};
   S.ws.onmessage=e=>{
     const d=JSON.parse(e.data);
-    if(d.type==='update'){
+    if(d.type==='job_created'){
+      S.currentJobId=d.job_id;
+    }else if(d.type==='update'){
       addCard(d.agent,d.event,d.text);
       if(d.event==='start')S.agentActivity[d.agent]='working';
       else if(d.event==='done'||d.event==='error')S.agentActivity[d.agent]='idle';
       drawDiagram();
     }else if(d.type==='result'){
       if(d.summary)addSum(d.summary);showStats(d);fin();
-    }else if(d.type==='error'){addCard('Error','error',d.text);fin()}
+    }else if(d.type==='error'){
+      // Not fatal for background jobs — just show the error
+      addCard('Error','error',d.text);
+      if(d.text&&!d.text.includes('already running'))fin();
+    }
   };
-  S.ws.onclose=()=>{if(S.phase==='running')fin()};
-  S.ws.onerror=()=>{addCard('Error','error','Connection failed');fin()};
+  // WS disconnect doesn't stop the job — it continues in background
+  S.ws.onclose=()=>{
+    S.ws=null;
+    // Don't call fin() — job is still running on server
+  };
+  S.ws.onerror=()=>{S.ws=null};
 }
 
 async function doRun(){
   if(S.phase==='running'){
+    // Stop job on server
+    if(S.currentJobId){
+      fetch(BASE+'/api/jobs/'+S.currentJobId+'/stop',{method:'POST'}).catch(()=>{});
+    }
     if(S.ws){S.ws.onclose=null;S.ws.onerror=null;S.ws.onmessage=null;S.ws.close();S.ws=null}
-    setPhase('done');addCard('System','error','Stopped');return;
+    fin();addCard('System','error','Stopped');return;
   }
   if(!S.plan||!S.plan.agents.length)return;
   document.getElementById('output').innerHTML='';
