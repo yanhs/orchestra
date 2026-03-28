@@ -11,6 +11,8 @@ claude-agent-sdk = ">=0.1.39"
 click = ">=8.1"
 pyyaml = ">=6.0"
 rich = ">=13.0"
+fastapi = ">=0.115"
+uvicorn = {version = ">=0.34", extras = ["standard"]}
 
 [tool.poetry.scripts]
 orchestra = "src.main:main"

@@ -186,3 +186,13 @@ def agents(ctx: click.Context) -> None:
     for name, role in coordinator.config.agents.items():
         console.print(f"  [cyan]{name:12s}[/] {role.display_name:10s} [dim]model={role.model}, tools={len(role.allowed_tools)}[/]")
     console.print()
+
+
+@cli.command()
+@click.option("--host", default="0.0.0.0", help="Bind host")
+@click.option("--port", default=3015, type=int, help="Port")
+def serve(host: str, port: int) -> None:
+    """Start the web UI server."""
+    from ..web.server import run_server
+    console.print(f"[bold]Starting web UI on {host}:{port}[/]")
+    run_server(host=host, port=port)

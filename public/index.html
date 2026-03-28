@@ -4,95 +4,357 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Agent Orchestra</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
-  :root { --bg: #0d1117; --surface: #161b22; --border: #30363d; --text: #e6edf3; --dim: #8b949e; --accent: #58a6ff; --green: #3fb950; --purple: #bc8cff; --orange: #d29922; }
-  * { margin: 0; padding: 0; box-sizing: border-box; }
-  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif; background: var(--bg); color: var(--text); line-height: 1.6; }
-  .container { max-width: 800px; margin: 0 auto; padding: 2rem 1.5rem; }
-  h1 { font-size: 2.5rem; margin-bottom: 0.5rem; }
-  h1 span { color: var(--accent); }
-  .subtitle { color: var(--dim); font-size: 1.1rem; margin-bottom: 2.5rem; }
-  h2 { font-size: 1.3rem; margin: 2rem 0 1rem; color: var(--accent); border-bottom: 1px solid var(--border); padding-bottom: 0.5rem; }
-  .modes { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin: 1.5rem 0; }
-  @media (max-width: 600px) { .modes { grid-template-columns: 1fr; } }
-  .mode { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 1.2rem; }
-  .mode h3 { font-size: 1rem; margin-bottom: 0.4rem; }
-  .mode p { color: var(--dim); font-size: 0.85rem; }
-  .mode-discuss h3 { color: var(--accent); }
-  .mode-pipeline h3 { color: var(--green); }
-  .mode-parallel h3 { color: var(--orange); }
-  .mode-consensus h3 { color: var(--purple); }
-  .agents { display: flex; flex-wrap: wrap; gap: 0.5rem; margin: 1rem 0; }
-  .agent { background: var(--surface); border: 1px solid var(--border); border-radius: 6px; padding: 0.4rem 0.8rem; font-size: 0.85rem; }
-  .agent .model { color: var(--dim); font-size: 0.75rem; }
-  pre { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 1rem; overflow-x: auto; font-size: 0.85rem; margin: 1rem 0; }
-  code { color: var(--green); }
-  .tech { color: var(--dim); font-size: 0.85rem; margin-top: 2rem; padding-top: 1rem; border-top: 1px solid var(--border); }
-  a { color: var(--accent); text-decoration: none; }
-  a:hover { text-decoration: underline; }
-  .diagram { color: var(--dim); font-family: monospace; font-size: 0.8rem; line-height: 1.4; margin: 0.8rem 0; }
+:root {
+  --bg: #09090b; --surface: #111113; --surface2: #18181b;
+  --border: rgba(255,255,255,0.06); --border2: rgba(255,255,255,0.1);
+  --text: #e4e4e7; --dim: #71717a; --dim2: #a1a1aa;
+  --accent: #818cf8; --accent-dim: rgba(129,140,248,0.12);
+  --green: #4ade80; --yellow: #fbbf24; --red: #f87171; --blue: #60a5fa;
+  --purple: #c084fc; --orange: #fb923c;
+}
+* { margin:0; padding:0; box-sizing:border-box; }
+body { background:var(--bg); color:var(--text); font-family:'Inter',system-ui,sans-serif; height:100vh; display:flex; flex-direction:column; -webkit-font-smoothing:antialiased; }
+
+/* Header */
+.header { padding:0.6rem 1.2rem; border-bottom:1px solid var(--border); display:flex; align-items:center; gap:1rem; background:var(--surface); flex-shrink:0; }
+.header h1 { font-size:0.95rem; font-weight:600; }
+.header h1 span { color:var(--accent); }
+.header .status { margin-left:auto; font-size:0.7rem; color:var(--dim); font-family:'JetBrains Mono',monospace; }
+
+/* Layout */
+.layout { flex:1; display:flex; overflow:hidden; }
+
+/* Sidebar */
+.sidebar { width:300px; min-width:300px; border-right:1px solid var(--border); display:flex; flex-direction:column; background:var(--surface); }
+.section { padding:0.8rem; border-bottom:1px solid var(--border); }
+.section-title { font-size:0.7rem; font-weight:600; text-transform:uppercase; letter-spacing:0.05em; color:var(--dim); margin-bottom:0.5rem; }
+
+/* Mode selector */
+.modes { display:grid; grid-template-columns:1fr 1fr; gap:0.35rem; }
+.mode-btn { padding:0.4rem 0.5rem; font-size:0.75rem; font-weight:500; background:var(--surface2); border:1px solid var(--border); border-radius:5px; cursor:pointer; color:var(--dim2); transition:all 0.15s; text-align:center; }
+.mode-btn:hover { border-color:var(--border2); color:var(--text); }
+.mode-btn.active { background:var(--accent-dim); border-color:var(--accent); color:var(--accent); }
+
+/* Agent chips */
+.agents-grid { display:flex; flex-wrap:wrap; gap:0.3rem; }
+.agent-chip { padding:0.3rem 0.6rem; font-size:0.72rem; background:var(--surface2); border:1px solid var(--border); border-radius:4px; cursor:pointer; color:var(--dim2); transition:all 0.15s; display:flex; align-items:center; gap:0.3rem; }
+.agent-chip:hover { border-color:var(--border2); }
+.agent-chip.selected { background:var(--accent-dim); border-color:var(--accent); color:var(--accent); }
+.agent-chip .model-tag { font-size:0.6rem; color:var(--dim); font-family:'JetBrains Mono',monospace; }
+
+/* Topic input */
+.topic-area { flex:1; padding:0.8rem; display:flex; flex-direction:column; gap:0.5rem; }
+.topic-input { width:100%; padding:0.5rem 0.6rem; background:var(--bg); border:1px solid var(--border); border-radius:5px; color:var(--text); font-size:0.8rem; font-family:inherit; resize:vertical; min-height:60px; }
+.topic-input:focus { outline:none; border-color:var(--accent); }
+.topic-input::placeholder { color:var(--dim); }
+
+/* Pipeline/Parallel options */
+.options-area { padding:0 0.8rem 0.8rem; display:none; }
+.opt-row { display:flex; gap:0.3rem; margin-bottom:0.3rem; align-items:center; }
+.opt-row select, .opt-row input { padding:0.3rem 0.5rem; background:var(--bg); border:1px solid var(--border); border-radius:4px; color:var(--text); font-size:0.72rem; font-family:inherit; }
+.opt-row select { min-width:90px; }
+.opt-row input { flex:1; }
+.opt-row select:focus, .opt-row input:focus { outline:none; border-color:var(--accent); }
+.add-btn, .rm-btn { padding:0.2rem 0.5rem; font-size:0.7rem; background:var(--surface2); border:1px solid var(--border); border-radius:4px; cursor:pointer; color:var(--dim2); }
+.add-btn:hover { border-color:var(--accent); color:var(--accent); }
+.rm-btn:hover { border-color:var(--red); color:var(--red); }
+
+/* Run button */
+.run-btn { padding:0.5rem; font-size:0.8rem; font-weight:600; background:var(--accent); color:#000; border:none; border-radius:5px; cursor:pointer; transition:all 0.15s; }
+.run-btn:hover { filter:brightness(1.15); }
+.run-btn:disabled { opacity:0.4; cursor:not-allowed; }
+.run-btn.running { background:var(--red); color:#fff; }
+
+/* Main output area */
+.main { flex:1; display:flex; flex-direction:column; overflow:hidden; }
+.output { flex:1; overflow-y:auto; padding:1rem; }
+.output::-webkit-scrollbar { width:4px; }
+.output::-webkit-scrollbar-thumb { background:#333; border-radius:2px; }
+
+/* Agent response cards */
+.resp-card { margin-bottom:0.8rem; border:1px solid var(--border); border-radius:6px; overflow:hidden; }
+.resp-header { padding:0.4rem 0.7rem; background:var(--surface); display:flex; align-items:center; gap:0.5rem; font-size:0.75rem; font-weight:600; }
+.resp-header .agent-label { color:var(--accent); }
+.resp-header .event-label { color:var(--dim); font-weight:400; font-family:'JetBrains Mono',monospace; font-size:0.65rem; }
+.resp-body { padding:0.7rem; font-size:0.8rem; line-height:1.6; white-space:pre-wrap; word-wrap:break-word; color:var(--dim2); }
+.resp-card.event-start { border-color:var(--blue); }
+.resp-card.event-start .resp-header { background:rgba(96,165,250,0.06); }
+.resp-card.event-start .agent-label { color:var(--blue); }
+.resp-card.event-done { border-color:var(--green); }
+.resp-card.event-done .resp-header { background:rgba(74,222,128,0.06); }
+.resp-card.event-done .agent-label { color:var(--green); }
+.resp-card.event-error { border-color:var(--red); }
+.resp-card.event-error .resp-header { background:rgba(248,113,113,0.06); }
+.resp-card.event-error .agent-label { color:var(--red); }
+
+/* Summary card */
+.summary-card { margin-top:0.5rem; border:1px solid var(--yellow); border-radius:6px; overflow:hidden; }
+.summary-card .resp-header { background:rgba(251,191,36,0.08); }
+.summary-card .agent-label { color:var(--yellow); }
+
+/* Stats bar */
+.stats { padding:0.4rem 0.8rem; border-top:1px solid var(--border); background:var(--surface); font-size:0.68rem; color:var(--dim); font-family:'JetBrains Mono',monospace; display:flex; gap:1rem; flex-shrink:0; }
+
+/* Placeholder */
+.placeholder { flex:1; display:flex; align-items:center; justify-content:center; color:#27272a; font-size:0.85rem; }
+
+/* Spinner */
+@keyframes spin { to { transform:rotate(360deg); } }
+.spinner { width:12px; height:12px; border:2px solid var(--border2); border-top-color:var(--accent); border-radius:50%; animation:spin 0.6s linear infinite; }
+
+/* Mobile */
+@media (max-width:768px) {
+  .layout { flex-direction:column; }
+  .sidebar { width:100%; min-width:100%; max-height:45vh; overflow-y:auto; border-right:none; border-bottom:1px solid var(--border); }
+}
 </style>
 </head>
 <body>
-<div class="container">
 
-<h1><span>Agent</span> Orchestra</h1>
-<p class="subtitle">Multi-agent orchestration &mdash; Claude agents with different roles discuss, develop, and review together.</p>
+<div class="header">
+  <h1><span>Agent</span> Orchestra</h1>
+  <div class="status" id="statusBar"></div>
+</div>
 
-<h2>Interaction Modes</h2>
-<div class="modes">
-  <div class="mode mode-discuss">
-    <h3>Discussion</h3>
-    <p>Round-robin debate. Each agent sees the full transcript and adds their perspective. PM summarizes.</p>
-    <div class="diagram">Topic &rarr; A &rarr; B &rarr; C &rarr; A &rarr; &hellip; &rarr; Summary</div>
+<div class="layout">
+  <div class="sidebar">
+    <div class="section">
+      <div class="section-title">Mode</div>
+      <div class="modes" id="modeSelector"></div>
+    </div>
+    <div class="section">
+      <div class="section-title">Agents</div>
+      <div class="agents-grid" id="agentSelector"></div>
+    </div>
+    <div class="options-area" id="optionsArea"></div>
+    <div class="topic-area">
+      <div class="section-title">Topic</div>
+      <textarea class="topic-input" id="topicInput" placeholder="Enter topic or task..."></textarea>
+      <button class="run-btn" id="runBtn" onclick="run()">Run</button>
+    </div>
   </div>
-  <div class="mode mode-pipeline">
-    <h3>Pipeline</h3>
-    <p>Sequential handoff. Design &rarr; code &rarr; review &rarr; test. Rework loop on critical issues.</p>
-    <div class="diagram">Architect &rarr; Developer &rarr; Reviewer &rarr; Tester</div>
-  </div>
-  <div class="mode mode-parallel">
-    <h3>Parallel</h3>
-    <p>Fan-out / fan-in. Agents work simultaneously on different aspects, then results are merged.</p>
-    <div class="diagram">Task &rarr; [A, B, C] &rarr; Merge</div>
-  </div>
-  <div class="mode mode-consensus">
-    <h3>Consensus</h3>
-    <p>Voting with structured output. Agents vote independently, supermajority decides.</p>
-    <div class="diagram">Question &rarr; All vote &rarr; Tally &rarr; Decision</div>
+
+  <div class="main">
+    <div class="output" id="output">
+      <div class="placeholder">Select mode, agents, and topic to start</div>
+    </div>
+    <div class="stats" id="statsBar" style="display:none"></div>
   </div>
 </div>
 
-<h2>Agent Roles</h2>
-<div class="agents">
-  <div class="agent"><strong>Architect</strong> <span class="model">opus</span></div>
-  <div class="agent"><strong>Developer</strong> <span class="model">sonnet</span></div>
-  <div class="agent"><strong>Reviewer</strong> <span class="model">opus</span></div>
-  <div class="agent"><strong>PM</strong> <span class="model">sonnet</span></div>
-  <div class="agent"><strong>Tester</strong> <span class="model">sonnet</span></div>
-  <div class="agent"><strong>DevOps</strong> <span class="model">sonnet</span></div>
-  <div class="agent"><strong>Security</strong> <span class="model">opus</span></div>
-</div>
+<script>
+const MODES = {
+  discuss:   { label:'Discussion', desc:'Round-robin debate' },
+  pipeline:  { label:'Pipeline', desc:'Sequential handoff' },
+  parallel:  { label:'Parallel', desc:'Fan-out / fan-in' },
+  consensus: { label:'Consensus', desc:'Voting' },
+};
 
-<h2>Usage</h2>
-<pre><code># Discussion
-orchestra discuss "REST or GraphQL?" --agents architect,developer,reviewer
+const PIPELINE_ACTIONS = ['design','implement','review','test'];
 
-# Pipeline
-orchestra pipeline "Add authentication" --steps architect:design,developer:implement,reviewer:review
+let agents = {};
+let selectedMode = 'discuss';
+let selectedAgents = new Set();
+let ws = null;
+let running = false;
 
-# Parallel
-orchestra parallel "Build dashboard" --tasks "developer:frontend" "developer:API" "devops:Docker"
+// Dynamic options for pipeline/parallel
+let pipelineSteps = [{agent:'architect',action:'design'},{agent:'developer',action:'implement'},{agent:'reviewer',action:'review'}];
+let parallelTasks = [{agent:'developer',description:''}];
 
-# Consensus
-orchestra consensus "PostgreSQL or MongoDB?" --agents architect,developer,devops</code></pre>
+// Init
+async function init() {
+  try {
+    const r = await fetch('/agents/api/config');
+    const data = await r.json();
+    agents = data.agents;
+    renderModes();
+    renderAgents();
+    // Default selection
+    selectedAgents = new Set(['architect','developer','reviewer']);
+    renderAgents();
+  } catch(e) {
+    document.getElementById('statusBar').textContent = 'Failed to load config';
+  }
+}
 
-<h2>Architecture</h2>
-<p>Each agent is an independent <code>ClaudeSDKClient</code> process. Python orchestrator controls turn order, message routing, and stopping criteria. No shared context window &mdash; each agent gets its full capacity.</p>
-<p>Runs on Claude Max subscription (no per-token API costs). Roles, modes, and prompts are configurable via YAML.</p>
+function renderModes() {
+  const el = document.getElementById('modeSelector');
+  el.innerHTML = Object.entries(MODES).map(([k,v]) =>
+    `<div class="mode-btn ${k===selectedMode?'active':''}" onclick="selectMode('${k}')">${v.label}</div>`
+  ).join('');
+}
 
-<p class="tech">Built with <code>claude-agent-sdk</code> + Python 3.11 &bull; <a href="https://github.com/yanhs/orchestra">GitHub</a></p>
+function selectMode(m) {
+  selectedMode = m;
+  renderModes();
+  renderOptions();
+}
 
-</div>
+function renderAgents() {
+  const el = document.getElementById('agentSelector');
+  el.innerHTML = Object.entries(agents).map(([k,v]) =>
+    `<div class="agent-chip ${selectedAgents.has(k)?'selected':''}" onclick="toggleAgent('${k}')">
+      ${v.display_name} <span class="model-tag">${v.model}</span>
+    </div>`
+  ).join('');
+}
+
+function toggleAgent(name) {
+  if (selectedAgents.has(name)) selectedAgents.delete(name);
+  else selectedAgents.add(name);
+  renderAgents();
+}
+
+function renderOptions() {
+  const area = document.getElementById('optionsArea');
+  if (selectedMode === 'pipeline') {
+    area.style.display = 'block';
+    area.innerHTML = '<div class="section-title">Pipeline Steps</div>' + pipelineSteps.map((s,i) =>
+      `<div class="opt-row">
+        <select onchange="pipelineSteps[${i}].agent=this.value">${agentOpts(s.agent)}</select>
+        <select onchange="pipelineSteps[${i}].action=this.value">${PIPELINE_ACTIONS.map(a=>`<option ${a===s.action?'selected':''}>${a}</option>`).join('')}</select>
+        <button class="rm-btn" onclick="pipelineSteps.splice(${i},1);renderOptions()">x</button>
+      </div>`
+    ).join('') + `<button class="add-btn" onclick="pipelineSteps.push({agent:'developer',action:'implement'});renderOptions()">+ step</button>`;
+  } else if (selectedMode === 'parallel') {
+    area.style.display = 'block';
+    area.innerHTML = '<div class="section-title">Subtasks</div>' + parallelTasks.map((t,i) =>
+      `<div class="opt-row">
+        <select onchange="parallelTasks[${i}].agent=this.value">${agentOpts(t.agent)}</select>
+        <input value="${esc(t.description)}" placeholder="subtask..." onchange="parallelTasks[${i}].description=this.value">
+        <button class="rm-btn" onclick="parallelTasks.splice(${i},1);renderOptions()">x</button>
+      </div>`
+    ).join('') + `<button class="add-btn" onclick="parallelTasks.push({agent:'developer',description:''});renderOptions()">+ task</button>`;
+  } else {
+    area.style.display = 'none';
+    area.innerHTML = '';
+  }
+}
+
+function agentOpts(sel) {
+  return Object.entries(agents).map(([k,v]) => `<option value="${k}" ${k===sel?'selected':''}>${v.display_name}</option>`).join('');
+}
+
+function esc(s) { return s.replace(/"/g,'&quot;').replace(/</g,'&lt;'); }
+
+function run() {
+  if (running) { stop(); return; }
+
+  const topic = document.getElementById('topicInput').value.trim();
+  if (!topic) return;
+
+  const output = document.getElementById('output');
+  output.innerHTML = '';
+  document.getElementById('statsBar').style.display = 'none';
+
+  const btn = document.getElementById('runBtn');
+  btn.textContent = 'Stop';
+  btn.classList.add('running');
+  running = true;
+
+  const proto = location.protocol === 'https:' ? 'wss:' : 'ws:';
+  ws = new WebSocket(`${proto}//${location.host}/agents/ws/run`);
+
+  ws.onopen = () => {
+    const msg = {
+      mode: selectedMode,
+      topic,
+      agents: [...selectedAgents],
+      options: {},
+    };
+    if (selectedMode === 'pipeline') msg.options.steps = pipelineSteps;
+    if (selectedMode === 'parallel') msg.options.tasks = parallelTasks;
+    ws.send(JSON.stringify(msg));
+    document.getElementById('statusBar').textContent = 'running...';
+  };
+
+  ws.onmessage = (e) => {
+    const data = JSON.parse(e.data);
+    if (data.type === 'update') {
+      addCard(data.agent, data.event, data.text);
+    } else if (data.type === 'result') {
+      if (data.summary) addSummary(data.summary);
+      showStats(data);
+      finish();
+    } else if (data.type === 'error') {
+      addCard('Error', 'error', data.text);
+      finish();
+    }
+  };
+
+  ws.onclose = () => { if (running) finish(); };
+  ws.onerror = () => { addCard('Error', 'error', 'WebSocket connection failed'); finish(); };
+}
+
+function stop() {
+  if (ws) ws.close();
+  finish();
+}
+
+function finish() {
+  running = false;
+  const btn = document.getElementById('runBtn');
+  btn.textContent = 'Run';
+  btn.classList.remove('running');
+  document.getElementById('statusBar').textContent = '';
+}
+
+function addCard(agent, event, text) {
+  const output = document.getElementById('output');
+  // For 'start' events, show compact indicator
+  if (event === 'start') {
+    const card = document.createElement('div');
+    card.className = 'resp-card event-start';
+    card.innerHTML = `<div class="resp-header"><span class="agent-label">${esc(agent)}</span><span class="event-label">${esc(text)}</span><div class="spinner"></div></div>`;
+    card.id = 'active-' + agent.replace(/\s/g,'');
+    output.appendChild(card);
+    output.scrollTop = output.scrollHeight;
+    return;
+  }
+
+  // Remove the start indicator for this agent
+  const active = document.getElementById('active-' + agent.replace(/\s/g,''));
+  if (active) active.remove();
+
+  const card = document.createElement('div');
+  card.className = `resp-card event-${event}`;
+  card.innerHTML = `<div class="resp-header"><span class="agent-label">${esc(agent)}</span><span class="event-label">${event}</span></div><div class="resp-body">${formatMd(text)}</div>`;
+  output.appendChild(card);
+  output.scrollTop = output.scrollHeight;
+}
+
+function addSummary(text) {
+  const output = document.getElementById('output');
+  const card = document.createElement('div');
+  card.className = 'resp-card summary-card';
+  card.innerHTML = `<div class="resp-header"><span class="agent-label">Summary</span></div><div class="resp-body">${formatMd(text)}</div>`;
+  output.appendChild(card);
+  output.scrollTop = output.scrollHeight;
+}
+
+function showStats(data) {
+  const bar = document.getElementById('statsBar');
+  bar.style.display = 'flex';
+  bar.textContent = `${data.responses} responses | $${(data.cost||0).toFixed(4)} | ${((data.duration_ms||0)/1000).toFixed(1)}s`;
+}
+
+function formatMd(text) {
+  // Minimal markdown: bold, code, headers, lists
+  return text
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+    .replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>')
+    .replace(/`([^`]+)`/g,'<code style="background:rgba(255,255,255,0.06);padding:1px 4px;border-radius:3px;font-size:0.78em">$1</code>')
+    .replace(/^### (.+)$/gm,'<strong style="color:var(--text);font-size:0.85rem">$1</strong>')
+    .replace(/^## (.+)$/gm,'<strong style="color:var(--text);font-size:0.9rem">$1</strong>')
+    .replace(/^- (.+)$/gm,'&nbsp;&nbsp;&#8226; $1')
+    .replace(/\n/g,'<br>');
+}
+
+init();
+</script>
 </body>
 </html>
