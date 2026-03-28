@@ -162,7 +162,11 @@ VARIANT RULES:
 - Variant 2 = solid middle ground tailored to THIS task
 - Variant 3 = the most thorough approach you can design for THIS task
 - Do NOT use fixed numbers — adapt everything to the task. A simple question might need 2/3/5 agents. A complex project might need 4/7/10.
-- Different variants may use different modes if that makes sense (e.g. fast=discuss, deep=pipeline)
+- Each variant MUST have its own interaction strategy — don't just add more agents to the same mode. Change HOW agents interact:
+  * Fast might use a single pipeline (A→B) or quick parallel split
+  * Balanced might add review loops, cross-checking, or multi-round debate
+  * Deep might combine modes: parallel research first, then pipeline build, then discussion review
+- Describe the interaction pattern in "description" so the user understands the workflow, not just agent count
 - Choose models per agent based on role complexity, not on variant level
 
 GENERAL RULES:
