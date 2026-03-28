@@ -138,7 +138,7 @@ class AutoPlanRequest(BaseModel):
     topic: str
 
 
-PLAN_PROMPT_TEMPLATE = """Analyze this task and propose exactly 3 plan variants — from FAST to THOROUGH.
+PLAN_PROMPT_TEMPLATE = """Analyze this task and propose exactly 5 plan variants — from FASTEST to MAXIMUM QUALITY.
 
 TASK: "{topic}"
 
@@ -192,9 +192,11 @@ Don't try to do everything in one simple pipeline — DECOMPOSE into logical pha
 
 VARIANT RULES:
 - The 3 variants must differ significantly in depth and approach
-- Variant 1 = fastest useful result. Maybe skip some phases, fewer agents per phase
-- Variant 2 = solid middle ground. All key phases, moderate depth
-- Variant 3 = maximum thoroughness. More phases, more agents, loops for quality, parallel exploration
+- Variant 1 = lightning fast, minimal agents, instant result, may sacrifice depth
+- Variant 2 = quick but smarter, a bit more agents/steps for better quality
+- Variant 3 = balanced, good tradeoff between speed and quality
+- Variant 4 = thorough, more phases, deeper analysis, review loops
+- Variant 5 = maximum quality, all phases, many agents, parallel exploration, multiple loops, opus models for key roles
 - Do NOT use fixed numbers — adapt everything to the task
 - Each variant MUST have its own interaction strategy. Describe step-by-step in "description"
 - Choose models per agent based on role complexity
@@ -265,8 +267,8 @@ async def auto_plan(req: AutoPlanRequest):
     result = await auto_plans(req)
     if isinstance(result, dict) and result.get("error"):
         return result
-    if isinstance(result, list) and len(result) >= 2:
-        return result[1]  # balanced
+    if isinstance(result, list) and len(result) >= 3:
+        return result[2]  # balanced (middle of 5)
     if isinstance(result, list) and len(result) >= 1:
         return result[0]
     return {"error": "No plans generated"}
