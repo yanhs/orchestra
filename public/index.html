@@ -160,10 +160,15 @@ body{background:var(--bg);color:var(--t);font-family:'Inter',system-ui,sans-seri
     </div>
     <!-- Mode options -->
     <div class="opts" id="optsArea"></div>
+    <!-- Auto assign status -->
+    <div id="autoStatus" style="display:none;padding:0 0.8rem 0.5rem;font-size:0.7rem;color:var(--d)"></div>
     <!-- Topic + Run -->
     <div class="top-area">
       <textarea class="top-in" id="topicIn" placeholder="Enter topic or task..."></textarea>
-      <button class="run" id="runBtn" onclick="doRun()">Run</button>
+      <div style="display:flex;gap:0.3rem">
+        <button class="run" id="assignBtn" onclick="autoAssign()" style="display:none;flex:1;background:var(--s2);color:var(--a);border:1px solid var(--a)">Assign agents</button>
+        <button class="run" id="runBtn" onclick="doRun()" style="flex:1">Run</button>
+      </div>
     </div>
   </div>
 
@@ -225,7 +230,10 @@ function renderModes(){
   document.getElementById('modeSel').innerHTML=Object.entries(MODES).map(([k,v])=>
     `<div class="mbtn ${k===selectedMode?'on':''}" onclick="selMode('${k}')">${v}</div>`).join('');
 }
-function selMode(m){selectedMode=m;render()}
+function selMode(m){selectedMode=m;render();
+  document.getElementById('assignBtn').style.display=m==='auto'?'block':'none';
+  document.getElementById('autoStatus').style.display='none';
+}
 
 // ── Agents ──
 function renderAgents(){
@@ -459,6 +467,41 @@ function switchTab(el){
 }
 
 // ── Run ──
+let autoPlan=null; // cached plan from autoAssign
+
+async function autoAssign(){
+  const topic=document.getElementById('topicIn').value.trim();
+  if(!topic){document.getElementById('autoStatus').style.display='block';document.getElementById('autoStatus').textContent='Enter a topic first';return}
+  const btn=document.getElementById('assignBtn');
+  btn.disabled=true;btn.textContent='Planning...';
+  document.getElementById('autoStatus').style.display='block';
+  document.getElementById('autoStatus').innerHTML='<div style="display:flex;align-items:center;gap:0.4rem"><div class="spinner"></div> AI is choosing agents and mode...</div>';
+  try{
+    const r=await fetch(BASE+'/api/auto-plan',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({topic})});
+    const plan=await r.json();
+    if(plan.error){document.getElementById('autoStatus').textContent='Error: '+plan.error;btn.disabled=false;btn.textContent='Assign agents';return}
+    // Create missing agents
+    for(const ag of plan.agents||[]){
+      if(!agents[ag.id]){
+        await fetch(BASE+'/api/agents/'+ag.id,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(ag)});
+      }
+    }
+    const d=await(await fetch(BASE+'/api/config')).json();agents=d.agents;
+    const agIds=(plan.agents||[]).map(a=>a.id);
+    selectedAgents=new Set(agIds);
+    selectedMode=plan.mode||'discuss';
+    autoPlan=plan;
+    render();drawDiagram();
+    // Show assigned info
+    const agNames=(plan.agents||[]).map(a=>a.display_name).join(', ');
+    document.getElementById('autoStatus').style.display='block';
+    document.getElementById('autoStatus').innerHTML=`<span style="color:var(--g)">&#10003;</span> <b style="color:var(--t)">${MODES[plan.mode]||plan.mode}</b> &mdash; ${agNames}<br><span style="color:var(--d2)">${plan.reasoning||''}</span>`;
+    // Keep assign button visible but update text
+    document.getElementById('assignBtn').style.display='block';
+  }catch(e){document.getElementById('autoStatus').textContent='Error: '+e.message}
+  btn.disabled=false;btn.textContent='Assign agents';
+}
+
 async function doRun(){
   if(running){if(ws)ws.close();return}
   const topic=document.getElementById('topicIn').value.trim();if(!topic)return;
@@ -467,34 +510,40 @@ async function doRun(){
   switchTab(document.querySelector('[data-p="output"]'));
   const btn=document.getElementById('runBtn');btn.textContent='Stop';btn.classList.add('stop');running=true;
 
-  // Auto mode: AI plans agents + mode first
+  // Auto mode: use cached plan from autoAssign, or plan now
   let mode=selectedMode, agList=[...selectedAgents], opts={};
-  if(selectedMode==='auto'){
-    document.getElementById('statusBar').textContent='planning...';
-    addCard('Auto','start','AI is analyzing the task and choosing agents + mode...');
-    try{
-      const r=await fetch(BASE+'/api/auto-plan',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({topic})});
-      const plan=await r.json();
-      if(plan.error){addCard('Auto','error',plan.error);fin();return}
-      // Create agents that don't exist yet
-      for(const ag of plan.agents||[]){
-        if(!agents[ag.id]){
-          await fetch(BASE+'/api/agents/'+ag.id,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(ag)});
+  if(selectedMode==='auto'||autoPlan){
+    if(autoPlan){
+      // Use cached plan from "Assign agents" button
+      mode=autoPlan.mode||'discuss';
+      agList=(autoPlan.agents||[]).map(a=>a.id);
+      opts=autoPlan.options||{};
+      const agNames=(autoPlan.agents||[]).map(a=>a.display_name).join(', ');
+      addCard('Auto','done',`Mode: **${MODES[mode]||mode}**\nAgents: ${agNames}\n${autoPlan.reasoning||''}`);
+      autoPlan=null;
+    }else{
+      // No pre-plan, do it now
+      document.getElementById('statusBar').textContent='planning...';
+      addCard('Auto','start','AI is analyzing the task and choosing agents + mode...');
+      try{
+        const r=await fetch(BASE+'/api/auto-plan',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({topic})});
+        const plan=await r.json();
+        if(plan.error){addCard('Auto','error',plan.error);fin();return}
+        for(const ag of plan.agents||[]){
+          if(!agents[ag.id]) await fetch(BASE+'/api/agents/'+ag.id,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(ag)});
         }
-      }
-      // Reload agents
-      const d=await(await fetch(BASE+'/api/config')).json();agents=d.agents;
-      agList=(plan.agents||[]).map(a=>a.id);
-      selectedAgents=new Set(agList);
-      mode=plan.mode||'discuss';
-      selectedMode=mode;
-      opts=plan.options||{};
-      render();drawDiagram();
-      const agNames=(plan.agents||[]).map(a=>a.display_name).join(', ');
-      addCard('Auto','done',`Mode: **${MODES[mode]||mode}**\nAgents: ${agNames}\n${plan.reasoning||''}`);
-    }catch(e){addCard('Auto','error','Planning failed: '+e.message);fin();return}
+        const d=await(await fetch(BASE+'/api/config')).json();agents=d.agents;
+        agList=(plan.agents||[]).map(a=>a.id);
+        selectedAgents=new Set(agList);
+        mode=plan.mode||'discuss';
+        opts=plan.options||{};
+        render();drawDiagram();
+        const agNames=(plan.agents||[]).map(a=>a.display_name).join(', ');
+        addCard('Auto','done',`Mode: **${MODES[mode]||mode}**\nAgents: ${agNames}\n${plan.reasoning||''}`);
+      }catch(e){addCard('Auto','error','Planning failed: '+e.message);fin();return}
+    }
   }
-  if(mode==='auto'){fin();return} // safety
+  if(mode==='auto'){fin();return}
 
   if(mode==='pipeline')opts.steps=opts.steps||pipeSteps;
   if(mode==='parallel')opts.tasks=opts.tasks||parTasks;
