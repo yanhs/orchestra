@@ -198,6 +198,21 @@ const ALL_TOOLS = ['Read','Write','Edit','Bash','Glob','Grep','WebSearch','WebFe
 const PIPELINE_ACTIONS = ['design','implement','review','test'];
 const MODEL_COLORS = {opus:'#c084fc',sonnet:'#60a5fa',haiku:'#4ade80'};
 
+// Role templates for auto-fill on new agent
+const ROLE_TEMPLATES = {
+  architect: {display_name:'Architect',model:'opus',allowed_tools:['Read','Glob','Grep','WebSearch','WebFetch'],system_prompt:'You are a senior software architect.\n- Analyze system design, architecture decisions, and trade-offs\n- Propose clean, scalable architectures\n- Evaluate technology choices\n- Identify potential problems early\nBe concise and specific. Cite files and line numbers when referencing code.'},
+  developer: {display_name:'Developer',model:'sonnet',allowed_tools:['Read','Write','Edit','Bash','Glob','Grep'],system_prompt:'You are a senior software developer.\n- Focus on practical implementation details\n- Write clean, well-tested code following existing patterns\n- Identify implementation challenges and propose solutions\n- Consider performance, maintainability, and developer experience\nBe concise and specific. Show code snippets when relevant.'},
+  reviewer: {display_name:'Reviewer',model:'opus',allowed_tools:['Read','Glob','Grep','Bash'],system_prompt:'You are a meticulous code reviewer.\n- Find bugs, security issues, performance problems, and design flaws\n- Challenge assumptions and identify edge cases\n- Rate issues by severity: critical / major / minor / nit\n- Be constructively critical\nBe concise. Cite specific files and line numbers.'},
+  pm: {display_name:'PM',model:'sonnet',allowed_tools:['Read','WebSearch','WebFetch'],system_prompt:'You are a product manager.\n- Translate technical discussions into clear requirements and decisions\n- Summarize key points, agreements, and disagreements\n- Identify missing requirements or unclear specifications\n- Prioritize by user impact\nBe concise. Focus on actionable outcomes.'},
+  tester: {display_name:'Tester',model:'sonnet',allowed_tools:['Read','Write','Edit','Bash','Glob','Grep'],system_prompt:'You are a QA engineer and test architect.\n- Write comprehensive tests (unit, integration, e2e)\n- Identify edge cases and boundary conditions\n- Verify implementations meet requirements\nBe thorough. Cover happy paths, error paths, and edge cases.'},
+  devops: {display_name:'DevOps',model:'sonnet',allowed_tools:['Read','Write','Edit','Bash','Glob','Grep'],system_prompt:'You are a DevOps engineer.\n- Handle CI/CD pipelines, Docker, deployment scripts\n- Set up monitoring, logging, and alerting\n- Focus on reliability, security, and automation\nBe practical. Prefer battle-tested tools over cutting-edge.'},
+  security: {display_name:'Security Analyst',model:'opus',allowed_tools:['Read','Glob','Grep','Bash','WebSearch'],system_prompt:'You are a security analyst.\n- Perform threat modeling and vulnerability assessment\n- Check for OWASP Top 10, CWE common weaknesses\n- Review authentication, authorization, and data handling\n- Identify secrets exposure and injection risks\nBe specific. Cite exact code locations and CVE references.'},
+  writer: {display_name:'Tech Writer',model:'sonnet',allowed_tools:['Read','Write','Edit','Glob','Grep'],system_prompt:'You are a technical writer.\n- Write clear documentation, READMEs, and API docs\n- Explain complex concepts simply\n- Create code examples and tutorials\n- Maintain consistent terminology and style\nBe clear and concise. Use examples.'},
+  analyst: {display_name:'Data Analyst',model:'sonnet',allowed_tools:['Read','Bash','Glob','Grep','WebSearch'],system_prompt:'You are a data analyst.\n- Analyze data patterns and metrics\n- Write queries and data pipelines\n- Create reports and visualizations\n- Identify trends and anomalies\nBe data-driven. Show evidence for conclusions.'},
+  designer: {display_name:'UX Designer',model:'sonnet',allowed_tools:['Read','WebSearch','WebFetch'],system_prompt:'You are a UX designer.\n- Design user flows and interfaces\n- Focus on usability and accessibility\n- Review implementations from a user perspective\n- Suggest improvements based on UX best practices\nBe specific. Describe concrete UI changes.'},
+  custom: {display_name:'',model:'sonnet',allowed_tools:['Read','Glob','Grep'],system_prompt:''},
+};
+
 let agents={}, selectedMode='discuss', selectedAgents=new Set(), ws=null, running=false, editingAgent=null;
 let pipeSteps=[{agent:'architect',action:'design'},{agent:'developer',action:'implement'},{agent:'reviewer',action:'review'}];
 let parTasks=[{agent:'developer',description:''}];
@@ -280,14 +295,17 @@ async function delConfig(){
 
 // ── Agent Editor ──
 function editAgent(name){
+  editAgentWithData(name, agents[name]||{}, false);
+}
+function editAgentWithData(name, a, isNew){
   editingAgent=name;
-  const a=agents[name]||{};
   switchTab(document.querySelector('[data-p="editor"]'));
   const tools=a.allowed_tools||[];
+  const idReadonly=name&&!isNew;
   document.getElementById('editorArea').innerHTML=`
     <div class="ed-card">
-      <h3><span>&#9998;</span> ${name?'Edit':'New'} Agent</h3>
-      <div class="ed-row"><label>ID (lowercase)</label><input id="ed-id" value="${esc(name)}" ${name?'readonly style="opacity:0.5"':''}></div>
+      <h3><span>&#9998;</span> ${idReadonly?'Edit':'New'} Agent</h3>
+      <div class="ed-row"><label>ID (lowercase)</label><input id="ed-id" value="${esc(name)}" ${idReadonly?'readonly style="opacity:0.5"':'placeholder="e.g. my_agent"'}></div>
       <div class="ed-row"><label>Display Name</label><input id="ed-dn" value="${esc(a.display_name||'')}"></div>
       <div class="ed-row"><label>Model</label><select id="ed-mod"><option ${a.model==='opus'?'selected':''}>opus</option><option ${a.model==='sonnet'?'selected':''}>sonnet</option><option ${a.model==='haiku'?'selected':''}>haiku</option></select></div>
       <div class="ed-row"><label>Max Turns</label><input id="ed-mt" type="number" value="${a.max_turns||50}"></div>
@@ -295,12 +313,43 @@ function editAgent(name){
       <div class="ed-row"><label>System Prompt</label><textarea id="ed-sp">${esc(a.system_prompt||'')}</textarea></div>
       <div class="ed-btns">
         <button class="ed-save" onclick="saveAgent()">Save</button>
-        ${name?`<button class="ed-del" onclick="delAgent('${name}')">Delete</button>`:''}
+        ${idReadonly?`<button class="ed-del" onclick="delAgent('${name}')">Delete</button>`:''}
         <button class="ed-cancel" onclick="editingAgent=null;document.getElementById('editorArea').innerHTML='<div class=ph>Click an agent chip or + New to edit</div>'">Cancel</button>
       </div>
     </div>`;
 }
-function newAgent(){editAgent('')}
+function newAgent(){
+  switchTab(document.querySelector('[data-p="editor"]'));
+  const existing=new Set(Object.keys(agents));
+  const available=Object.entries(ROLE_TEMPLATES).filter(([k])=>k==='custom'||!existing.has(k));
+  document.getElementById('editorArea').innerHTML=`
+    <div class="ed-card">
+      <h3><span>+</span> New Agent</h3>
+      <p style="font-size:0.78rem;color:var(--d2);margin-bottom:0.8rem">Choose a role template. All fields will be auto-filled.</p>
+      <div style="display:flex;flex-wrap:wrap;gap:0.4rem">
+        ${available.map(([k,v])=>{
+          const mc=MODEL_COLORS[v.model]||'#a1a1aa';
+          return `<div style="padding:0.5rem 0.8rem;background:var(--s2);border:1px solid var(--b);border-radius:5px;cursor:pointer;transition:all .12s;min-width:120px" onclick="createFromTemplate('${k}')" onmouseover="this.style.borderColor='${mc}'" onmouseout="this.style.borderColor='var(--b)'">
+            <div style="font-size:0.8rem;font-weight:500;color:var(--t)">${v.display_name||'Custom'}</div>
+            <div style="font-size:0.62rem;color:${mc};font-family:'JetBrains Mono',monospace;margin-top:2px">${v.model} ${k==='custom'?'':'| '+v.allowed_tools.length+' tools'}</div>
+          </div>`;
+        }).join('')}
+      </div>
+    </div>`;
+}
+function createFromTemplate(tplKey){
+  const tpl=ROLE_TEMPLATES[tplKey];
+  const id=tplKey==='custom'?'':tplKey;
+  // Pre-fill agent data and open editor
+  const fakeAgent={
+    display_name:tpl.display_name,
+    model:tpl.model,
+    system_prompt:tpl.system_prompt,
+    allowed_tools:tpl.allowed_tools,
+    max_turns:50,
+  };
+  editAgentWithData(id,fakeAgent,tplKey==='custom');
+}
 
 async function saveAgent(){
   const id=(document.getElementById('ed-id').value||'').trim().toLowerCase().replace(/[^a-z0-9_]/g,'');

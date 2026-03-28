@@ -171,6 +171,12 @@ agents:
       Be specific. Cite exact code locations and CVE references when applicable.
 
       '
+  marketing:
+    display_name: marketing
+    model: opus
+    system_prompt: ''
+    allowed_tools: []
+    max_turns: 50
 modes:
   discussion:
     max_rounds: 2
