@@ -547,6 +547,7 @@ async function doRun(){
   const out=document.getElementById('output');out.innerHTML='';
   document.getElementById('statsBar').style.display='none';
   switchTab(document.querySelector('[data-p="output"]'));
+  document.getElementById('assignBtn').style.display='none';
   const btn=document.getElementById('runBtn');btn.textContent='Stop';btn.classList.add('stop');running=true;
 
   // Auto mode: use cached plan from autoAssign, or plan now
