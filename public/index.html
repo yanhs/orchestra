@@ -161,6 +161,13 @@ body{background:var(--bg);color:var(--t);font-family:'Inter',system-ui,sans-seri
     </div>
     <!-- Mode options -->
     <div class="opts" id="optsArea"></div>
+    <!-- Rounds -->
+    <div class="sec" style="padding:0.4rem 0.8rem;border-bottom:none">
+      <div style="display:flex;align-items:center;gap:0.4rem">
+        <span style="font-size:0.65rem;color:var(--d);font-weight:600;text-transform:uppercase;letter-spacing:0.05em">Rounds</span>
+        <input id="roundsIn" type="number" value="2" min="1" max="10" style="width:50px;padding:0.2rem 0.4rem;background:var(--bg);border:1px solid var(--b);border-radius:4px;color:var(--t);font-size:0.72rem;font-family:inherit;text-align:center">
+      </div>
+    </div>
     <!-- Auto assign status -->
     <div id="autoStatus" style="display:none;padding:0 0.8rem 0.5rem;font-size:0.7rem;color:var(--d)"></div>
     <!-- Topic + Run -->
@@ -581,6 +588,8 @@ async function doRun(){
   const proto=location.protocol==='https:'?'wss:':'ws:';
   ws=new WebSocket(`${proto}//${location.host}${BASE}/ws/run`);
   ws.onopen=()=>{
+    const rounds=parseInt(document.getElementById('roundsIn').value)||2;
+    if(!opts.rounds)opts.rounds=rounds;
     ws.send(JSON.stringify({mode,topic,agents:agList,options:opts}));
     document.getElementById('statusBar').textContent='running...';
   };
