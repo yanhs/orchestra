@@ -223,7 +223,7 @@ async function init(){
   try{
     const d=await(await fetch(BASE+'/api/config')).json();
     agents=d.agents;
-    selectedAgents=new Set(Object.keys(agents).slice(0,3));
+    selectedAgents=new Set(Object.keys(agents));
     render();
     loadConfigs();
     drawDiagram();
@@ -269,7 +269,7 @@ async function delAllAgents(){
 async function resetAgents(){
   await fetch(BASE+'/api/agents/reset',{method:'POST'});
   const d=await(await fetch(BASE+'/api/config')).json();agents=d.agents;
-  selectedAgents=new Set(Object.keys(agents).slice(0,3));render();drawDiagram();
+  selectedAgents=new Set(Object.keys(agents));render();drawDiagram();
 }
 async function fullReset(){
   // Stop any running task
@@ -277,7 +277,7 @@ async function fullReset(){
   // Reset agents to defaults
   await fetch(BASE+'/api/agents/reset',{method:'POST'});
   const d=await(await fetch(BASE+'/api/config')).json();agents=d.agents;
-  selectedAgents=new Set(Object.keys(agents).slice(0,3));
+  selectedAgents=new Set(Object.keys(agents));
   // Clear UI
   selectedMode='auto';autoPlan=null;autoAssigned=false;
   document.getElementById('output').innerHTML='<div class="ph">Select mode, agents, and topic</div>';
@@ -319,7 +319,7 @@ async function saveConfig(){
 async function loadConfig(){
   const name=document.getElementById('cfgSel').value;if(!name)return;
   const r=await(await fetch(BASE+'/api/configs/'+encodeURIComponent(name)+'/load',{method:'POST'})).json();
-  const d=await(await fetch(BASE+'/api/config')).json();agents=d.agents;selectedAgents=new Set(Object.keys(agents).slice(0,3));render();drawDiagram();
+  const d=await(await fetch(BASE+'/api/config')).json();agents=d.agents;selectedAgents=new Set(Object.keys(agents));render();drawDiagram();
   if(histOpen)loadHist();
   document.getElementById('autoStatus').style.display='block';
   document.getElementById('autoStatus').innerHTML=`<span style="color:var(--g)">&#10003;</span> Loaded "${esc(name)}" — ${r.runs||0} conversations restored`;
