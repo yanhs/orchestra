@@ -530,6 +530,7 @@ async function autoAssign(){
     selectedMode=plan.mode||'discuss';
     autoAssigned=true;
     autoPlan=plan;
+    if(plan.options?.rounds)document.getElementById('roundsIn').value=plan.options.rounds;
     render();drawDiagram();
     // Show assigned info
     const agNames=(plan.agents||[]).map(a=>a.display_name).join(', ');

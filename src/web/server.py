@@ -191,7 +191,7 @@ Return ONLY valid JSON:
       "system_prompt": "<role description>"
     }}
   ],
-  "options": {{}}
+  "options": {{"rounds": <number 1-5, based on task complexity>}}
 }}
 
 Rules:
