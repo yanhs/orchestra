@@ -37,10 +37,22 @@ def _write_yaml(data: dict) -> None:
         yaml.dump(data, f, default_flow_style=False, allow_unicode=True, sort_keys=False)
 
 
+LANDING_PATH = Path(__file__).parent.parent.parent / "landing"
+
+
 # ── Pages ──
 
 @app.get("/")
-async def index():
+async def landing():
+    return HTMLResponse(
+        (LANDING_PATH / "index.html").read_text(),
+        headers={"Cache-Control": "no-store"},
+    )
+
+
+@app.get("/app")
+@app.get("/app/")
+async def dashboard():
     return HTMLResponse(
         (PUBLIC_PATH / "index.html").read_text(),
         headers={"Cache-Control": "no-store"},

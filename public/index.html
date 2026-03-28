@@ -229,7 +229,7 @@ body.st-choose .topic-view,body.st-choose .work-view{display:none}
 </div>
 
 <script>
-const BASE='/agents';
+const BASE=location.pathname.replace(/\/(app\/?)?$/,'');
 const ALL_TOOLS=['Read','Write','Edit','Bash','Glob','Grep','WebSearch','WebFetch'];
 const MC={opus:'#c084fc',sonnet:'#60a5fa',haiku:'#4ade80'};
 const MODE_NAMES={discuss:'Discussion',pipeline:'Pipeline',parallel:'Parallel',consensus:'Consensus',custom:'Custom Workflow'};
