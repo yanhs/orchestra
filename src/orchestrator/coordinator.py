@@ -59,10 +59,33 @@ class OrchestraCoordinator:
         agents = [self._make_agent(n) for n in names]
         max_rounds = rounds or mode_config.max_rounds
 
+        # Find a summarizer: from config, or from available agents, or create ad-hoc
         summarizer = None
         summarizer_name = mode_config.summarizer
         if summarizer_name and summarizer_name in self.config.agents:
             summarizer = self._make_agent(summarizer_name)
+        else:
+            # Use any agent not in the discussion as summarizer
+            for aname in self.config.agents:
+                if aname not in names:
+                    summarizer = self._make_agent(aname)
+                    break
+            if not summarizer:
+                # Create ad-hoc summarizer from first agent
+                from ..agents.client import AgentClient
+                from ..agents.definition import AgentRole
+                summarizer = AgentClient(
+                    role=AgentRole(
+                        name="_summarizer",
+                        display_name="Summarizer",
+                        model="sonnet",
+                        system_prompt="You summarize discussions. Structure: 1) Key decisions 2) Open questions 3) Action items. Be concise.",
+                        allowed_tools=[],
+                        max_turns=10,
+                    ),
+                    project_path=self.project_path,
+                    cli_path=self.cli_path,
+                )
 
         mode = DiscussionMode(max_rounds=max_rounds, summarizer=summarizer)
         return await mode.execute(topic, agents, on_update=on_update)
