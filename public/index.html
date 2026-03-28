@@ -232,7 +232,7 @@ body.st-choose .topic-view,body.st-choose .work-view{display:none}
 const BASE='/agents';
 const ALL_TOOLS=['Read','Write','Edit','Bash','Glob','Grep','WebSearch','WebFetch'];
 const MC={opus:'#c084fc',sonnet:'#60a5fa',haiku:'#4ade80'};
-const MODE_NAMES={discuss:'Discussion',pipeline:'Pipeline',parallel:'Parallel',consensus:'Consensus'};
+const MODE_NAMES={discuss:'Discussion',pipeline:'Pipeline',parallel:'Parallel',consensus:'Consensus',custom:'Custom Workflow'};
 
 // ── State ──
 let S={
@@ -367,6 +367,22 @@ function renderPlan(){
       h+=`<div class="opt-step"><select onchange="S.plan.options.tasks[${i}].agent=this.value">${agOpts(t.agent)}</select><input value="${esc(t.description||'')}" placeholder="subtask..." onchange="S.plan.options.tasks[${i}].description=this.value"><span class="opt-x" onclick="S.plan.options.tasks.splice(${i},1);renderPlan()">×</span></div>`;
     });
     h+=`<span class="opt-add" onclick="if(!S.plan.options.tasks)S.plan.options.tasks=[];S.plan.options.tasks.push({agent:S.plan.agents[0]?.id||'',description:''});renderPlan()">+ task</span>`;
+  }else if(P.mode==='custom'){
+    const wf=P.options.workflow||[];
+    wf.forEach((st,i)=>{
+      const stAgents=(st.agents||[]).join(', ');
+      h+=`<div style="margin-bottom:0.4rem;padding:0.4rem 0.5rem;background:var(--bg);border:1px solid var(--b);border-radius:4px">
+        <div style="display:flex;align-items:center;gap:0.3rem;font-size:0.7rem">
+          <span style="color:var(--a);font-weight:600">Stage ${i+1}</span>
+          <span style="color:var(--d2)">${esc(st.type||'')}</span>
+          <span style="color:var(--d);font-size:0.6rem;flex:1">${esc(stAgents)}</span>
+          <span class="opt-x" onclick="S.plan.options.workflow.splice(${i},1);renderPlan()">×</span>
+        </div>
+        ${st.task?`<div style="font-size:0.65rem;color:var(--d);margin-top:2px">${esc(st.task)}</div>`:''}
+      </div>`;
+    });
+    const rounds=P.options.rounds||2;
+    h+=`<div style="display:flex;align-items:center;gap:0.4rem;margin-top:0.3rem"><span style="font-size:0.72rem;color:var(--d2)">Rounds</span><input type="number" value="${rounds}" min="1" max="10" style="width:50px;padding:0.25rem 0.4rem;background:var(--bg);border:1px solid var(--b);border-radius:4px;color:var(--t);font-size:0.72rem;text-align:center" onchange="S.plan.options.rounds=parseInt(this.value)"></div>`;
   }else{
     const rounds=P.options.rounds||2;
     h+=`<div style="display:flex;align-items:center;gap:0.4rem"><span style="font-size:0.72rem;color:var(--d2)">Rounds</span><input type="number" value="${rounds}" min="1" max="10" style="width:50px;padding:0.25rem 0.4rem;background:var(--bg);border:1px solid var(--b);border-radius:4px;color:var(--t);font-size:0.72rem;text-align:center" onchange="S.plan.options.rounds=parseInt(this.value)"></div>`;

@@ -129,19 +129,22 @@ TASK: "{topic}"
 
 EXISTING AGENTS (reuse if suitable): {existing}
 
-AVAILABLE MODES:
-- pipeline: Sequential handoff. Actions can be ANY verb: "brainstorm", "evaluate", "select", "design", "implement", "review", "test", "analyze", "critique", etc.
-- discuss: All agents debate simultaneously in rounds.
-- parallel: Agents work on DIFFERENT subtasks at the same time.
-- consensus: Agents vote independently on a question with predefined options.
+BASE MODES (can use as-is or combine into custom workflows):
+- pipeline: Sequential handoff between agents
+- discuss: All agents debate simultaneously in rounds
+- parallel: Agents work on different subtasks at the same time
+- consensus: Agents vote independently
+
+You can also design CUSTOM workflows by combining these in "options.workflow" — a sequence of stages:
+  {{"workflow": [{{"type":"parallel","agents":["a","b"],"task":"research"}}, {{"type":"discuss","agents":["c","d"],"rounds":2}}, {{"type":"pipeline","steps":[{{"agent":"e","action":"write"}}]}}]}}
 
 Return ONLY a valid JSON array of 3 plans:
 [
   {{
-    "label": "<short name, e.g. 'Quick' / 'Balanced' / 'Deep'>",
-    "description": "<1-2 sentences: what this variant does, how long, what quality>",
-    "mode": "<discuss|pipeline|parallel|consensus>",
-    "reasoning": "<why this mode and agents for this variant>",
+    "label": "<creative short name for this approach>",
+    "description": "<2-3 sentences: describe the workflow step by step, what each stage does>",
+    "mode": "<pipeline|discuss|parallel|consensus|custom>",
+    "reasoning": "<why this approach>",
     "agents": [
       {{
         "id": "<lowercase_snake_case>",
@@ -155,6 +158,8 @@ Return ONLY a valid JSON array of 3 plans:
     "options": {{"rounds": <number>}}
   }}
 ]
+
+For "custom" mode, add "workflow" array in options describing stage-by-stage execution.
 
 VARIANT RULES:
 - The 3 variants must differ significantly in depth, number of agents, models, rounds, and approach
@@ -485,6 +490,16 @@ async def ws_run(ws: WebSocket):
             result = await coordinator.consensus(
                 topic=topic,
                 agent_names=agent_names or None,
+                on_update=on_update,
+            )
+        elif mode == "custom":
+            workflow = options.get("workflow", [])
+            if not workflow:
+                await ws.send_json({"type": "error", "text": "Custom mode requires workflow stages"})
+                return
+            result = await coordinator.custom(
+                topic=topic,
+                workflow=workflow,
                 on_update=on_update,
             )
         else:

@@ -190,3 +190,73 @@ class OrchestraCoordinator:
             max_rounds=mode_config.settings.get("max_rounds", 3),
         )
         return await mode.execute(topic, agents, on_update=on_update)
+
+    async def custom(
+        self,
+        topic: str,
+        workflow: list[dict],
+        on_update: UpdateCallback | None = None,
+    ) -> OrchestraResult:
+        """Execute a custom multi-stage workflow.
+
+        Each stage is a dict with:
+            type: "pipeline" | "discuss" | "parallel" | "consensus"
+            agents: list of agent IDs
+            + mode-specific fields (steps, tasks, rounds, task)
+        """
+        result = OrchestraResult(mode="custom", topic=topic)
+        transcript_so_far = ""
+
+        for i, stage in enumerate(workflow):
+            stage_type = stage.get("type", "discuss")
+            agent_ids = stage.get("agents", [])
+            stage_topic = topic
+            if transcript_so_far:
+                stage_topic = f"{topic}\n\n## Previous stages output:\n{transcript_so_far}"
+
+            if on_update:
+                import asyncio
+                r = on_update("Workflow", "start", f"Stage {i+1}/{len(workflow)}: {stage_type}")
+                if asyncio.iscoroutine(r):
+                    await r
+
+            if stage_type == "pipeline":
+                steps = stage.get("steps", [{"agent": a, "action": "process"} for a in agent_ids])
+                stage_result = await self.pipeline(
+                    topic=stage_topic,
+                    steps=[(s["agent"], s["action"]) for s in steps],
+                    on_update=on_update,
+                )
+            elif stage_type == "discuss":
+                stage_result = await self.discuss(
+                    topic=stage_topic,
+                    agent_names=agent_ids,
+                    rounds=stage.get("rounds", 2),
+                    on_update=on_update,
+                )
+            elif stage_type == "parallel":
+                tasks = stage.get("tasks", [{"agent": a, "description": stage.get("task", "process")} for a in agent_ids])
+                stage_result = await self.parallel(
+                    topic=stage_topic,
+                    tasks=[(t["agent"], t["description"]) for t in tasks],
+                    on_update=on_update,
+                )
+            elif stage_type == "consensus":
+                stage_result = await self.consensus(
+                    topic=stage_topic,
+                    agent_names=agent_ids,
+                    on_update=on_update,
+                )
+            else:
+                continue
+
+            # Accumulate results
+            for resp in stage_result.responses:
+                result.add_response(resp)
+            stage_text = stage_result.summary or "\n".join(
+                r.content for r in stage_result.responses if not r.is_error
+            )
+            transcript_so_far += f"\n### Stage {i+1} ({stage_type}):\n{stage_text}\n"
+
+        result.summary = transcript_so_far
+        return result
