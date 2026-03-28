@@ -157,9 +157,13 @@ Return ONLY a valid JSON array of 3 plans:
 ]
 
 VARIANT RULES:
-1. **Fast** (first): minimal agents (2), haiku/sonnet models, 1 round, quick result. Sacrifice depth for speed.
-2. **Balanced** (second): moderate agents (3-4), sonnet models, 2 rounds. Good tradeoff.
-3. **Deep** (third): many agents (5-8), opus for key roles, 3+ rounds. Maximum quality, thorough analysis.
+- The 3 variants must differ significantly in depth, number of agents, models, rounds, and approach
+- Variant 1 = fastest/cheapest way to get a useful result for THIS specific task
+- Variant 2 = solid middle ground tailored to THIS task
+- Variant 3 = the most thorough approach you can design for THIS task
+- Do NOT use fixed numbers — adapt everything to the task. A simple question might need 2/3/5 agents. A complex project might need 4/7/10.
+- Different variants may use different modes if that makes sense (e.g. fast=discuss, deep=pipeline)
+- Choose models per agent based on role complexity, not on variant level
 
 GENERAL RULES:
 - For pipeline: add "steps" in options: [{{"agent":"id","action":"<verb>"}}]
