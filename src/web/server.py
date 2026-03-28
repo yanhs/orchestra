@@ -177,7 +177,7 @@ BASE MODES (can use as-is or combine into custom workflows):
 You can also design CUSTOM workflows by combining these in "options.workflow" — a sequence of stages:
   {{"workflow": [{{"type":"parallel","agents":["a","b"],"task":"research"}}, {{"type":"discuss","agents":["c","d"],"rounds":2}}, {{"type":"pipeline","steps":[{{"agent":"e","action":"write"}}]}}]}}
 
-Return ONLY a valid JSON array of 3 plans:
+Return ONLY a valid JSON array of 5 plans:
 [
   {{
     "label": "<creative short name for this approach>",
@@ -202,21 +202,31 @@ Return ONLY a valid JSON array of 3 plans:
 For "custom" mode, add "workflow" array in options describing stage-by-stage execution.
 Mark exactly ONE variant as "recommended": true — the one with the best quality/speed tradeoff for THIS specific task.
 
-CRITICAL — MULTI-PHASE TASKS:
-If the task is complex/ambitious (e.g. "заработай деньги", "build a startup", "create a product"), break it into PHASES.
-Each phase is a separate workflow stage that depends on results of the previous phase.
-Example for "заработай деньги":
-  Phase 1: Brainstorm — parallel agents generate business ideas
-  Phase 2: Evaluate — discuss and vote on best ideas
-  Phase 3: Plan — pipeline to create detailed business plan for winner
-  Phase 4: Execute — parallel agents implement different aspects
-  Phase 5: Review — loop to check quality and iterate
+CRITICAL — USE THE TASK ANALYSIS PHASES:
+The task analysis above already identified the phases this task needs. USE THEM.
+Build workflows that follow these phases. Use "custom" mode with workflow stages.
+Each stage's agents get output from ALL previous stages as context.
 
-Use "custom" mode with workflow stages. Each stage's agents get output from ALL previous stages as context.
-Don't try to do everything in one simple pipeline — DECOMPOSE into logical phases.
+Mix stage types freely based on what each phase needs:
+  - Phase needs ideas? → parallel or discuss
+  - Phase needs building/writing? → pipeline
+  - Phase needs a decision? → consensus or discuss
+  - Phase needs quality check? → loop
+  - Phase needs research? → parallel
+
+Example: "сделай сайт" →
+  Stage 1: discuss (requirements + design decisions)
+  Stage 2: pipeline (architect designs → developer codes)
+  Stage 3: loop (reviewer checks → developer fixes)
+  Stage 4: parallel (testing + documentation)
+
+Example: "выбери лучшую идею" →
+  Stage 1: parallel (3 agents brainstorm independently)
+  Stage 2: discuss (debate the ideas, 2 rounds)
+  Stage 3: consensus (vote on winner)
 
 VARIANT RULES:
-- The 3 variants must differ significantly in depth and approach
+- The 5 variants must differ significantly in depth and approach
 - Variant 1 = lightning fast, minimal agents, instant result, may sacrifice depth
 - Variant 2 = quick but smarter, a bit more agents/steps for better quality
 - Variant 3 = balanced, good tradeoff between speed and quality
