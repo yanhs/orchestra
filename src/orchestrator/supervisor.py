@@ -63,6 +63,8 @@ YOUR ROLE:
 - You do NOT do the work — you ONLY control and direct
 - You MUST ALWAYS launch at least one stage with agents. NEVER finish without running agents.
 - Even for simple tasks, create an agent to do the work. You are a manager, not a worker.
+- Agents can be given complex tasks — they have access to tools (Read, Write, Edit, Bash, Glob, Grep, WebSearch) and can work autonomously.
+- For complex subtasks, create specialized agents with detailed prompts. Each agent operates independently within their assigned task.
 
 RESPONSE FORMAT — always return valid JSON:
 
@@ -93,7 +95,15 @@ To finish:
   "reasoning": "<why we're done>"
 }}
 
-To retry a stage:
+To correct and rerun a stage (steer):
+{{
+  "action": "steer",
+  "feedback": "<what was wrong, specific corrections>",
+  "stage_index": <which stage to rerun, 0-based>,
+  "modifications": "<changes to agents/mode/options, or 'none' to keep same setup>"
+}}
+
+To retry with completely different approach:
 {{
   "action": "retry",
   "feedback": "<what was wrong, what to improve>",
@@ -180,10 +190,43 @@ You are a manager — delegate the work to agents. Plan a stage now."""
                     f"**Goal achieved**\n\n{decision.get('reasoning', '')}\n\n{result.summary}")
                 break
 
+            elif action == "steer":
+                stage_idx = decision.get("stage_index", len(self.stages) - 1)
+                feedback = decision.get("feedback", "")
+                await self._notify("Supervisor", "start",
+                    f"Steering stage {stage_idx + 1}: {feedback[:100]}")
+
+                if 0 <= stage_idx < len(self.stages):
+                    old_stage = self.stages[stage_idx]
+                    old_decision = old_stage["decision"]
+                    # Inject feedback into agent prompts
+                    for ag in old_decision.get("agents", []):
+                        ag["system_prompt"] = ag.get("system_prompt", "") + \
+                            f"\n\nSUPERVISOR CORRECTION: {feedback}"
+
+                    stage_result = await self._execute_stage(old_decision, stage_num)
+                    self.stages.append({
+                        "name": f"steer:{old_stage['name']}",
+                        "decision": old_decision,
+                        "result_summary": stage_result.summary or "",
+                        "responses": [r.content[:500] for r in stage_result.responses if not r.is_error],
+                    })
+                    for resp in stage_result.responses:
+                        result.add_response(resp)
+
+                    stage_output = stage_result.summary or "\n".join(
+                        f"[{r.agent_name}]: {r.content[:1000]}"
+                        for r in stage_result.responses if not r.is_error
+                    )
+                    prompt = self._build_next_prompt(stage_num, f"steer:{old_stage['name']}", stage_output)
+                    await self._notify("Supervisor", "start", "Reviewing steered results...")
+                else:
+                    prompt = self._build_retry_prompt(decision)
+                continue
+
             elif action == "retry":
                 await self._notify("Supervisor", "start",
                     f"Retrying: {decision.get('feedback', '')}")
-                # Rebuild prompt with feedback
                 prompt = self._build_retry_prompt(decision)
                 continue
 
