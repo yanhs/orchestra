@@ -155,7 +155,7 @@ body{background:var(--bg);color:var(--t);font-family:'Inter',system-ui,sans-seri
     </div>
     <!-- Agents -->
     <div class="sec">
-      <div class="sec-t">Agents <span class="act" onclick="delAllAgents()" style="color:var(--r)">Clear all</span></div>
+      <div class="sec-t">Agents <span class="act" onclick="resetAgents()">Reset</span> <span class="act" onclick="delAllAgents()" style="color:var(--r)">Clear</span></div>
       <div class="ag-grid" id="agSel"></div>
     </div>
     <!-- Mode options -->
@@ -186,7 +186,7 @@ body{background:var(--bg);color:var(--t);font-family:'Inter',system-ui,sans-seri
       <div class="diag" id="diagArea"></div>
     </div>
     <div class="panel" id="p-editor">
-      <div class="editor" id="editorArea"><div class="ph">Click an agent chip or + New to edit</div></div>
+      <div class="editor" id="editorArea"><div class="ph">Click an agent to edit</div></div>
     </div>
   </div>
 
@@ -257,6 +257,11 @@ async function delAllAgents(){
   await Promise.all(Object.keys(agents).map(k=>fetch(BASE+'/api/agents/'+k,{method:'DELETE'})));
   agents={};selectedAgents.clear();render();drawDiagram();
 }
+async function resetAgents(){
+  await fetch(BASE+'/api/agents/reset',{method:'POST'});
+  const d=await(await fetch(BASE+'/api/config')).json();agents=d.agents;
+  selectedAgents=new Set(Object.keys(agents).slice(0,3));render();drawDiagram();
+}
 
 // ── Options ──
 function renderOpts(){
@@ -323,7 +328,7 @@ function editAgentWithData(name, a, isNew){
       <div class="ed-btns">
         <button class="ed-save" onclick="saveAgent()">Save</button>
         ${idReadonly?`<button class="ed-del" onclick="delAgent('${name}')">Delete</button>`:''}
-        <button class="ed-cancel" onclick="editingAgent=null;document.getElementById('editorArea').innerHTML='<div class=ph>Click an agent chip or + New to edit</div>'">Cancel</button>
+        <button class="ed-cancel" onclick="editingAgent=null;document.getElementById('editorArea').innerHTML='<div class=ph>Click an agent to edit</div>'">Cancel</button>
       </div>
     </div>`;
 }

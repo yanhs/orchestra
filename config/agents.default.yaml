@@ -1,0 +1,30 @@
+agents: {}
+modes:
+  discussion:
+    max_rounds: 2
+    default_agents:
+    - architect
+    - developer
+    - reviewer
+    summarizer: pm
+  pipeline:
+    allow_rework: true
+    max_rework_cycles: 1
+    default_steps:
+    - agent: architect
+      action: design
+    - agent: developer
+      action: implement
+    - agent: reviewer
+      action: review
+  parallel:
+    max_concurrent: 3
+    merge_agent: architect
+    timeout_seconds: 600
+  consensus:
+    threshold: 0.67
+    max_rounds: 3
+    default_agents:
+    - architect
+    - developer
+    - reviewer

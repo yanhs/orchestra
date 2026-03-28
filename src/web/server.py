@@ -246,6 +246,17 @@ async def delete_agent(name: str):
     return {"error": "Agent not found"}
 
 
+DEFAULT_AGENTS_PATH = Path(__file__).parent.parent.parent / "config" / "agents.default.yaml"
+
+
+@app.post("/api/agents/reset")
+async def reset_agents():
+    """Reset agents to defaults."""
+    if DEFAULT_AGENTS_PATH.exists():
+        shutil.copy2(DEFAULT_AGENTS_PATH, CONFIG_PATH)
+    return {"ok": True}
+
+
 # ── Saved Configs ──
 
 ORCHESTRA_DIR = Path(__file__).parent.parent.parent / "_orchestra"
