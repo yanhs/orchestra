@@ -61,6 +61,8 @@ YOUR ROLE:
 - For each stage you define which agents to create and how they should interact
 - After each stage you review results and decide: continue / retry / change plan
 - You do NOT do the work — you ONLY control and direct
+- You MUST ALWAYS launch at least one stage with agents. NEVER finish without running agents.
+- Even for simple tasks, create an agent to do the work. You are a manager, not a worker.
 
 RESPONSE FORMAT — always return valid JSON:
 
@@ -163,6 +165,16 @@ Plan your first stage. What should we do first to achieve this goal?"""
             self._log({"type": "decision", "stage": stage_num, "decision": decision})
 
             if action == "finish":
+                if not self.stages:
+                    # Force at least one stage
+                    prompt = f"""{SUPERVISOR_SYSTEM}
+
+GOAL: "{self.goal}"
+
+You tried to finish without running any agents. You MUST launch at least one stage.
+You are a manager — delegate the work to agents. Plan a stage now."""
+                    await self._notify("Supervisor", "start", "Must run agents first, replanning...")
+                    continue
                 result.summary = decision.get("summary", "")
                 await self._notify("Supervisor", "done",
                     f"**Goal achieved**\n\n{decision.get('reasoning', '')}\n\n{result.summary}")

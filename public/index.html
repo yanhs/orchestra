@@ -453,11 +453,8 @@ function renderPlan(){
         ${st.type==='loop'?`<div style="font-size:0.6rem;color:var(--y);margin-top:2px">↻ loop stage ${(st.target_stage||0)+1}, max ${st.max_iterations||3}x${st.criteria?' — '+esc(st.criteria):''}</div>`:''}
       </div>`;
     });
-    const rounds=P.options.rounds||2;
-    h+=`<div style="display:flex;align-items:center;gap:0.4rem;margin-top:0.3rem"><span style="font-size:0.72rem;color:var(--d2)">Rounds</span><input type="number" value="${rounds}" min="1" max="10" style="width:50px;padding:0.25rem 0.4rem;background:var(--bg);border:1px solid var(--b);border-radius:4px;color:var(--t);font-size:0.72rem;text-align:center" onchange="S.plan.options.rounds=parseInt(this.value)"></div>`;
   }else{
-    const rounds=P.options.rounds||2;
-    h+=`<div style="display:flex;align-items:center;gap:0.4rem"><span style="font-size:0.72rem;color:var(--d2)">Rounds</span><input type="number" value="${rounds}" min="1" max="10" style="width:50px;padding:0.25rem 0.4rem;background:var(--bg);border:1px solid var(--b);border-radius:4px;color:var(--t);font-size:0.72rem;text-align:center" onchange="S.plan.options.rounds=parseInt(this.value)"></div>`;
+    // No manual rounds control — supervisor decides
   }
   h+=`</div>`;
   el.innerHTML=h;

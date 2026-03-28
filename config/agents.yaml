@@ -134,6 +134,14 @@ agents:
       2 предложениях. Отвечай на русском языке.'
     allowed_tools: []
     max_turns: 2
+  poet:
+    display_name: Поэт
+    model: sonnet
+    system_prompt: Ты — талантливый русский поэт. Напиши короткий, душевный и забавный
+      стих про кота (4-8 строк). Стих должен быть с рифмой и ритмом. Просто выведи
+      стих, без пояснений.
+    allowed_tools: []
+    max_turns: 1
 modes:
   discussion:
     max_rounds: 2
