@@ -248,40 +248,96 @@ async def delete_agent(name: str):
 
 # ── Saved Configs ──
 
+ORCHESTRA_DIR = Path(__file__).parent.parent.parent / "_orchestra"
+SESSIONS_FILE = ORCHESTRA_DIR / "sessions.json"
+RUNS_DIR = ORCHESTRA_DIR / "runs"
+
+
 @app.get("/api/configs")
 async def list_configs():
     """List saved config presets."""
     CONFIGS_DIR.mkdir(parents=True, exist_ok=True)
-    return [
-        {"name": f.stem, "modified": f.stat().st_mtime}
-        for f in sorted(CONFIGS_DIR.glob("*.yaml"), key=lambda f: -f.stat().st_mtime)
-    ]
+    configs = []
+    for d in sorted(CONFIGS_DIR.iterdir(), key=lambda x: -x.stat().st_mtime):
+        if d.is_dir() and (d / "agents.yaml").exists():
+            runs_dir = d / "runs"
+            n_runs = len(list(runs_dir.iterdir())) if runs_dir.exists() else 0
+            configs.append({"name": d.name, "modified": d.stat().st_mtime, "runs": n_runs})
+        elif d.suffix == ".yaml":
+            # Legacy single-file configs
+            configs.append({"name": d.stem, "modified": d.stat().st_mtime, "runs": 0})
+    return configs
 
 
 @app.post("/api/configs/{name}")
 async def save_config(name: str):
-    """Save current config as a named preset."""
-    CONFIGS_DIR.mkdir(parents=True, exist_ok=True)
-    shutil.copy2(CONFIG_PATH, CONFIGS_DIR / f"{name}.yaml")
-    return {"ok": True, "name": name}
+    """Save current config + all conversations as a named preset."""
+    save_dir = CONFIGS_DIR / name
+    save_dir.mkdir(parents=True, exist_ok=True)
+
+    # Config
+    shutil.copy2(CONFIG_PATH, save_dir / "agents.yaml")
+
+    # Sessions
+    if SESSIONS_FILE.exists():
+        shutil.copy2(SESSIONS_FILE, save_dir / "sessions.json")
+
+    # Runs (conversations)
+    dest_runs = save_dir / "runs"
+    if dest_runs.exists():
+        shutil.rmtree(dest_runs)
+    if RUNS_DIR.exists():
+        shutil.copytree(RUNS_DIR, dest_runs)
+
+    n_runs = len(list(dest_runs.iterdir())) if dest_runs.exists() else 0
+    return {"ok": True, "name": name, "runs": n_runs}
 
 
 @app.post("/api/configs/{name}/load")
 async def load_saved_config(name: str):
-    """Load a saved config preset."""
-    src = CONFIGS_DIR / f"{name}.yaml"
-    if not src.exists():
+    """Load a saved config preset + conversations."""
+    save_dir = CONFIGS_DIR / name
+
+    # Support legacy single-file configs
+    if not save_dir.is_dir():
+        legacy = CONFIGS_DIR / f"{name}.yaml"
+        if legacy.exists():
+            shutil.copy2(legacy, CONFIG_PATH)
+            return {"ok": True, "runs": 0}
         return {"error": "Config not found"}
-    shutil.copy2(src, CONFIG_PATH)
-    return {"ok": True}
+
+    # Config
+    shutil.copy2(save_dir / "agents.yaml", CONFIG_PATH)
+
+    # Sessions
+    sess_src = save_dir / "sessions.json"
+    if sess_src.exists():
+        ORCHESTRA_DIR.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(sess_src, SESSIONS_FILE)
+
+    # Runs
+    runs_src = save_dir / "runs"
+    if runs_src.exists():
+        if RUNS_DIR.exists():
+            shutil.rmtree(RUNS_DIR)
+        shutil.copytree(runs_src, RUNS_DIR)
+        n_runs = len(list(RUNS_DIR.iterdir()))
+    else:
+        n_runs = 0
+
+    return {"ok": True, "runs": n_runs}
 
 
 @app.delete("/api/configs/{name}")
 async def delete_config(name: str):
     """Delete a saved config."""
-    src = CONFIGS_DIR / f"{name}.yaml"
-    if src.exists():
-        src.unlink()
+    save_dir = CONFIGS_DIR / name
+    if save_dir.is_dir():
+        shutil.rmtree(save_dir)
+        return {"ok": True}
+    legacy = CONFIGS_DIR / f"{name}.yaml"
+    if legacy.exists():
+        legacy.unlink()
         return {"ok": True}
     return {"error": "Config not found"}
 

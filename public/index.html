@@ -279,7 +279,7 @@ function agOpts(s){return Object.entries(agents).map(([k,v])=>`<option value="${
 async function loadConfigs(){
   const cfgs=await(await fetch(BASE+'/api/configs')).json();
   const sel=document.getElementById('cfgSel');
-  sel.innerHTML='<option value="">current</option>'+cfgs.map(c=>`<option value="${c.name}">${c.name}</option>`).join('');
+  sel.innerHTML='<option value="">current</option>'+cfgs.map(c=>`<option value="${c.name}">${c.name}${c.runs?' ('+c.runs+' runs)':''}</option>`).join('');
 }
 async function saveConfig(){
   const name=prompt('Config name:');if(!name)return;
@@ -288,8 +288,12 @@ async function saveConfig(){
 }
 async function loadConfig(){
   const name=document.getElementById('cfgSel').value;if(!name)return;
-  await fetch(BASE+'/api/configs/'+encodeURIComponent(name)+'/load',{method:'POST'});
+  const r=await(await fetch(BASE+'/api/configs/'+encodeURIComponent(name)+'/load',{method:'POST'})).json();
   const d=await(await fetch(BASE+'/api/config')).json();agents=d.agents;selectedAgents=new Set(Object.keys(agents).slice(0,3));render();drawDiagram();
+  if(histOpen)loadHist();
+  document.getElementById('autoStatus').style.display='block';
+  document.getElementById('autoStatus').innerHTML=`<span style="color:var(--g)">&#10003;</span> Loaded "${esc(name)}" — ${r.runs||0} conversations restored`;
+  setTimeout(()=>{document.getElementById('autoStatus').style.display='none'},4000);
 }
 async function delConfig(){
   const name=document.getElementById('cfgSel').value;if(!name)return;
