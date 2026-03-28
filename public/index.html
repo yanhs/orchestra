@@ -133,7 +133,7 @@ body{background:var(--bg);color:var(--t);font-family:'Inter',system-ui,sans-seri
 <div class="hdr">
   <h1><span>Agent</span> Orchestra</h1>
   <div class="st" id="statusBar"></div>
-  <div class="hdr-btn" onclick="fullReset()" style="color:var(--r);border-color:rgba(248,113,113,0.3)">Reset</div>
+  <div class="hdr-btn" onclick="fullReset()" style="color:#fff;background:rgba(248,113,113,0.15);border-color:var(--r);font-weight:600">Reset</div>
   <div class="hdr-btn" id="histBtn" onclick="toggleHist()">History</div>
 </div>
 
@@ -156,7 +156,7 @@ body{background:var(--bg);color:var(--t);font-family:'Inter',system-ui,sans-seri
     </div>
     <!-- Agents -->
     <div class="sec">
-      <div class="sec-t">Agents <span class="act" onclick="resetAgents()">Reset</span> <span class="act" onclick="delAllAgents()" style="color:var(--r)">Clear</span></div>
+      <div class="sec-t">Agents <span class="act" onclick="delAllAgents()" style="color:var(--r)">Clear</span></div>
       <div class="ag-grid" id="agSel"></div>
     </div>
     <!-- Mode options -->
