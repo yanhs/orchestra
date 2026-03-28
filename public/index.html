@@ -542,8 +542,12 @@ function drawDiagram(){
 }
 
 async function pollActivity(){
-  if(S.phase!=='running')return;
-  try{const d=await(await fetch(BASE+'/api/activity')).json();S.agentActivity=d;drawDiagram()}catch(e){}
+  try{
+    const d=await(await fetch(BASE+'/api/activity')).json();
+    const changed=JSON.stringify(d)!==JSON.stringify(S.agentActivity);
+    S.agentActivity=d;
+    if(changed){renderPlan();drawDiagram()}
+  }catch(e){}
 }
 
 // ── HISTORY ──
