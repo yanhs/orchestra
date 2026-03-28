@@ -1,19 +1,19 @@
-"""Discussion mode — round-robin debate between agents."""
+"""Discussion mode — parallel debate between agents."""
 
 import asyncio
 from typing import Any
 
-from ..agents.client import AgentClient
+from ..agents.client import AgentClient, AgentResponse
 from ..orchestrator.transcript import Transcript
 from .base import BaseMode, OrchestraResult, UpdateCallback
 
 
 class DiscussionMode(BaseMode):
-    """Round-robin discussion between agents.
+    """Parallel discussion between agents.
 
-    Each agent sees the full transcript of previous responses
-    and contributes their perspective. After all rounds,
-    an optional summarizer produces a final summary.
+    Within each round, all agents work simultaneously.
+    Between rounds, each agent sees the full transcript from previous rounds.
+    After all rounds, an optional summarizer produces a final summary.
     """
 
     def __init__(
@@ -35,8 +35,9 @@ class DiscussionMode(BaseMode):
         transcript = Transcript()
 
         for round_num in range(1, self.max_rounds + 1):
-            for agent in agents:
-                if on_update:
+            # Notify all agents starting
+            if on_update:
+                for agent in agents:
                     r = on_update(
                         agent.display_name,
                         "start",
@@ -45,17 +46,21 @@ class DiscussionMode(BaseMode):
                     if asyncio.iscoroutine(r):
                         await r
 
+            # All agents work in parallel within a round
+            async def run_agent(agent: AgentClient) -> tuple[AgentClient, AgentResponse]:
                 prompt = self._build_prompt(topic, transcript, agent, round_num)
-
                 response = await agent.run(prompt)
+                return agent, response
 
+            responses = await asyncio.gather(
+                *[run_agent(a) for a in agents]
+            )
+
+            # Collect results
+            for agent, response in responses:
                 if response.is_error:
                     if on_update:
-                        r = on_update(
-                            agent.display_name,
-                            "error",
-                            response.error_message,
-                        )
+                        r = on_update(agent.display_name, "error", response.error_message)
                         if asyncio.iscoroutine(r):
                             await r
                     continue
@@ -67,6 +72,8 @@ class DiscussionMode(BaseMode):
                     r = on_update(agent.display_name, "done", response.content)
                     if asyncio.iscoroutine(r):
                         await r
+
+            transcript.next_round()
 
         # Summarize
         if self.summarizer:
@@ -83,9 +90,7 @@ class DiscussionMode(BaseMode):
                 result.add_response(summary_response)
 
             if on_update:
-                r = on_update(
-                    self.summarizer.display_name, "done", result.summary
-                )
+                r = on_update(self.summarizer.display_name, "done", result.summary)
                 if asyncio.iscoroutine(r):
                     await r
 
