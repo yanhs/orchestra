@@ -14,6 +14,7 @@ from claude_agent_sdk import (
     ToolUseBlock,
 )
 
+from ..orchestrator.sessions import get_session, set_session
 from .definition import AgentRole
 
 
@@ -48,7 +49,7 @@ class AgentClient:
         self.role = role
         self.project_path = project_path or Path.cwd()
         self.cli_path = cli_path
-        self._session_id: str | None = None
+        self._session_id: str | None = get_session(role.name)
 
     @property
     def name(self) -> str:
@@ -164,7 +165,9 @@ class AgentClient:
                     elif isinstance(block, ToolUseBlock):
                         tools.append(block.name)
 
-        self._session_id = session_id or self._session_id
+        if session_id:
+            self._session_id = session_id
+            set_session(self.role.name, session_id)
 
         return AgentResponse(
             agent_name=self.role.display_name,

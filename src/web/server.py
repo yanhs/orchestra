@@ -2,7 +2,6 @@
 
 import asyncio
 import json
-import uuid
 from pathlib import Path
 from typing import Any
 
@@ -12,13 +11,13 @@ from fastapi.staticfiles import StaticFiles
 
 from ..agents.definition import load_config
 from ..orchestrator.coordinator import OrchestraCoordinator
+from ..orchestrator.history import get_run, list_runs, save_run
 
 CONFIG_PATH = Path(__file__).parent.parent.parent / "config" / "agents.yaml"
 PUBLIC_PATH = Path(__file__).parent.parent.parent / "public"
 
 app = FastAPI(title="Agent Orchestra")
 
-# Serve static files
 app.mount("/static", StaticFiles(directory=str(PUBLIC_PATH)), name="static")
 
 
@@ -41,6 +40,21 @@ async def get_config():
         },
         "modes": list(config.modes.keys()),
     }
+
+
+@app.get("/api/history")
+async def api_history(limit: int = 30):
+    """List recent runs."""
+    return list_runs(limit=limit)
+
+
+@app.get("/api/history/{run_id}")
+async def api_run(run_id: str):
+    """Get a specific run with transcript."""
+    run = get_run(run_id)
+    if not run:
+        return {"error": "Run not found"}
+    return run
 
 
 @app.websocket("/ws/run")
@@ -70,7 +84,6 @@ async def ws_run(ws: WebSocket):
             project_path=Path(project_path) if project_path else None,
         )
 
-        # Stream callback — sends updates over WebSocket
         async def on_update(agent_name: str, event: str, text: str):
             await ws.send_json({
                 "type": "update",
@@ -79,7 +92,6 @@ async def ws_run(ws: WebSocket):
                 "text": text,
             })
 
-        # Run the selected mode
         if mode == "discuss":
             result = await coordinator.discuss(
                 topic=topic,
@@ -115,13 +127,16 @@ async def ws_run(ws: WebSocket):
             await ws.send_json({"type": "error", "text": f"Unknown mode: {mode}"})
             return
 
-        # Send final result
+        # Save to history
+        run_dir = save_run(result)
+
         await ws.send_json({
             "type": "result",
             "summary": result.summary,
             "cost": result.total_cost,
             "duration_ms": result.total_duration_ms,
             "responses": len(result.responses),
+            "run_id": run_dir.name,
         })
 
     except WebSocketDisconnect:
@@ -133,6 +148,6 @@ async def ws_run(ws: WebSocket):
             pass
 
 
-def run_server(host: str = "0.0.0.0", port: int = 3015):
+def run_server(host: str = "0.0.0.0", port: int = 3025):
     import uvicorn
     uvicorn.run(app, host=host, port=port)

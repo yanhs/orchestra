@@ -23,6 +23,18 @@ body { background:var(--bg); color:var(--text); font-family:'Inter',system-ui,sa
 .header h1 { font-size:0.95rem; font-weight:600; }
 .header h1 span { color:var(--accent); }
 .header .status { margin-left:auto; font-size:0.7rem; color:var(--dim); font-family:'JetBrains Mono',monospace; }
+.header .hist-btn { padding:0.25rem 0.6rem; font-size:0.7rem; background:var(--surface2); border:1px solid var(--border); border-radius:4px; cursor:pointer; color:var(--dim2); }
+.header .hist-btn:hover { border-color:var(--accent); color:var(--accent); }
+.header .hist-btn.active { background:var(--accent-dim); border-color:var(--accent); color:var(--accent); }
+
+/* History panel */
+.history-panel { display:none; width:260px; min-width:260px; border-left:1px solid var(--border); background:var(--surface); overflow-y:auto; }
+.history-panel.open { display:flex; flex-direction:column; }
+.hist-item { padding:0.6rem 0.8rem; border-bottom:1px solid var(--border); cursor:pointer; transition:background 0.12s; }
+.hist-item:hover { background:rgba(255,255,255,0.02); }
+.hist-item .hi-mode { font-size:0.65rem; font-weight:600; text-transform:uppercase; color:var(--accent); }
+.hist-item .hi-topic { font-size:0.78rem; color:var(--dim2); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; margin-top:2px; }
+.hist-item .hi-meta { font-size:0.6rem; color:var(--dim); font-family:'JetBrains Mono',monospace; margin-top:3px; }
 
 /* Layout */
 .layout { flex:1; display:flex; overflow:hidden; }
@@ -117,6 +129,7 @@ body { background:var(--bg); color:var(--text); font-family:'Inter',system-ui,sa
 <div class="header">
   <h1><span>Agent</span> Orchestra</h1>
   <div class="status" id="statusBar"></div>
+  <div class="hist-btn" id="histBtn" onclick="toggleHistory()">History</div>
 </div>
 
 <div class="layout">
@@ -142,6 +155,11 @@ body { background:var(--bg); color:var(--text); font-family:'Inter',system-ui,sa
       <div class="placeholder">Select mode, agents, and topic to start</div>
     </div>
     <div class="stats" id="statsBar" style="display:none"></div>
+  </div>
+
+  <div class="history-panel" id="histPanel">
+    <div class="section" style="flex-shrink:0"><div class="section-title">Recent Runs</div></div>
+    <div id="histList" style="flex:1;overflow-y:auto"></div>
   </div>
 </div>
 
@@ -352,6 +370,52 @@ function formatMd(text) {
     .replace(/^## (.+)$/gm,'<strong style="color:var(--text);font-size:0.9rem">$1</strong>')
     .replace(/^- (.+)$/gm,'&nbsp;&nbsp;&#8226; $1')
     .replace(/\n/g,'<br>');
+}
+
+// History
+let histOpen = false;
+
+function toggleHistory() {
+  histOpen = !histOpen;
+  document.getElementById('histPanel').classList.toggle('open', histOpen);
+  document.getElementById('histBtn').classList.toggle('active', histOpen);
+  if (histOpen) loadHistory();
+}
+
+async function loadHistory() {
+  try {
+    const r = await fetch('/agents/api/history');
+    const runs = await r.json();
+    const el = document.getElementById('histList');
+    if (!runs.length) { el.innerHTML = '<div style="padding:1rem;color:var(--dim);font-size:0.8rem">No runs yet</div>'; return; }
+    el.innerHTML = runs.map(r => `
+      <div class="hist-item" onclick="loadRun('${r.id}')">
+        <div class="hi-mode">${r.mode}</div>
+        <div class="hi-topic">${esc(r.topic||'')}</div>
+        <div class="hi-meta">${r.agents?.length||0} agents | $${(r.cost||0).toFixed(3)} | ${((r.duration_ms||0)/1000).toFixed(0)}s</div>
+      </div>
+    `).join('');
+  } catch(e) {}
+}
+
+async function loadRun(id) {
+  try {
+    const r = await fetch('/agents/api/history/' + id);
+    const run = await r.json();
+    if (run.error) return;
+    const output = document.getElementById('output');
+    output.innerHTML = '';
+    if (run.transcript) {
+      const card = document.createElement('div');
+      card.className = 'resp-card event-done';
+      card.innerHTML = `<div class="resp-header"><span class="agent-label">${run.mode||''} run</span><span class="event-label">${id}</span></div><div class="resp-body">${formatMd(run.transcript)}</div>`;
+      output.appendChild(card);
+    }
+    if (run.summary) addSummary(run.summary);
+    const bar = document.getElementById('statsBar');
+    bar.style.display = 'flex';
+    bar.textContent = `${run.responses||0} responses | $${(run.cost||0).toFixed(4)} | ${((run.duration_ms||0)/1000).toFixed(1)}s`;
+  } catch(e) {}
 }
 
 init();
