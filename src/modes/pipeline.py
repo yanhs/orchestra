@@ -143,7 +143,9 @@ class PipelineMode(BaseMode):
 
         instruction = action_instructions.get(
             step.action,
-            f"Perform the '{step.action}' step for this task.",
+            f"Perform the '{step.action}' step for this task. "
+            "Use the results from previous steps above as input. "
+            "Be thorough and produce a clear, structured output for the next step.",
         )
         parts.append(f"## Your Task: {step.action.title()}\n{instruction}")
 

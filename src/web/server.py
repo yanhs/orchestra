@@ -172,10 +172,10 @@ TASK: "{req.topic}"
 EXISTING AGENTS (reuse if suitable): {json.dumps(existing)}
 
 AVAILABLE MODES:
-- discuss: round-robin debate, good for open questions, architecture decisions, brainstorming
-- pipeline: sequential handoff (design→implement→review→test), good for building/coding tasks
-- parallel: agents work on subtasks simultaneously, good for multi-part tasks
-- consensus: agents vote independently, good for choosing between options
+- pipeline: BEST for multi-stage tasks. Agents pass results to next agent. Actions can be ANY verb: "brainstorm", "evaluate", "select", "design", "implement", "review", "test", "analyze", "critique", "summarize", etc. Use this for tasks like "generate ideas then pick best" or "research then build then review".
+- discuss: All agents debate simultaneously in rounds. Good for open questions, opinions, architecture decisions.
+- parallel: Agents work on DIFFERENT subtasks at the same time. Good for splitting independent work.
+- consensus: Agents vote independently on a question with predefined options. Only use when options are ALREADY KNOWN.
 
 Return ONLY valid JSON:
 {{
@@ -188,19 +188,20 @@ Return ONLY valid JSON:
       "model": "<opus|sonnet|haiku>",
       "max_turns": <number>,
       "allowed_tools": [<subset of: "Read","Write","Edit","Bash","Glob","Grep","WebSearch","WebFetch">],
-      "system_prompt": "<role description>"
+      "system_prompt": "<role-specific instructions tailored to this exact task. Tell the agent exactly what to do, what to produce, what format to use>"
     }}
   ],
   "options": {{"rounds": <number 1-5, based on task complexity>}}
 }}
 
 Rules:
-- NEVER default to exactly 3 agents. Analyze the task and pick the RIGHT number: simple yes/no → 2, debates → 4-5, complex projects → 5-8, large systems → 7-10. Each agent must have a distinct role
-- Reuse existing agents by ID if they fit (keep same config)
-- Create new ones only if needed, with task-specific prompts
-- For pipeline mode, add "steps" in options: [{{"agent":"id","action":"design|implement|review|test"}}]
-- For parallel mode, add "tasks" in options: [{{"agent":"id","description":"subtask"}}]
-- IMPORTANT: "reasoning", "display_name", and "system_prompt" MUST be in the same language as the TASK. If task is in Russian, respond in Russian. If in English, respond in English."""
+- NEVER default to exactly 3 agents. Pick the RIGHT number: simple → 2, debates → 4-5, complex → 5-8, large → 7-10
+- For pipeline: add "steps" in options: [{{"agent":"id","action":"<any action verb>"}}]. Actions are NOT limited to design/implement/review/test — use whatever fits: "brainstorm", "evaluate", "rank", "select", "research", "write", "critique", etc.
+- For parallel: add "tasks" in options: [{{"agent":"id","description":"subtask"}}]
+- NEVER use consensus when the task requires generating ideas first — use pipeline instead (generate → evaluate → select)
+- Each agent's system_prompt must be specific to THIS task, not generic
+- Reuse existing agents by ID if they fit, create new ones if needed
+- IMPORTANT: "reasoning", "display_name", and "system_prompt" MUST be in the same language as the TASK"""
 
     options = ClaudeAgentOptions(
         model="opus",
