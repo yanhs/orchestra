@@ -206,7 +206,7 @@ const MODEL_COLORS = {opus:'#c084fc',sonnet:'#60a5fa',haiku:'#4ade80'};
 
 // No hardcoded templates — AI generates configs from any role name
 
-let agents={}, selectedMode='discuss', selectedAgents=new Set(), ws=null, running=false, editingAgent=null;
+let agents={}, selectedMode='auto', selectedAgents=new Set(), ws=null, running=false, editingAgent=null;
 let pipeSteps=[{agent:'architect',action:'design'},{agent:'developer',action:'implement'},{agent:'reviewer',action:'review'}];
 let parTasks=[{agent:'developer',description:''}];
 let agentActivity={};
