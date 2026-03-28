@@ -54,17 +54,20 @@ body.st-choose .topic-view,body.st-choose .work-view{display:none}
 .cv-box{width:100%;max-width:800px}
 .cv-box h2{font-size:1.1rem;font-weight:600;margin-bottom:0.2rem} .cv-box h2 span{color:var(--a)}
 .cv-topic{font-size:0.78rem;color:var(--d2);margin-bottom:1rem;word-wrap:break-word}
-.cv-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:0.5rem}
-@media(max-width:900px){.cv-grid{grid-template-columns:repeat(3,1fr)}}
-@media(max-width:600px){.cv-grid{grid-template-columns:1fr}}
-.cv-card{background:var(--s2);border:1px solid var(--b);border-radius:8px;padding:0.8rem;cursor:pointer;transition:all .15s;display:flex;flex-direction:column}
-.cv-card:hover{border-color:var(--a);transform:translateY(-2px)}
-.cv-label{font-size:0.8rem;font-weight:600;margin-bottom:0.2rem}
-.cv-card:nth-child(1) .cv-label{color:var(--g)}
-.cv-card:nth-child(2) .cv-label{color:var(--bl)}
-.cv-card:nth-child(3) .cv-label{color:var(--a)}
-.cv-card:nth-child(4) .cv-label{color:var(--o)}
-.cv-card:nth-child(5) .cv-label{color:var(--p)}
+.cv-grid{display:flex;flex-direction:column;gap:0.5rem}
+.cv-card{background:var(--s2);border:1px solid var(--b);border-radius:8px;padding:0.7rem 1rem;cursor:pointer;transition:all .15s;display:flex;align-items:center;gap:0.8rem}
+.cv-card:hover{border-color:var(--a)}
+.cv-card.recommended{border-color:var(--a);background:var(--ad)}
+.cv-card.recommended .cv-rec{display:inline-block}
+.cv-rec{display:none;font-size:0.55rem;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;background:var(--a);color:#000;padding:0.1rem 0.35rem;border-radius:3px;margin-left:0.4rem}
+.cv-num{font-size:0.85rem;font-weight:700;width:22px;text-align:center;flex-shrink:0}
+.cv-body{flex:1;min-width:0}
+.cv-label{font-size:0.82rem;font-weight:600;display:flex;align-items:center}
+.cv-desc{font-size:0.7rem;color:var(--d2);line-height:1.4;margin-top:0.15rem}
+.cv-right{display:flex;align-items:center;gap:0.6rem;flex-shrink:0}
+.cv-meta{font-size:0.6rem;color:var(--d);font-family:'JetBrains Mono',monospace;white-space:nowrap}
+.cv-agents{display:flex;flex-wrap:wrap;gap:0.15rem}
+.cv-ag{padding:0.1rem 0.35rem;font-size:0.55rem;background:var(--bg);border:1px solid var(--b);border-radius:3px;color:var(--d2);white-space:nowrap}
 .cv-desc{font-size:0.72rem;color:var(--d2);line-height:1.5;margin-bottom:0.6rem;flex:1}
 .cv-meta{font-size:0.62rem;color:var(--d);font-family:'JetBrains Mono',monospace}
 .cv-agents{display:flex;flex-wrap:wrap;gap:0.2rem;margin-top:0.4rem}
@@ -293,14 +296,24 @@ async function doPlan(){
 function renderVariants(){
   document.getElementById('cvTopic').textContent=S.topic;
   const grid=document.getElementById('cvGrid');
+  const colors=['var(--g)','var(--bl)','var(--a)','var(--o)','var(--p)'];
+  // Find recommended variant (marked by AI or default to middle)
+  const recIdx=planVariants.findIndex(p=>p.recommended);
+  const bestIdx=recIdx>=0?recIdx:Math.min(2,planVariants.length-1);
   grid.innerHTML=planVariants.map((p,i)=>{
     const ags=(p.agents||[]);
     const mode=MODE_NAMES[p.mode]||p.mode;
-    return `<div class="cv-card" onclick="pickVariant(${i})">
-      <div class="cv-label">${esc(p.label||['Fast','Balanced','Deep'][i]||'Plan '+(i+1))}</div>
-      <div class="cv-desc">${esc(p.description||p.reasoning||'')}</div>
-      <div class="cv-meta">${mode} · ${ags.length} agents · ${p.options?.rounds||1} rounds</div>
-      <div class="cv-agents">${ags.map(a=>`<span class="cv-ag">${esc(a.display_name)} <span style="color:${MC[a.model]||'#a1a1aa'}">${a.model}</span></span>`).join('')}</div>
+    const isRec=i===bestIdx;
+    return `<div class="cv-card${isRec?' recommended':''}" onclick="pickVariant(${i})">
+      <div class="cv-num" style="color:${colors[i]||'var(--d)'}">${i+1}</div>
+      <div class="cv-body">
+        <div class="cv-label" style="color:${colors[i]||'var(--t)'}">${esc(p.label||'Plan '+(i+1))}${isRec?'<span class="cv-rec">optimal</span>':''}</div>
+        <div class="cv-desc">${esc(p.description||p.reasoning||'')}</div>
+      </div>
+      <div class="cv-right">
+        <div class="cv-meta">${mode}<br>${ags.length} agents</div>
+        <div class="cv-agents">${ags.slice(0,4).map(a=>`<span class="cv-ag">${esc(a.display_name)}</span>`).join('')}${ags.length>4?`<span class="cv-ag">+${ags.length-4}</span>`:''}</div>
+      </div>
     </div>`;
   }).join('');
 }

@@ -171,11 +171,13 @@ Return ONLY a valid JSON array of 3 plans:
         "system_prompt": "<task-specific role instructions>"
       }}
     ],
-    "options": {{"rounds": <number>}}
+    "options": {{"rounds": <number>}},
+    "recommended": <true ONLY for the one variant you consider optimal for this task, false for others>
   }}
 ]
 
 For "custom" mode, add "workflow" array in options describing stage-by-stage execution.
+Mark exactly ONE variant as "recommended": true — the one with the best quality/speed tradeoff for THIS specific task.
 
 CRITICAL — MULTI-PHASE TASKS:
 If the task is complex/ambitious (e.g. "заработай деньги", "build a startup", "create a product"), break it into PHASES.
