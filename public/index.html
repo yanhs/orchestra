@@ -133,6 +133,7 @@ body{background:var(--bg);color:var(--t);font-family:'Inter',system-ui,sans-seri
 <div class="hdr">
   <h1><span>Agent</span> Orchestra</h1>
   <div class="st" id="statusBar"></div>
+  <div class="hdr-btn" onclick="fullReset()" style="color:var(--r);border-color:rgba(248,113,113,0.3)">Reset</div>
   <div class="hdr-btn" id="histBtn" onclick="toggleHist()">History</div>
 </div>
 
@@ -261,6 +262,22 @@ async function resetAgents(){
   await fetch(BASE+'/api/agents/reset',{method:'POST'});
   const d=await(await fetch(BASE+'/api/config')).json();agents=d.agents;
   selectedAgents=new Set(Object.keys(agents).slice(0,3));render();drawDiagram();
+}
+async function fullReset(){
+  // Stop any running task
+  if(running){if(ws){ws.onclose=null;ws.close();ws=null}fin()}
+  // Reset agents to defaults
+  await fetch(BASE+'/api/agents/reset',{method:'POST'});
+  const d=await(await fetch(BASE+'/api/config')).json();agents=d.agents;
+  selectedAgents=new Set(Object.keys(agents).slice(0,3));
+  // Clear UI
+  selectedMode='auto';autoPlan=null;
+  document.getElementById('output').innerHTML='<div class="ph">Select mode, agents, and topic</div>';
+  document.getElementById('statsBar').style.display='none';
+  document.getElementById('topicIn').value='';
+  document.getElementById('autoStatus').style.display='none';
+  document.getElementById('editorArea').innerHTML='<div class="ph">Click an agent to edit</div>';
+  render();drawDiagram();
 }
 
 // ── Options ──
@@ -516,7 +533,7 @@ async function autoAssign(){
 }
 
 async function doRun(){
-  if(running){if(ws)ws.close();return}
+  if(running){if(ws){ws.onclose=null;ws.onerror=null;ws.onmessage=null;ws.close();ws=null}fin();addCard('System','error','Stopped by user');return}
   const topic=document.getElementById('topicIn').value.trim();if(!topic)return;
   const out=document.getElementById('output');out.innerHTML='';
   document.getElementById('statsBar').style.display='none';
