@@ -193,7 +193,7 @@ body{background:var(--bg);color:var(--t);font-family:'Inter',system-ui,sans-seri
 
 <script>
 const BASE = '/agents';
-const MODES = {discuss:'Discussion',pipeline:'Pipeline',parallel:'Parallel',consensus:'Consensus'};
+const MODES = {auto:'Auto',discuss:'Discussion',pipeline:'Pipeline',parallel:'Parallel',consensus:'Consensus'};
 const ALL_TOOLS = ['Read','Write','Edit','Bash','Glob','Grep','WebSearch','WebFetch'];
 const PIPELINE_ACTIONS = ['design','implement','review','test'];
 const MODEL_COLORS = {opus:'#c084fc',sonnet:'#60a5fa',haiku:'#4ade80'};
@@ -235,10 +235,17 @@ function renderAgents(){
     return `<div class="ag-c ${selectedAgents.has(k)?'sel':''}" onclick="toggleAg(event,'${k}')">
       <span class="dot ${st}"></span>${v.display_name} <span class="mt">${v.model}</span>
       <span class="edit-ic" onclick="event.stopPropagation();editAgent('${k}')">&#9998;</span>
+      <span class="edit-ic" onclick="event.stopPropagation();quickDelAgent('${k}')" style="color:var(--r)">&times;</span>
     </div>`;
   }).join('')+`<div class="ag-new" onclick="newAgent()">+</div>`;
 }
 function toggleAg(e,n){if(e.target.classList.contains('edit-ic'))return;selectedAgents.has(n)?selectedAgents.delete(n):selectedAgents.add(n);renderAgents()}
+async function quickDelAgent(name){
+  if(!confirm('Delete agent "'+name+'"?'))return;
+  await fetch(BASE+'/api/agents/'+name,{method:'DELETE'});
+  const d=await(await fetch(BASE+'/api/config')).json();agents=d.agents;
+  selectedAgents.delete(name);render();drawDiagram();
+}
 
 // ── Options ──
 function renderOpts(){
@@ -454,17 +461,50 @@ function switchTab(el){
 }
 
 // ── Run ──
-function doRun(){
+async function doRun(){
   if(running){if(ws)ws.close();return}
   const topic=document.getElementById('topicIn').value.trim();if(!topic)return;
   const out=document.getElementById('output');out.innerHTML='';
   document.getElementById('statsBar').style.display='none';
   switchTab(document.querySelector('[data-p="output"]'));
   const btn=document.getElementById('runBtn');btn.textContent='Stop';btn.classList.add('stop');running=true;
+
+  // Auto mode: AI plans agents + mode first
+  let mode=selectedMode, agList=[...selectedAgents], opts={};
+  if(selectedMode==='auto'){
+    document.getElementById('statusBar').textContent='planning...';
+    addCard('Auto','start','AI is analyzing the task and choosing agents + mode...');
+    try{
+      const r=await fetch(BASE+'/api/auto-plan',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({topic})});
+      const plan=await r.json();
+      if(plan.error){addCard('Auto','error',plan.error);fin();return}
+      // Create agents that don't exist yet
+      for(const ag of plan.agents||[]){
+        if(!agents[ag.id]){
+          await fetch(BASE+'/api/agents/'+ag.id,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(ag)});
+        }
+      }
+      // Reload agents
+      const d=await(await fetch(BASE+'/api/config')).json();agents=d.agents;
+      agList=(plan.agents||[]).map(a=>a.id);
+      selectedAgents=new Set(agList);
+      mode=plan.mode||'discuss';
+      selectedMode=mode;
+      opts=plan.options||{};
+      render();drawDiagram();
+      const agNames=(plan.agents||[]).map(a=>a.display_name).join(', ');
+      addCard('Auto','done',`Mode: **${MODES[mode]||mode}**\nAgents: ${agNames}\n${plan.reasoning||''}`);
+    }catch(e){addCard('Auto','error','Planning failed: '+e.message);fin();return}
+  }
+  if(mode==='auto'){fin();return} // safety
+
+  if(mode==='pipeline')opts.steps=opts.steps||pipeSteps;
+  if(mode==='parallel')opts.tasks=opts.tasks||parTasks;
+
   const proto=location.protocol==='https:'?'wss:':'ws:';
   ws=new WebSocket(`${proto}//${location.host}${BASE}/ws/run`);
   ws.onopen=()=>{
-    ws.send(JSON.stringify({mode:selectedMode,topic,agents:[...selectedAgents],options:selectedMode==='pipeline'?{steps:pipeSteps}:selectedMode==='parallel'?{tasks:parTasks}:{}}));
+    ws.send(JSON.stringify({mode,topic,agents:agList,options:opts}));
     document.getElementById('statusBar').textContent='running...';
   };
   ws.onmessage=e=>{

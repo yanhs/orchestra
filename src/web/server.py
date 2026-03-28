@@ -151,6 +151,90 @@ Choose tools that match the role. Read-only roles get Read/Glob/Grep. Coding rol
         return {"error": str(e)}
 
 
+class AutoPlanRequest(BaseModel):
+    topic: str
+
+
+@app.post("/api/auto-plan")
+async def auto_plan(req: AutoPlanRequest):
+    """AI analyzes the task and picks optimal agents + mode."""
+    from claude_agent_sdk import ClaudeAgentOptions, ClaudeSDKClient, AssistantMessage, ResultMessage, TextBlock
+
+    # List existing agents for context
+    config = load_config(CONFIG_PATH)
+    existing = {name: {"display_name": r.display_name, "model": r.model}
+                for name, r in config.agents.items()}
+
+    prompt = f"""Analyze this task and decide which AI agents and interaction mode to use.
+
+TASK: "{req.topic}"
+
+EXISTING AGENTS (reuse if suitable): {json.dumps(existing)}
+
+AVAILABLE MODES:
+- discuss: round-robin debate, good for open questions, architecture decisions, brainstorming
+- pipeline: sequential handoff (design→implement→review→test), good for building/coding tasks
+- parallel: agents work on subtasks simultaneously, good for multi-part tasks
+- consensus: agents vote independently, good for choosing between options
+
+Return ONLY valid JSON:
+{{
+  "mode": "<discuss|pipeline|parallel|consensus>",
+  "reasoning": "<1-2 sentences why this mode and these agents>",
+  "agents": [
+    {{
+      "id": "<lowercase_snake_case>",
+      "display_name": "<name>",
+      "model": "<opus|sonnet|haiku>",
+      "max_turns": <number>,
+      "allowed_tools": [<subset of: "Read","Write","Edit","Bash","Glob","Grep","WebSearch","WebFetch">],
+      "system_prompt": "<role description>"
+    }}
+  ],
+  "options": {{}}
+}}
+
+Rules:
+- Pick 2-4 agents best suited for this specific task
+- Reuse existing agents by ID if they fit (keep same config)
+- Create new ones only if needed, with task-specific prompts
+- For pipeline mode, add "steps" in options: [{{"agent":"id","action":"design|implement|review|test"}}]
+- For parallel mode, add "tasks" in options: [{{"agent":"id","description":"subtask"}}]"""
+
+    options = ClaudeAgentOptions(
+        model="sonnet",
+        max_turns=1,
+        permission_mode="plan",
+    )
+
+    try:
+        client = ClaudeSDKClient(options)
+        content = ""
+        try:
+            await client.connect()
+            await client.query(prompt)
+            async for msg in client.receive_messages():
+                if isinstance(msg, ResultMessage):
+                    if msg.result:
+                        content = msg.result
+                    break
+                elif isinstance(msg, AssistantMessage):
+                    for block in msg.content or []:
+                        if isinstance(block, TextBlock):
+                            content += block.text
+        finally:
+            await client.disconnect()
+
+        text = content.strip()
+        if text.startswith("```"):
+            text = text.split("\n", 1)[1] if "\n" in text else text[3:]
+            text = text.rsplit("```", 1)[0]
+        return json.loads(text.strip())
+
+    except Exception as e:
+        return {"error": str(e)}
+
+
 @app.delete("/api/agents/{name}")
 async def delete_agent(name: str):
     """Delete an agent."""
