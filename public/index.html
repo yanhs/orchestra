@@ -188,13 +188,11 @@ body.st-choose .topic-view,body.st-choose .work-view{display:none}
 <div class="topic-view">
   <div class="tv-box">
     <h2><span>Agent</span> Orchestra</h2>
-    <p>Describe what you want to discuss, build, analyze, or decide. AI will assemble the right team and plan.</p>
-    <textarea class="tv-ta" id="topicIn" placeholder="e.g. Предложи 20 бизнес-идей и выбери 2 лучших..." oninput="const v=!this.value.trim();document.getElementById('btnPlan').disabled=v;document.getElementById('btnSuper').disabled=v"></textarea>
+    <p>Describe your goal. AI supervisor will assemble the right team, plan the stages, and execute.</p>
+    <textarea class="tv-ta" id="topicIn" placeholder="e.g. Заработай денег, Напиши статью про AI, Разработай лендинг..." oninput="document.getElementById('btnGo').disabled=!this.value.trim()"></textarea>
     <div class="tv-btns">
-      <button class="btn-plan" id="btnPlan" onclick="doPlan()" disabled>Plan</button>
-      <button class="btn-plan" id="btnSuper" onclick="doSupervised()" disabled style="background:var(--p);flex:1">Supervisor</button>
+      <button class="btn-plan" id="btnGo" onclick="doSupervised()" disabled>Go</button>
     </div>
-    <div class="tv-manual"><a onclick="goManual()">or configure manually</a></div>
   </div>
 </div>
 
