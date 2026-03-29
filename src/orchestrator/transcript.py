@@ -31,8 +31,13 @@ class Transcript:
     def next_round(self) -> None:
         self._round += 1
 
-    def format(self) -> str:
-        """Format transcript as readable text for agent context."""
+    def format(self, max_full_rounds: int = 2) -> str:
+        """Format transcript. Keep last max_full_rounds in full, truncate earlier rounds."""
+        if not self.entries:
+            return ""
+        max_round = max(e.round_num for e in self.entries)
+        cutoff = max(1, max_round - max_full_rounds + 1)
+
         parts = []
         current_round = 0
         for entry in self.entries:
@@ -40,5 +45,11 @@ class Transcript:
                 current_round = entry.round_num
                 if current_round > 1:
                     parts.append(f"\n--- Round {current_round} ---\n")
-            parts.append(f"**[{entry.agent_name}]:**\n{entry.content}\n")
+
+            if entry.round_num < cutoff:
+                # Truncate early rounds to save context
+                summary = entry.content[:300] + "..." if len(entry.content) > 300 else entry.content
+                parts.append(f"**[{entry.agent_name}]** (summary): {summary}\n")
+            else:
+                parts.append(f"**[{entry.agent_name}]:**\n{entry.content}\n")
         return "\n".join(parts)

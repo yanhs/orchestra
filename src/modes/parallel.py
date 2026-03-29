@@ -80,10 +80,10 @@ class ParallelMode(BaseMode):
 
                 return response
 
-        # Fan-out
+        # Fan-out — return_exceptions=True so one failure doesn't kill all
         try:
-            responses = await asyncio.wait_for(
-                asyncio.gather(*[run_task(t) for t in self.tasks]),
+            raw_responses = await asyncio.wait_for(
+                asyncio.gather(*[run_task(t) for t in self.tasks], return_exceptions=True),
                 timeout=self.timeout_seconds,
             )
         except asyncio.TimeoutError:
@@ -92,6 +92,18 @@ class ParallelMode(BaseMode):
                 if asyncio.iscoroutine(r):
                     await r
             return result
+
+        # Collect successful responses, convert exceptions to error responses
+        responses = []
+        for i, resp in enumerate(raw_responses):
+            if isinstance(resp, Exception):
+                agent_name = self.tasks[i].agent.display_name if i < len(self.tasks) else f"Agent {i}"
+                responses.append(AgentResponse(
+                    agent_name=agent_name, content="",
+                    is_error=True, error_message=str(resp),
+                ))
+            else:
+                responses.append(resp)
 
         for resp in responses:
             result.add_response(resp)

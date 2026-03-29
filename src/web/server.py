@@ -288,10 +288,11 @@ GENERAL RULES:
 
 
 async def _call_claude(prompt: str, model: str = "opus", max_retries: int = 3) -> str:
-    """Helper: call Claude with auto-retry on failure."""
+    """Helper: call Claude with auto-retry on failure. Prepends model fallback warning."""
     from claude_agent_sdk import ClaudeAgentOptions, ClaudeSDKClient, AssistantMessage, ResultMessage, TextBlock
 
     fallback_models = {"opus": "sonnet", "sonnet": "haiku", "haiku": "haiku"}
+    requested_model = model
     current_model = model
 
     for attempt in range(max_retries):
@@ -315,9 +316,11 @@ async def _call_claude(prompt: str, model: str = "opus", max_retries: int = 3) -
                 await client.disconnect()
 
             if content.strip():
+                # Warn if model was downgraded
+                if current_model != requested_model:
+                    content = f"[WARNING: responded by {current_model}, not {requested_model}]\n{content}"
                 return content
 
-            # Empty response — retry with fallback model
             print(f"Empty response from {current_model} (attempt {attempt+1})")
             current_model = fallback_models.get(current_model, current_model)
 
@@ -590,12 +593,33 @@ async def _run_job_task(job: Job):
         elif event in ("done", "error"):
             active_agents[agent_name] = "idle"
         job.add_event(agent_name, event, text)
+        # Keep context_doc synced for continuation even on stop/crash
+        if hasattr(supervised, 'context_doc'):
+            job._context_doc = supervised.context_doc
+            job._total_cost = supervised.total_cost
 
     try:
-        supervised = SupervisedRun(goal=job.goal, on_update=on_update)
+        supervisor_model = getattr(job, 'supervisor_model', 'sonnet')
+        supervised = SupervisedRun(goal=job.goal, on_update=on_update, supervisor_model=supervisor_model)
+        # Inherit context from previous job (continuation)
+        prev_ctx = getattr(job, '_prev_context', '')
+        if prev_ctx:
+            supervised.context_doc = prev_ctx
+            supervised.total_cost = getattr(job, '_prev_cost', 0.0)
+            prev_goal = getattr(job, '_prev_goal', '')
+            if prev_goal:
+                supervised.context_doc += f"\n### PREVIOUS GOAL: {prev_goal}\n"
+        # Link feedback queues so user corrections flow through
+        job._feedback_queue = supervised.feedback_queue
+        # Link job for child task tracking
+        supervised._job = job
         result = await supervised.run()
         active_agents.clear()
         run_dir = save_run(result)
+        # Save state for continuation (always, even before finish)
+        job._context_doc = supervised.context_doc
+        job._run_dir = str(supervised.run_dir)
+        job._total_cost = supervised.total_cost
         job.finish("done", {
             "summary": result.summary,
             "cost": result.total_cost,
@@ -605,6 +629,10 @@ async def _run_job_task(job: Job):
         })
     except asyncio.CancelledError:
         active_agents.clear()
+        # Preserve context for continuation
+        job._context_doc = getattr(supervised, 'context_doc', '')
+        job._total_cost = getattr(supervised, 'total_cost', 0.0)
+        job._run_dir = str(getattr(supervised, 'run_dir', ''))
         job.finish("stopped")
     except Exception as e:
         import traceback
@@ -623,10 +651,10 @@ async def list_jobs():
 
 @app.get("/api/jobs/current")
 async def current_job():
-    job = job_manager.get_running()
-    if job:
-        return job.to_summary()
-    return {"status": "idle"}
+    running = job_manager.get_all_running()
+    if running:
+        return {"status": "running", "jobs": [j.to_summary() for j in running]}
+    return {"status": "idle", "jobs": []}
 
 
 @app.post("/api/jobs/{job_id}/stop")
@@ -634,6 +662,31 @@ async def stop_job(job_id: str):
     if job_manager.stop(job_id):
         return {"ok": True}
     return {"error": "Job not found or not running"}
+
+@app.post("/api/jobs/resume")
+async def resume_job():
+    """Resume the most recent checkpoint."""
+    from ..orchestrator.supervisor import SupervisedRun
+    import glob as glob_mod
+    runs_dir = Path(__file__).parent.parent.parent / "_orchestra" / "runs"
+    checkpoints = sorted(runs_dir.glob("*/.checkpoint.json"), key=lambda p: -p.stat().st_mtime)
+    if not checkpoints:
+        return {"error": "No checkpoints found"}
+    return {"checkpoint": str(checkpoints[0]), "goal": json.loads(checkpoints[0].read_text()).get("goal", "")}
+
+@app.delete("/api/jobs/{job_id}")
+async def delete_job(job_id: str):
+    job = job_manager.get(job_id)
+    if not job:
+        return {"error": "Job not found"}
+    if job.status == "running":
+        job_manager.stop(job_id)
+    del job_manager.jobs[job_id]
+    # Also delete from disk so it doesn't reload
+    disk_file = Path(__file__).parent.parent.parent / "_orchestra" / "jobs" / f"{job_id}.json"
+    if disk_file.exists():
+        disk_file.unlink()
+    return {"ok": True}
 
 
 # ── WebSocket ──
@@ -665,34 +718,61 @@ async def ws_run(ws: WebSocket):
             if not topic:
                 await ws.send_json({"type": "error", "text": "No topic provided"})
                 return
-            # Check if already running
-            existing = job_manager.get_running()
-            if existing:
-                await ws.send_json({"type": "error", "text": f"Job already running: {existing.id}"})
-                return
-            # Create background job
+            # Create background job (multiple jobs can run concurrently)
+            supervisor_model = msg.get("supervisor_model", "sonnet")
+            continue_from = msg.get("continue_from")
             job = job_manager.create(goal=topic)
+            job.supervisor_model = supervisor_model
+            # Inherit context from previous job for continuation
+            if continue_from:
+                prev = job_manager.get(continue_from)
+                if prev:
+                    job._prev_context = getattr(prev, '_context_doc', '')
+                    job._prev_run_dir = getattr(prev, '_run_dir', '')
+                    job._prev_cost = getattr(prev, '_total_cost', 0.0)
+                    job._prev_goal = prev.goal
             job._task = asyncio.create_task(_run_job_task(job))
             await ws.send_json({"type": "job_created", "job_id": job.id})
         else:
             await ws.send_json({"type": "error", "text": "Invalid action"})
             return
 
-        # Subscribe to live events
+        # Subscribe to live events + listen for user corrections (bidirectional)
         queue = job.subscribe()
-        try:
+
+        async def _send_events():
+            """Forward job events to WebSocket."""
             while True:
                 ev = await queue.get()
                 if ev is None:
-                    # Job finished
                     await ws.send_json({"type": "result", **(job.result or {})})
-                    break
+                    return
                 await ws.send_json({
                     "type": "update",
                     "agent": ev.agent,
                     "event": ev.event,
                     "text": ev.text,
                 })
+
+        async def _recv_feedback():
+            """Listen for user corrections mid-run."""
+            while True:
+                try:
+                    msg = await ws.receive_json()
+                    if msg.get("action") == "feedback" and msg.get("text"):
+                        job.add_feedback(msg["text"])
+                except (WebSocketDisconnect, Exception):
+                    return
+
+        try:
+            # Run both tasks concurrently — first to finish wins
+            send_task = asyncio.create_task(_send_events())
+            recv_task = asyncio.create_task(_recv_feedback())
+            done, pending = await asyncio.wait(
+                [send_task, recv_task], return_when=asyncio.FIRST_COMPLETED
+            )
+            for t in pending:
+                t.cancel()
         finally:
             job.unsubscribe(queue)
 

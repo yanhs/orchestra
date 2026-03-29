@@ -42,7 +42,34 @@ body.st-topic .topic-view{display:none}
 .pc{width:380px;min-width:380px;border-right:1px solid var(--b);background:var(--s);display:flex;flex-direction:column;overflow:hidden}
 .pc-scroll{flex:1;overflow-y:auto;padding:0.8rem}
 .pc-scroll::-webkit-scrollbar{width:4px} .pc-scroll::-webkit-scrollbar-thumb{background:#333;border-radius:2px}
-body.st-running .pc-scroll{opacity:0.5;pointer-events:none}
+/* Job tabs */
+.job-tabs{display:none;border-bottom:1px solid var(--b);background:var(--s2);flex-shrink:0;overflow-y:auto;max-height:5.5rem}
+.job-tabs.has-jobs{display:flex;flex-wrap:wrap}
+.jt{padding:0.3rem 0.6rem;font-size:0.62rem;color:var(--d);cursor:pointer;border-bottom:2px solid transparent;display:flex;align-items:center;gap:0.3rem;flex-shrink:0}
+.jt:hover{color:var(--d2)} .jt.on{color:var(--a);border-bottom-color:var(--a)}
+.jt-dot{width:5px;height:5px;border-radius:50%;background:var(--g)}
+.jt-dot.running{background:var(--y);box-shadow:0 0 3px var(--y)}
+.jt-x{color:var(--d);font-size:0.6rem;margin-left:0.2rem;cursor:pointer} .jt-x:hover{color:var(--r)}
+/* Model selector */
+.model-sel-wrap{display:flex;align-items:center;gap:0.3rem;margin-left:auto}
+.model-sel-label{font-size:0.58rem;color:var(--d);text-transform:uppercase}
+.model-sel{padding:0.15rem 0.4rem;font-size:0.62rem;background:var(--s2);border:1px solid var(--b);border-radius:3px;color:var(--d2);cursor:pointer;font-family:inherit;appearance:none}
+.model-sel:focus{outline:none;border-color:var(--a)} .model-sel option{background:var(--s2);color:var(--t)}
+
+/* Agent list (replaces plan scroll during running) */
+.agent-list{display:none;flex:1;overflow-y:auto;padding:0.4rem}
+body.st-running .pc-scroll{display:none}
+body.st-running .agent-list{display:block}
+body.st-done .agent-list{display:block}
+.al-item{padding:0.35rem 0.5rem;border:1px solid var(--b);border-radius:5px;margin-bottom:0.25rem;cursor:pointer;display:flex;align-items:center;gap:0.35rem;font-size:0.72rem;transition:all .12s}
+.al-item:hover{border-color:var(--b2);background:rgba(255,255,255,0.015)}
+.al-item.selected{border-color:var(--a);background:var(--ad)}
+.al-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0}
+.al-dot.working{background:var(--y);box-shadow:0 0 4px var(--y)}
+.al-dot.idle{background:var(--g)}
+.al-dot.off{background:var(--d)}
+.al-name{flex:1;font-weight:500}
+.al-status{font-size:0.58rem;color:var(--d);font-family:'JetBrains Mono',monospace}
 
 /* ── STATE: CHOOSE (pick a plan variant) ── */
 .choose-view{flex:1;display:none;align-items:center;justify-content:center;background:var(--s);overflow-y:auto;padding:2rem}
@@ -147,6 +174,23 @@ body.st-choose .topic-view,body.st-choose .work-view{display:none}
 .stats{padding:0.3rem 0.7rem;border-top:1px solid var(--b);background:var(--s2);font-size:0.64rem;color:var(--d);font-family:'JetBrains Mono',monospace;flex-shrink:0}
 .ph{flex:1;display:flex;align-items:center;justify-content:center;color:#27272a;font-size:0.8rem}
 
+/* Phase progress bar */
+.phase-bar{display:none;padding:0.35rem 0.7rem;border-bottom:1px solid var(--b);background:var(--s2);flex-shrink:0;overflow-x:auto}
+body.st-running .phase-bar,body.st-done .phase-bar{display:flex}
+.phase-bar{display:flex;align-items:center;gap:0.15rem;white-space:nowrap}
+.pb-step{padding:0.15rem 0.45rem;font-size:0.58rem;font-weight:600;text-transform:uppercase;letter-spacing:0.04em;border-radius:3px;color:var(--d);background:var(--bg);border:1px solid var(--b);transition:all .2s}
+.pb-step.active{color:var(--y);border-color:var(--y);background:rgba(251,191,36,0.08)}
+.pb-step.done{color:var(--g);border-color:rgba(74,222,128,0.3);background:rgba(74,222,128,0.06)}
+.pb-arrow{color:var(--d);font-size:0.5rem;margin:0 0.05rem}
+/* Prompt bar — always visible */
+.prompt-bar{display:flex;padding:0.4rem 0.5rem;border-top:1px solid var(--b);background:var(--s2);flex-shrink:0;gap:0.3rem;align-items:center}
+.prompt-in{flex:1;padding:0.35rem 0.6rem;background:var(--bg);border:1px solid var(--b);border-radius:5px;color:var(--t);font-size:0.78rem;font-family:inherit}
+.prompt-in:focus{outline:none;border-color:var(--a)}
+.prompt-in::placeholder{color:#52525b}
+.prompt-btn{padding:0.35rem 0.7rem;font-size:0.68rem;font-weight:600;background:var(--a);color:#000;border:none;border-radius:5px;cursor:pointer;white-space:nowrap}
+.prompt-btn:hover{filter:brightness(1.15)}
+.prompt-btn.stop{background:var(--r);color:#fff}
+
 /* Cards in output */
 .rc{margin-bottom:0.5rem;border:1px solid var(--b);border-radius:5px;overflow:hidden}
 .rc-h{padding:0.3rem 0.5rem;background:var(--s2);display:flex;align-items:center;gap:0.4rem;font-size:0.7rem;font-weight:600}
@@ -177,6 +221,14 @@ body.st-choose .topic-view,body.st-choose .work-view{display:none}
 <div class="hdr">
   <h1><span>Agent</span> Orchestra</h1>
   <div class="hdr-sp"></div>
+  <div class="model-sel-wrap">
+    <span class="model-sel-label">Supervisor</span>
+    <select class="model-sel" id="supervisorModel">
+      <option value="haiku">haiku</option>
+      <option value="sonnet">sonnet</option>
+      <option value="opus" selected>opus</option>
+    </select>
+  </div>
   <div class="hb hb-r" onclick="fullReset()">Reset</div>
   <div class="hb" id="histBtn" onclick="toggleHist()">History</div>
 </div>
@@ -196,29 +248,33 @@ body.st-choose .topic-view,body.st-choose .work-view{display:none}
 <!-- STATE: WORK (plan-ready / running / done) -->
 <div class="work-view">
   <div class="pc">
-    <div class="pc-scroll" id="planCard">
-      <!-- Default: topic input -->
-      <div class="ps">
-        <div class="ps-label">Goal</div>
-        <textarea class="tv-ta" id="topicIn" style="min-height:60px;font-size:0.82rem" placeholder="Describe your goal..." oninput="document.getElementById('btnGo').disabled=!this.value.trim()"></textarea>
-      </div>
-    </div>
-    <div class="pc-run">
-      <button class="btn-run" id="btnGo" onclick="doSupervised()">Go</button>
-      <button class="btn-run stop" id="btnRun" onclick="doRun()" style="display:none">Stop</button>
+    <div class="pc-scroll" id="planCard"></div>
+    <div class="agent-list" id="agentList">
+      <div class="ps-label" style="padding:0 0.1rem 0.3rem">Agents</div>
     </div>
   </div>
   <div class="out-area">
+    <div class="job-tabs" id="jobTabs"></div>
     <div class="out-tabs">
       <div class="otab on" data-p="output" onclick="switchTab(this)">Output</div>
       <div class="otab" data-p="diagram" onclick="switchTab(this)">Diagram</div>
+      <div class="otab" data-p="timeline" onclick="switchTab(this)">Timeline</div>
     </div>
     <div class="opanel on" id="p-output">
-      <div class="out" id="output"><div class="ph">Plan is ready. Press Run to start.</div></div>
+      <div class="phase-bar" id="phaseBar"></div>
+      <div class="out" id="output"><div class="ph">Enter a goal below to start</div></div>
       <div class="stats" id="statsBar" style="display:none"></div>
+      <div class="prompt-bar" id="promptBar">
+        <input class="prompt-in" id="promptIn" placeholder="Enter a goal..." onkeydown="if(event.key==='Enter')handlePrompt()">
+        <button class="prompt-btn" id="promptBtn" onclick="handlePrompt()">Go</button>
+        <button class="prompt-btn stop" id="stopBtn" onclick="stopCurrent()">Stop</button>
+      </div>
     </div>
     <div class="opanel" id="p-diagram">
       <div class="diag" id="diagArea"></div>
+    </div>
+    <div class="opanel" id="p-timeline">
+      <div class="out" id="timelineArea" style="padding:0.5rem"></div>
     </div>
   </div>
   <div class="hist" id="histPanel">
@@ -232,24 +288,28 @@ const BASE=location.pathname.replace(/\/(app\/?)?$/,'');
 const ALL_TOOLS=['Read','Write','Edit','Bash','Glob','Grep','WebSearch','WebFetch'];
 const MC={opus:'#c084fc',sonnet:'#60a5fa',haiku:'#4ade80'};
 const MODE_NAMES={supervised:'Supervised',discuss:'Discussion',pipeline:'Pipeline',parallel:'Parallel',consensus:'Consensus',custom:'Custom Workflow'};
+const PHASE_LABELS={research:'Research',deep_dive:'Deep Dive',synthesis:'Synthesis',planning:'Planning',execution:'Execution',review:'Review',delegate:'Delegate',unknown:'...'};
 
 // ── State ──
 let S={
   phase:'topic', // topic|planning|plan-ready|running|done
   topic:'',
-  plan:null, // {mode,reasoning,agents[],options:{rounds,steps[],tasks[]}}
+  plan:null,
   agents:{}, // global registry
   ws:null,
   agentActivity:{},
+  activePhases:[],
+  currentPhase:null,
 };
+// Multi-job state
+let jobs={}; // jobId -> {ws, topic, events:[], agentActivity:{}, activePhases:[], agentOutputs:{}, startTime, status}
+let activeJobId=null;
 
 // ── Phase transitions ──
 function setPhase(p){
   S.phase=p;
-  document.body.className=p==='choose'?'st-choose':'';
-  // Toggle Go/Stop buttons
-  document.getElementById('btnGo').style.display=(p==='running')?'none':'block';
-  document.getElementById('btnRun').style.display=(p==='running')?'block':'none';
+  document.body.className=p==='choose'?'st-choose':p==='running'?'st-running':p==='done'?'st-done':'';
+  updatePromptUI();
   renderPlan();
 }
 
@@ -258,16 +318,34 @@ async function init(){
   const d=await(await fetch(BASE+'/api/config')).json();
   S.agents=d.agents;
   setInterval(pollActivity,3000);
-  // Check for running job — reconnect if found
+  // Load all known jobs (running + recent finished)
   try{
-    const cur=await(await fetch(BASE+'/api/jobs/current')).json();
-    if(cur.status==='running'&&cur.id){
-      S.topic=cur.goal||'';
+    const allJobs=await(await fetch(BASE+'/api/jobs')).json();
+    for(const j of allJobs){
+      jobs[j.id]={ws:null,topic:j.goal||'',startTime:j.created_at*1000,status:j.status,agentTimeline:[]};
+    }
+    renderJobTabs();
+    // Reconnect to running jobs
+    const running=allJobs.filter(j=>j.status==='running');
+    if(running.length>0){
+      const latest=running[0];
+      S.topic=latest.goal||'';
       S.plan={mode:'supervised',reasoning:'Reconnecting...',agents:[],options:{}};
       document.getElementById('output').innerHTML='';
+      activeJobId=latest.id;
+      S.currentJobId=latest.id;
       setPhase('running');
-      attachToJob(cur.id);
+      attachToJob(latest.id);
       return;
+    }
+    // Show last finished job if any
+    const finished=allJobs.filter(j=>j.status==='done');
+    if(finished.length>0){
+      activeJobId=finished[0].id;
+      S.currentJobId=finished[0].id;
+      S.topic=finished[0].goal||'';
+      setPhase('done');
+      renderJobTabs();
     }
   }catch(e){}
 }
@@ -316,7 +394,7 @@ async function doPlan(retryCount=0){
   }catch(e){
     if(retryCount<maxRetries){return doPlan(retryCount+1)}
     btn.textContent='Self-repairing...';
-    await selfRepair(e.message,'doPlan: '+topic);
+    addCard('Error','error',e.message);
     btn.disabled=false;btn.textContent='Plan';
   }
   btn.disabled=false;btn.textContent='Plan';
@@ -510,48 +588,130 @@ async function addAgent(){
 }
 
 // ── RUN ──
-async function doSupervised(){
-  const topic=document.getElementById('topicIn').value.trim();
+async function doSupervised(topic){
   if(!topic)return;
   S.topic=topic;
   S.plan={mode:'supervised',reasoning:'Supervisor controls all stages',agents:[],options:{}};
+  S.activePhases=[];S.currentPhase=null;
+  agentOutputs={};selectedAgent=null;
   document.getElementById('output').innerHTML='';
   document.getElementById('statsBar').style.display='none';
+  document.getElementById('agentList').innerHTML='<div class="ps-label" style="padding:0 0.1rem 0.3rem">Agents</div>';
+  renderPhaseBar();
   setPhase('running');
-  connectWS({action:'start',topic});
+  const model=document.getElementById('supervisorModel').value;
+  connectWS({action:'start',topic,supervisor_model:model});
 }
 
 function attachToJob(jobId){
+  S.currentJobId=jobId;
   connectWS({action:'attach',job_id:jobId});
 }
 
 function connectWS(msg){
   const proto=location.protocol==='https:'?'wss:':'ws:';
-  S.ws=new WebSocket(`${proto}//${location.host}${BASE}/ws/run`);
-  S.ws.onopen=()=>{S.ws.send(JSON.stringify(msg))};
-  S.ws.onmessage=e=>{
+  const ws=new WebSocket(`${proto}//${location.host}${BASE}/ws/run`);
+  // Track which job this WS belongs to
+  let wsJobId=msg.job_id||null;
+  S.ws=ws;
+  ws.onopen=()=>{ws.send(JSON.stringify(msg))};
+  ws.onmessage=e=>{
     const d=JSON.parse(e.data);
     if(d.type==='job_created'){
+      wsJobId=d.job_id;
       S.currentJobId=d.job_id;
+      activeJobId=d.job_id;
+      jobs[d.job_id]={ws,topic:S.topic,startTime:Date.now(),status:'running',agentTimeline:[]};
+      renderJobTabs();
     }else if(d.type==='update'){
-      addCard(d.agent,d.event,d.text);
-      if(d.event==='start')S.agentActivity[d.agent]='working';
-      else if(d.event==='done'||d.event==='error')S.agentActivity[d.agent]='idle';
-      drawDiagram();
+      // Track timeline on the correct job
+      if(wsJobId&&jobs[wsJobId]){
+        jobs[wsJobId].agentTimeline.push({agent:d.agent,event:d.event,ts:Date.now()});
+      }
+      // Only render if this is the active tab
+      if(wsJobId===activeJobId){
+        addCard(d.agent,d.event,d.text);
+        if(d.event==='start')S.agentActivity[d.agent]='working';
+        else if(d.event==='done'||d.event==='error')S.agentActivity[d.agent]='idle';
+        drawDiagram();
+      }
     }else if(d.type==='result'){
-      if(d.summary)addSum(d.summary);showStats(d);fin();
+      if(wsJobId&&jobs[wsJobId])jobs[wsJobId].status='done';
+      if(wsJobId===activeJobId){
+        if(d.summary)addSum(d.summary);showStats(d);fin();
+      }
+      renderJobTabs();
     }else if(d.type==='error'){
-      // Not fatal for background jobs — just show the error
-      addCard('Error','error',d.text);
-      if(d.text&&!d.text.includes('already running'))fin();
+      if(wsJobId===activeJobId)addCard('Error','error',d.text);
     }
   };
-  // WS disconnect doesn't stop the job — it continues in background
-  S.ws.onclose=()=>{
-    S.ws=null;
-    // Don't call fin() — job is still running on server
-  };
-  S.ws.onerror=()=>{S.ws=null};
+  ws.onclose=()=>{if(S.ws===ws)S.ws=null};
+  ws.onerror=()=>{if(S.ws===ws)S.ws=null};
+  // Store WS on job
+  if(wsJobId&&jobs[wsJobId])jobs[wsJobId].ws=ws;
+}
+
+function renderJobTabs(){
+  const el=document.getElementById('jobTabs');
+  const ids=Object.keys(jobs);
+  if(ids.length===0){el.className='job-tabs';el.innerHTML='';return}
+  el.className='job-tabs has-jobs';
+  // Always show "+ New" tab
+  let html=ids.map(id=>{
+    const j=jobs[id];
+    const on=id===activeJobId?' on':'';
+    const dot=j.status==='running'?'running':'';
+    const label=(j.topic||id).slice(0,20);
+    const closeAction=j.status==='running'?`stopJob('${id}')`:`deleteJob('${id}')`;
+    return `<div class="jt${on}" onclick="switchJob('${id}')"><span class="jt-dot ${dot}"></span>${esc(label)}<span class="jt-x" onclick="event.stopPropagation();${closeAction}">×</span></div>`;
+  }).join('');
+  html+=`<div class="jt" onclick="newTask()" style="color:var(--a)">+ New</div>`;
+  el.innerHTML=html;
+}
+
+function switchJob(id){
+  activeJobId=id;
+  S.currentJobId=id;
+  const j=jobs[id];
+  // Reset output for this tab
+  S.agentActivity={};S.activePhases=[];S.currentPhase=null;
+  agentOutputs={};selectedAgent=null;
+  document.getElementById('output').innerHTML='';
+  document.getElementById('statsBar').style.display='none';
+  document.getElementById('agentList').innerHTML='<div class="ps-label" style="padding:0 0.1rem 0.3rem">Agents</div>';
+  renderPhaseBar();
+  S.topic=j?j.topic:'';
+
+  // Use existing WS if job is running, otherwise replay via new attach
+  if(j&&j.status==='running'&&j.ws&&j.ws.readyState===1){
+    S.ws=j.ws;
+    setPhase('running');
+    // Re-attach to get replay of events
+    attachToJob(id);
+  } else {
+    attachToJob(id);
+    setPhase(j&&j.status==='running'?'running':'done');
+  }
+  renderJobTabs();
+}
+
+function stopJob(id){
+  fetch(BASE+'/api/jobs/'+id+'/stop',{method:'POST'}).catch(()=>{});
+  if(jobs[id])jobs[id].status='stopped';
+  if(id===activeJobId)fin();
+  renderJobTabs();
+}
+
+function deleteJob(id){
+  fetch(BASE+'/api/jobs/'+id,{method:'DELETE'}).catch(()=>{});
+  if(jobs[id]&&jobs[id].ws){try{jobs[id].ws.close()}catch(e){}}
+  delete jobs[id];
+  if(id===activeJobId){
+    const ids=Object.keys(jobs);
+    if(ids.length)switchJob(ids[ids.length-1]);
+    else fullReset();
+  }
+  renderJobTabs();
 }
 
 async function doRun(){
@@ -593,7 +753,7 @@ async function doRun(){
       drawDiagram();
     }else if(d.type==='result'){
       if(d.summary)addSum(d.summary);showStats(d);fin();
-    }else if(d.type==='error'){addCard('Error','error',d.text);selfRepair(d.text,'ws run: '+S.topic);fin()}
+    }else if(d.type==='error'){addCard('Error','error',d.text);fin()}
   };
   S.ws.onclose=()=>{if(S.phase==='running')fin()};
   S.ws.onerror=()=>{addCard('Error','error','Connection failed');fin()};
@@ -604,15 +764,29 @@ function fin(){
   setPhase('done');
 }
 
+function newTask(){
+  // Start fresh — clear output but keep other jobs
+  activeJobId=null;
+  S.currentJobId=null;S.ws=null;S.agentActivity={};S.activePhases=[];S.currentPhase=null;
+  agentOutputs={};selectedAgent=null;
+  document.getElementById('output').innerHTML='<div class="ph">Enter a goal below to start</div>';
+  document.getElementById('statsBar').style.display='none';
+  document.getElementById('agentList').innerHTML='<div class="ps-label" style="padding:0 0.1rem 0.3rem">Agents</div>';
+  renderPhaseBar();
+  setPhase('topic');
+  renderJobTabs();
+  document.getElementById('promptIn').focus();
+}
+
 // ── RESET ──
 function fullReset(){
   if(S.currentJobId){
     fetch(BASE+'/api/jobs/'+S.currentJobId+'/stop',{method:'POST'}).catch(()=>{});
   }
   if(S.ws){S.ws.onclose=null;S.ws.close();S.ws=null}
-  S.plan=null;S.topic='';S.agentActivity={};S.currentJobId=null;
-  document.getElementById('topicIn').value='';
-  document.getElementById('output').innerHTML='<div class="ph">Enter a goal and press Go</div>';
+  S.plan=null;S.topic='';S.agentActivity={};S.currentJobId=null;S.activePhases=[];S.currentPhase=null;agentOutputs={};selectedAgent=null;
+  document.getElementById('promptIn').value='';
+  document.getElementById('output').innerHTML='<div class="ph">Enter a goal below to start</div>';
   document.getElementById('statsBar').style.display='none';
   setPhase('topic');
 }
@@ -622,9 +796,24 @@ function addCard(ag,ev,txt){
   const out=document.getElementById('output');
   const cid='a-'+ag.replace(/\s/g,'');
 
+  // Track agent output
+  trackAgent(ag,ev,txt);
+
+  // Update phase bar from supervisor messages
+  if(ag==='Supervisor' && (ev==='done'||ev==='start')){updatePhaseBar(txt)}
+  if(ag==='Supervisor' && ev==='progress'){updateLiveCost(txt)}
+
+  // User feedback card
+  if(ev==='feedback'){
+    const c=document.createElement('div');c.className='rc';c.style.borderColor='var(--a)';
+    c.innerHTML=`<div class="rc-h" style="background:var(--ad)"><span class="al" style="color:var(--a)">${esc(ag)}</span><span class="el">correction</span></div><div class="rc-b">${fmtMd(txt)}</div>`;
+    out.appendChild(c);out.scrollTop=out.scrollHeight;return;
+  }
+
   if(ev==='start'){
     const c=document.createElement('div');c.className='rc ev-start';c.id=cid;
     c.innerHTML=`<div class="rc-h"><span class="al">${esc(ag)}</span><span class="el">${esc(txt)}</span><div class="spinner"></div></div><div class="rc-b rc-live" style="font-size:0.7rem;color:var(--d);max-height:150px;overflow-y:auto"></div>`;
+    if(selectedAgent&&selectedAgent!==ag)c.style.display='none';
     out.appendChild(c);out.scrollTop=out.scrollHeight;return;
   }
 
@@ -646,38 +835,253 @@ function addCard(ag,ev,txt){
   const a=document.getElementById(cid);if(a)a.remove();
   const c=document.createElement('div');c.className=`rc ev-${ev}`;
   c.innerHTML=`<div class="rc-h"><span class="al">${esc(ag)}</span><span class="el">${ev}</span></div><div class="rc-b">${fmtMd(txt)}</div>`;
+  if(selectedAgent&&selectedAgent!==ag)c.style.display='none';
   out.appendChild(c);out.scrollTop=out.scrollHeight;
 }
 function addSum(txt){const out=document.getElementById('output');const c=document.createElement('div');c.className='rc sc';c.innerHTML=`<div class="rc-h"><span class="al">Summary</span></div><div class="rc-b">${fmtMd(txt)}</div>`;out.appendChild(c);out.scrollTop=out.scrollHeight}
 function showStats(d){const b=document.getElementById('statsBar');b.style.display='block';b.textContent=`${d.responses} responses | $${(d.cost||0).toFixed(4)} | ${((d.duration_ms||0)/1000).toFixed(1)}s`}
+function updateLiveCost(txt){
+  const m=txt.match(/Total: \$([0-9.]+)/);
+  if(m){const b=document.getElementById('statsBar');b.style.display='block';b.textContent=`Running cost: $${m[1]}`}
+}
+
+// ── PHASE BAR ──
+function updatePhaseBar(text){
+  // Extract phase from supervisor stage messages: "Stage N [PHASE]: ..."
+  const m=text.match(/\[([A-Z_]+)\]/);
+  if(m){
+    const ph=m[1].toLowerCase();
+    if(ph && !S.activePhases.includes(ph)){S.activePhases.push(ph)}
+    S.currentPhase=ph;
+  }
+  renderPhaseBar();
+}
+function renderPhaseBar(){
+  const bar=document.getElementById('phaseBar');
+  if(!S.activePhases.length){bar.innerHTML='';return}
+  // Only show phases that actually happened — no fixed template
+  bar.innerHTML=S.activePhases.map((ph,i)=>{
+    const cls=ph===S.currentPhase?'active':'done';
+    const arrow=i<S.activePhases.length-1?'<span class="pb-arrow">&#9654;</span>':'';
+    return `<span class="pb-step ${cls}">${PHASE_LABELS[ph]||ph}</span>${arrow}`;
+  }).join('');
+}
+
+// ── AGENT LIST ──
+let agentOutputs={}; // agent_name -> [{event, text}]
+let selectedAgent=null; // null = show all
+
+function trackAgent(ag, ev, txt){
+  if(ag==='System'||ag==='Error')return;
+  if(!agentOutputs[ag])agentOutputs[ag]=[];
+  agentOutputs[ag].push({event:ev, text:txt});
+  renderAgentList();
+}
+
+function renderAgentList(){
+  const el=document.getElementById('agentList');
+  let html='';
+  // Goal
+  if(S.topic){
+    html+=`<div class="ps" style="margin-bottom:0.5rem"><div class="ps-label">Goal</div><div style="font-size:0.72rem;color:var(--t);padding:0.3rem 0.4rem;background:var(--bg);border:1px solid var(--b);border-radius:4px;word-wrap:break-word">${esc(S.topic).slice(0,200)}</div></div>`;
+  }
+  // Phase + cost
+  const phaseText=S.currentPhase?`<span style="color:var(--a)">${esc(PHASE_LABELS[S.currentPhase]||S.currentPhase)}</span>`:'';
+  const costEl=document.getElementById('statsBar');
+  const costText=costEl&&costEl.textContent?costEl.textContent:'';
+  if(phaseText||costText){
+    html+=`<div style="font-size:0.6rem;color:var(--d);padding:0 0.1rem 0.4rem">${phaseText}${costText?' · <span class="mono">'+esc(costText)+'</span>':''}</div>`;
+  }
+  // Agents
+  const names=Object.keys(agentOutputs);
+  if(names.length){
+    html+=`<div class="ps-label" style="padding:0 0.1rem 0.3rem">Agents</div>`;
+    html+=`<div class="al-item${selectedAgent===null?' selected':''}" onclick="selectAgent(null)"><span class="al-dot off"></span><span class="al-name" style="color:var(--d2)">All</span></div>`;
+    for(const name of names){
+      const st=S.agentActivity[name]||'off';
+      const msgs=agentOutputs[name].length;
+      const sel=selectedAgent===name?' selected':'';
+      // Show last event snippet
+      const lastEv=agentOutputs[name][agentOutputs[name].length-1];
+      const snippet=lastEv?lastEv.text.slice(0,40):'';
+      html+=`<div class="al-item${sel}" onclick="selectAgent('${esc(name)}')"><span class="al-dot ${st}"></span><span class="al-name">${esc(name)}</span><span class="al-status">${msgs}</span></div>`;
+      if(sel&&snippet){
+        html+=`<div style="font-size:0.58rem;color:var(--d);padding:0.1rem 0.5rem 0.3rem;word-wrap:break-word">${esc(snippet)}...</div>`;
+      }
+    }
+  } else {
+    html+=`<div class="ps-label" style="padding:0 0.1rem 0.3rem">Agents</div>`;
+    html+=`<div style="font-size:0.68rem;color:var(--d);padding:0.3rem">Waiting for supervisor...</div>`;
+  }
+  el.innerHTML=html;
+}
+
+function selectAgent(name){
+  selectedAgent=name;
+  renderAgentList();
+  filterOutput();
+}
+
+function filterOutput(){
+  const cards=document.querySelectorAll('#output .rc');
+  cards.forEach(c=>{
+    if(!selectedAgent){c.style.display='';return}
+    // Match by agent name in card header
+    const al=c.querySelector('.al');
+    const agName=al?al.textContent:'';
+    c.style.display=(agName===selectedAgent)?'':'none';
+  });
+  document.getElementById('output').scrollTop=document.getElementById('output').scrollHeight;
+}
+
+// ── UNIFIED PROMPT HANDLER ──
+function handlePrompt(){
+  const inp=document.getElementById('promptIn');
+  const text=inp.value.trim();
+  inp.value='';
+
+  if(S.phase==='running'&&S.ws&&S.ws.readyState===1){
+    if(!text)return;
+    S.ws.send(JSON.stringify({action:'feedback',text}));
+    addCard('You','feedback',text);
+  } else if(S.phase==='done'&&(S.currentJobId||activeJobId)){
+    doContinue(text||'продолжай');
+  } else if(text){
+    doSupervised(text);
+  }
+}
+
+function updatePromptUI(){
+  const inp=document.getElementById('promptIn');
+  // Go + Stop always visible, placeholder changes
+  if(S.phase==='running'){
+    inp.placeholder='Send correction to supervisor...';
+  } else if(S.phase==='done'){
+    inp.placeholder='Enter follow-up or new goal...';
+  } else {
+    inp.placeholder='Enter a goal...';
+  }
+}
+
+function stopCurrent(){
+  const id=S.currentJobId||activeJobId;
+  if(id){
+    fetch(BASE+'/api/jobs/'+id+'/stop',{method:'POST'}).catch(()=>{});
+    if(jobs[id])jobs[id].status='stopped';
+  }
+  if(S.ws){S.ws.onclose=null;S.ws.close();S.ws=null}
+  // Kill all spinners and reset agent statuses
+  document.querySelectorAll('.spinner').forEach(s=>s.remove());
+  document.querySelectorAll('.rc.ev-start').forEach(c=>c.classList.replace('ev-start','ev-error'));
+  S.agentActivity={};
+  S.phase='done';
+  updatePromptUI();
+  addCard('System','error','Stopped');
+  renderAgentList();
+  renderJobTabs();
+}
+
+async function doContinue(text){
+  const prevJobId=S.currentJobId||activeJobId;
+  const prevTopic=prevJobId&&jobs[prevJobId]?jobs[prevJobId].topic:'';
+  const fullTopic=prevTopic?`Continue previous task: "${prevTopic}"\n\nNew instruction: ${text}`:text;
+  S.plan={mode:'supervised',reasoning:'Continuing...',agents:[],options:{}};
+  // Remove old tab — continuation replaces it, not adds new
+  if(prevJobId&&jobs[prevJobId]){
+    delete jobs[prevJobId];
+    // Keep topic for new tab
+    S.topic=prevTopic||text;
+  }
+  setPhase('running');
+  const model=document.getElementById('supervisorModel').value;
+  connectWS({action:'start',topic:fullTopic,supervisor_model:model,continue_from:prevJobId});
+}
 
 // ── TABS ──
-function switchTab(el){document.querySelectorAll('.otab').forEach(t=>t.classList.remove('on'));document.querySelectorAll('.opanel').forEach(p=>p.classList.remove('on'));el.classList.add('on');document.getElementById('p-'+el.dataset.p).classList.add('on');if(el.dataset.p==='diagram')drawDiagram()}
+function switchTab(el){document.querySelectorAll('.otab').forEach(t=>t.classList.remove('on'));document.querySelectorAll('.opanel').forEach(p=>p.classList.remove('on'));el.classList.add('on');document.getElementById('p-'+el.dataset.p).classList.add('on');if(el.dataset.p==='diagram')drawDiagram();if(el.dataset.p==='timeline')drawTimeline()}
 
 // ── DIAGRAM ──
 function drawDiagram(){
   const area=document.getElementById('diagArea');
-  if(!S.plan||!S.plan.agents.length){area.innerHTML='<div class="ph">No agents</div>';return}
-  const ags=S.plan.agents,n=ags.length,W=600,H=400,cx=W/2,cy=H/2,R=140;
+  // Build agent list from tracked outputs (works in supervised mode too)
+  const names=Object.keys(agentOutputs).filter(n=>n!=='Supervisor'&&n!=='System'&&n!=='Error'&&n!=='You');
+  if(!names.length){area.innerHTML='<div class="ph">No agents yet</div>';return}
+  const n=names.length,W=600,H=400,cx=W/2,cy=H/2,R=Math.min(140,Math.max(80,n*25));
   let svg=`<svg viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg" style="font-family:Inter,sans-serif">`;
   svg+=`<rect width="${W}" height="${H}" fill="#111113" rx="8"/>`;
-  svg+=`<circle cx="${cx}" cy="${cy}" r="28" fill="#18181b" stroke="#818cf8" stroke-width="1.5"/>`;
-  svg+=`<text x="${cx}" y="${cy+1}" text-anchor="middle" dominant-baseline="middle" fill="#818cf8" font-size="9" font-weight="600">Coordinator</text>`;
-  svg+=`<text x="${cx}" y="24" text-anchor="middle" fill="#71717a" font-size="10">${MODE_NAMES[S.plan.mode]||S.plan.mode}</text>`;
-  ags.forEach((a,i)=>{
+  // Phase label
+  if(S.currentPhase)svg+=`<text x="${cx}" y="20" text-anchor="middle" fill="#71717a" font-size="10" text-transform="uppercase">${PHASE_LABELS[S.currentPhase]||S.currentPhase}</text>`;
+  // Supervisor node
+  svg+=`<circle cx="${cx}" cy="${cy}" r="24" fill="#18181b" stroke="#818cf8" stroke-width="1.5"/>`;
+  svg+=`<text x="${cx}" y="${cy+1}" text-anchor="middle" dominant-baseline="middle" fill="#818cf8" font-size="8" font-weight="600">Supervisor</text>`;
+  names.forEach((name,i)=>{
     const angle=(2*Math.PI*i/n)-Math.PI/2;
     const x=cx+R*Math.cos(angle),y=cy+R*Math.sin(angle);
-    const st=S.agentActivity[a.display_name]||'off';
-    const mc=MC[a.model]||'#a1a1aa';
+    const st=S.agentActivity[name]||'off';
+    const col=st==='working'?'#fbbf24':st==='idle'?'#4ade80':'#a1a1aa';
     svg+=`<line x1="${cx}" y1="${cy}" x2="${x}" y2="${y}" stroke="${st==='working'?'#fbbf24':'#27272a'}" stroke-width="${st==='working'?1.5:0.8}"/>`;
-    svg+=`<circle cx="${x}" cy="${y}" r="24" fill="#18181b" stroke="${st==='working'?'#fbbf24':mc}" stroke-width="${st==='working'?2:1}"/>`;
-    if(st==='working')svg+=`<circle cx="${x}" cy="${y}" r="24" fill="none" stroke="#fbbf24" stroke-width="1" opacity="0.3"><animate attributeName="r" from="24" to="32" dur="1.5s" repeatCount="indefinite"/><animate attributeName="opacity" from="0.3" to="0" dur="1.5s" repeatCount="indefinite"/></circle>`;
-    svg+=`<text x="${x}" y="${y-3}" text-anchor="middle" fill="#e4e4e7" font-size="8.5" font-weight="500">${a.display_name}</text>`;
-    svg+=`<text x="${x}" y="${y+8}" text-anchor="middle" fill="${mc}" font-size="6.5" font-family="JetBrains Mono,monospace">${a.model}</text>`;
+    svg+=`<circle cx="${x}" cy="${y}" r="22" fill="#18181b" stroke="${col}" stroke-width="${st==='working'?2:1}"/>`;
+    if(st==='working')svg+=`<circle cx="${x}" cy="${y}" r="22" fill="none" stroke="#fbbf24" stroke-width="1" opacity="0.3"><animate attributeName="r" from="22" to="30" dur="1.5s" repeatCount="indefinite"/><animate attributeName="opacity" from="0.3" to="0" dur="1.5s" repeatCount="indefinite"/></circle>`;
+    const label=name.length>14?name.slice(0,13)+'…':name;
+    svg+=`<text x="${x}" y="${y+1}" text-anchor="middle" dominant-baseline="middle" fill="#e4e4e7" font-size="7.5" font-weight="500">${esc(label)}</text>`;
+    const msgs=agentOutputs[name]?agentOutputs[name].length:0;
+    svg+=`<text x="${x}" y="${y+13}" text-anchor="middle" fill="#52525b" font-size="6" font-family="JetBrains Mono,monospace">${msgs} msg</text>`;
     const dc=st==='working'?'#fbbf24':st==='idle'?'#4ade80':'#3f3f46';
-    svg+=`<circle cx="${x+16}" cy="${y-16}" r="3.5" fill="${dc}"/>`;
+    svg+=`<circle cx="${x+15}" cy="${y-15}" r="3" fill="${dc}"/>`;
   });
   svg+=`</svg>`;area.innerHTML=svg;
+}
+
+// ── TIMELINE ──
+function drawTimeline(){
+  const area=document.getElementById('timelineArea');
+  const j=activeJobId&&jobs[activeJobId];
+  const events=(j&&j.agentTimeline)||[];
+  if(!events.length){area.innerHTML='<div class="ph">No events yet</div>';return}
+
+  const agents=[...new Set(events.map(e=>e.agent))].filter(a=>a!=='Supervisor'&&a!=='System');
+  if(!agents.length){area.innerHTML='<div class="ph">No agent activity</div>';return}
+  const t0=events[0].ts;
+  const tEnd=Date.now();
+  const dur=Math.max(tEnd-t0,1000);
+
+  // Build spans per agent: start→done pairs
+  const spans={};
+  for(const e of events){
+    if(!spans[e.agent])spans[e.agent]=[];
+    if(e.event==='start')spans[e.agent].push({start:e.ts,end:null});
+    else if((e.event==='done'||e.event==='error')&&spans[e.agent].length){
+      const last=spans[e.agent][spans[e.agent].length-1];
+      if(!last.end)last.end=e.ts;
+    }
+  }
+
+  const W=600,rowH=28,padL=120,padR=20,barW=W-padL-padR;
+  const H=agents.length*rowH+40;
+  let svg=`<svg viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg" style="font-family:Inter,sans-serif;width:100%;max-width:700px">`;
+  svg+=`<rect width="${W}" height="${H}" fill="#111113" rx="6"/>`;
+  // Time axis
+  svg+=`<line x1="${padL}" y1="${H-15}" x2="${W-padR}" y2="${H-15}" stroke="#27272a" stroke-width="1"/>`;
+  for(let i=0;i<=4;i++){
+    const x=padL+barW*i/4;
+    const t=Math.round(dur*i/4/1000);
+    svg+=`<text x="${x}" y="${H-4}" text-anchor="middle" fill="#52525b" font-size="7">${t}s</text>`;
+  }
+  agents.forEach((ag,i)=>{
+    const y=i*rowH+18;
+    svg+=`<text x="${padL-6}" y="${y+4}" text-anchor="end" fill="#a1a1aa" font-size="8">${ag.slice(0,16)}</text>`;
+    const agSpans=spans[ag]||[];
+    for(const sp of agSpans){
+      const x1=padL+barW*((sp.start-t0)/dur);
+      const x2=padL+barW*(((sp.end||tEnd)-t0)/dur);
+      const w=Math.max(x2-x1,2);
+      const st=S.agentActivity[ag];
+      const col=st==='working'?'#fbbf24':st==='idle'?'#4ade80':'#818cf8';
+      svg+=`<rect x="${x1}" y="${y-6}" width="${w}" height="14" rx="3" fill="${col}" opacity="0.7"/>`;
+    }
+  });
+  svg+=`</svg>`;
+  area.innerHTML=svg;
 }
 
 async function pollActivity(){

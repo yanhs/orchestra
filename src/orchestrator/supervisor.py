@@ -12,13 +12,13 @@ from ..modes.base import OrchestraResult, UpdateCallback
 
 CONFIG_PATH = Path(__file__).parent.parent.parent / "config" / "agents.yaml"
 LOG_DIR = Path(__file__).parent.parent.parent / "_orchestra" / "supervised"
+_config_lock = asyncio.Lock()
 
 
-async def _call_supervisor(prompt: str) -> str:
-    """Call supervisor (opus) with retry fallback."""
-    # Import from server module which has retry logic
+async def _call_supervisor(prompt: str, model: str = "sonnet") -> str:
+    """Call supervisor with retry fallback."""
     from ..web.server import _call_claude
-    return await _call_claude(prompt, model="opus")
+    return await _call_claude(prompt, model=model)
 
 
 def _parse_json(text: str):
@@ -33,22 +33,76 @@ SUPERVISOR_SYSTEM = """You are a Supervisor — a top-level controller managing 
 
 YOUR ROLE:
 - You hold the main GOAL and never lose sight of it
-- You break the goal into stages
-- For each stage you define which agents to create and how they should interact
-- After each stage you review results and decide: continue / retry / change plan
+- You decide what needs to happen at each step and how to orchestrate agents
+- After each stage you review results and decide what's next
 - You do NOT do the work — you ONLY control and direct
 - You MUST ALWAYS launch at least one stage with agents. NEVER finish without running agents.
-- Even for simple tasks, create an agent to do the work. You are a manager, not a worker.
-- Agents can be given complex tasks — they have access to tools (Read, Write, Edit, Bash, Glob, Grep, WebSearch) and can work autonomously.
-- For complex subtasks, create specialized agents with detailed prompts. Each agent operates independently within their assigned task.
+- Agents have tools (Read, Write, Edit, Bash, Glob, Grep, WebSearch, WebFetch) and work autonomously.
+
+CRITICAL: DO NOT stop at planning. A plan is NOT a result. If the goal requires action — agents must EXECUTE, not just describe what to do. Research→Plan→EXECUTE→Verify. Only finish when real work is done: code written, files created, actions taken. A plan document alone is never enough.
+
+BASE MODES (building blocks):
+
+parallel — agents work independently on separate tasks, results collected at the end
+  Options: "tasks" — list of {{agent, description}} pairs
+
+discuss — agents see each other's output and respond in rounds
+  Options: "rounds" — number of rounds (1-3)
+
+pipeline — sequential: output of one agent feeds the next
+  Options: "steps" — ordered list of {{agent, action}} pairs
+
+consensus — agents vote independently on a question
+  Options: defaults are fine
+
+COMPOSITE STRATEGIES (build from base modes across multiple stages):
+
+Red-Blue — adversarial quality loop:
+  Stage 1 (pipeline): Blue agent builds/implements
+  Stage 2 (discuss): Red agent attacks, finds flaws, Blue defends
+  Stage 3 (pipeline): Blue fixes all issues
+  Repeat stages 2-3 until Red finds nothing. Reuse agent IDs for memory.
+
+MCTS-lite — explore then exploit:
+  Stage 1 (parallel): 3+ agents quickly sketch different solutions (haiku, low max_turns)
+  Stage 2 (consensus): agents vote on which approach is best
+  Stage 3 (pipeline): best approach executed deeply (opus/sonnet, high max_turns)
+
+Full Dev Team — iterative development cycle:
+  Stage 1 (pipeline): architect designs → developer implements
+  Stage 2 (parallel): tester writes+runs tests, reviewer does code review
+  Stage 3 (pipeline): developer fixes all issues from tester+reviewer
+  Repeat stages 2-3 until both tester and reviewer approve. Reuse agent IDs.
+
+Tree of Thoughts — parallel exploration, pick winner:
+  Stage 1 (parallel): 2-3 agents explore different approaches
+  Stage 2 (discuss): agents compare and debate approaches
+  Pick the best, continue with it.
+
+You can invent your own composite strategies. These are examples, not a fixed list.
+
+MECHANICS:
+
+- "stage_topic": refine the topic for agents at each stage — incorporate what you've learned, don't just repeat the original goal.
+- "context_update": after each stage, write KEY FINDINGS to carry forward. This builds a shared document all future agents see.
+- "max_stages": set the stage budget (4-20), reassess as you go.
+- "phase": free-form label for what this stage is doing (e.g. "research", "implementation", "evaluation" — whatever fits).
+- "timeout": optional seconds limit per stage. Stage auto-aborts if exceeded.
+- Models: haiku (fast/cheap), sonnet (balanced), opus (max quality). You decide.
+- Agent sessions: if you reuse the same agent "id" across stages, the agent REMEMBERS everything from previous stages. Use this for continuity.
+- All agent outputs are saved to files. You'll see file paths in stage results — agents can Read these files to access full previous work.
+- For complex sub-goals, use action "delegate" to spawn a sub-supervisor (up to 5 stages).
+- You can run multiple stages at once: use action "run_parallel_stages" with a "stages" array.
 
 RESPONSE FORMAT — always return valid JSON:
 
-To start a new stage:
+To run a stage:
 {{
   "action": "run_stage",
+  "phase": "<free-form label for this stage>",
   "stage_name": "<name>",
   "stage_goal": "<what this stage should achieve>",
+  "stage_topic": "<refined topic for agents>",
   "mode": "<discuss|pipeline|parallel|consensus>",
   "agents": [
     {{
@@ -61,14 +115,16 @@ To start a new stage:
     }}
   ],
   "options": {{<mode-specific: rounds, steps, tasks>}},
-  "reasoning": "<why this stage, why these agents>"
+  "context_update": "<key findings to carry forward>",
+  "max_stages": <4-20>,
+  "reasoning": "<your reasoning>"
 }}
 
 To finish:
 {{
   "action": "finish",
   "summary": "<final result addressing the original goal>",
-  "reasoning": "<why we're done>"
+  "reasoning": "<why we're done — what was achieved across all strategies>"
 }}
 
 To correct and rerun a stage (steer):
@@ -86,30 +142,76 @@ To retry with completely different approach:
   "modifications": "<changes to agents/mode/options>"
 }}
 
+To delegate a sub-goal to a sub-supervisor:
+{{
+  "action": "delegate",
+  "sub_goal": "<specific sub-goal for the sub-supervisor>",
+  "max_sub_stages": <3-5>,
+  "reasoning": "<why this needs its own supervisor>"
+}}
+
+To run multiple stages in parallel:
+{{
+  "action": "run_parallel_stages",
+  "stages": [<array of run_stage objects without "action" field>],
+  "reasoning": "<why parallel>"
+}}
+
 RULES:
 - Always respond in the same language as the goal
 - Be strategic — don't waste stages on trivial things
 - Each stage should produce clear deliverables
 - Review results critically — don't accept low quality
-- Maximum 10 stages total
-- You can create ANY agents needed for each stage"""
+- You can create ANY agents needed for each stage
+- Reuse agent IDs across stages when you want them to remember previous work"""
 
 
 class SupervisedRun:
     """Runs a task under supervisor control."""
+
+    @classmethod
+    def from_checkpoint(cls, checkpoint_path: Path, on_update=None) -> "SupervisedRun":
+        """Resume a run from a saved checkpoint."""
+        data = json.loads(checkpoint_path.read_text())
+        run = cls(
+            goal=data["goal"],
+            on_update=on_update,
+            supervisor_model=data.get("supervisor_model", "sonnet"),
+        )
+        run.context_doc = data.get("context_doc", "")
+        run.phase_history = data.get("phase_history", [])
+        run.current_phase = data.get("current_phase", "")
+        run.total_cost = data.get("total_cost", 0.0)
+        run.max_stages = data.get("max_stages", 10)
+        run.stages = data.get("stages", [])
+        # Use the same run_dir
+        run.run_dir = checkpoint_path.parent
+        return run
 
     def __init__(
         self,
         goal: str,
         on_update: UpdateCallback | None = None,
         project_path: Path | None = None,
+        supervisor_model: str = "sonnet",
     ):
         self.goal = goal
         self.on_update = on_update
         self.project_path = project_path or Path.cwd()
+        self.supervisor_model = supervisor_model
         self.stages: list[dict] = []
         self.log: list[dict] = []
         self.max_stages = 10
+        self.current_phase: str = "research"
+        self.phase_history: list[str] = []
+        self.context_doc: str = ""  # shared context accumulating across phases
+        self.feedback_queue: asyncio.Queue = asyncio.Queue()  # live user corrections
+        self._job = None  # linked Job for child task tracking
+        self.total_cost: float = 0.0
+        # Directory for saving full agent outputs — inside project_path so agents can access
+        run_ts = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
+        self.run_dir: Path = self.project_path / "_orchestra" / "runs" / f"{run_ts}_supervised"
+        self.run_dir.mkdir(parents=True, exist_ok=True)
 
     async def _notify(self, agent: str, event: str, text: str):
         if self.on_update:
@@ -130,17 +232,30 @@ class SupervisedRun:
 
 GOAL: "{self.goal}"
 
-Plan your first stage. What should we do first to achieve this goal?"""
+Plan your first stage. You decide the approach."""
 
-        await self._notify("Supervisor", "start", "Analyzing goal and planning first stage...")
+        await self._notify("Supervisor", "start", "Analyzing goal...")
 
         empty_retries = 0
         max_empty_retries = 2
 
         for stage_num in range(self.max_stages):
+            # Check for live user corrections (non-blocking)
+            user_corrections = []
+            while not self.feedback_queue.empty():
+                try:
+                    fb = self.feedback_queue.get_nowait()
+                    user_corrections.append(fb)
+                except asyncio.QueueEmpty:
+                    break
+            if user_corrections:
+                corrections_text = "\n".join(f"- {c}" for c in user_corrections)
+                prompt += f"\n\nUSER CORRECTION (live feedback, high priority):\n{corrections_text}\nAdjust your plan according to this feedback."
+                await self._notify("Supervisor", "start", f"User correction received: {corrections_text[:200]}")
+
             # Ask supervisor what to do
             try:
-                raw = await _call_supervisor(prompt)
+                raw = await _call_supervisor(prompt, self.supervisor_model)
                 if not raw.strip():
                     empty_retries += 1
                     if empty_retries > max_empty_retries:
@@ -193,16 +308,17 @@ You are a manager — delegate the work to agents. Plan a stage now."""
                     stage_result = await self._execute_stage(old_decision, stage_num)
                     self.stages.append({
                         "name": f"steer:{old_stage['name']}",
+                        "phase": old_stage.get("phase", "unknown"),
                         "decision": old_decision,
                         "result_summary": stage_result.summary or "",
-                        "responses": [r.content[:500] for r in stage_result.responses if not r.is_error],
+                        "responses": [r.content[:500] for r in stage_result.responses],
                     })
                     for resp in stage_result.responses:
                         result.add_response(resp)
 
                     stage_output = stage_result.summary or "\n".join(
                         f"[{r.agent_name}]: {r.content[:1000]}"
-                        for r in stage_result.responses if not r.is_error
+                        for r in stage_result.responses
                     )
                     prompt = self._build_next_prompt(stage_num, f"steer:{old_stage['name']}", stage_output)
                     await self._notify("Supervisor", "start", "Reviewing steered results...")
@@ -216,32 +332,177 @@ You are a manager — delegate the work to agents. Plan a stage now."""
                 prompt = self._build_retry_prompt(decision)
                 continue
 
+            elif action == "delegate":
+                sub_goal = decision.get("sub_goal", "")
+                max_sub = min(decision.get("max_sub_stages", 5), 5)
+                await self._notify("Supervisor", "start",
+                    f"**Delegating sub-goal**: {sub_goal[:200]}\n{decision.get('reasoning', '')}")
+
+                # Spawn sub-supervisor
+                sub_run = SupervisedRun(
+                    goal=sub_goal,
+                    on_update=self.on_update,
+                    project_path=self.project_path,
+                )
+                sub_run.max_stages = max_sub
+                sub_run.context_doc = self.context_doc  # share context
+                sub_result = await sub_run.run()
+
+                # Merge results
+                for resp in sub_result.responses:
+                    result.add_response(resp)
+                # Update our context with sub-supervisor findings
+                if sub_run.context_doc and sub_run.context_doc != self.context_doc:
+                    self.context_doc = sub_run.context_doc
+
+                self.stages.append({
+                    "name": f"delegate:{sub_goal[:50]}",
+                    "phase": "delegate",
+                    "decision": decision,
+                    "result_summary": sub_result.summary or "",
+                    "responses": [r.content[:500] for r in sub_result.responses],
+                })
+
+                sub_output = sub_result.summary or "Sub-goal completed"
+                prompt = self._build_next_prompt(stage_num, f"delegate:{sub_goal[:50]}", sub_output)
+                await self._notify("Supervisor", "start", "Sub-goal completed, reviewing results...")
+                continue
+
             elif action == "run_stage":
                 stage_name = decision.get("stage_name", f"Stage {stage_num + 1}")
-                await self._notify("Supervisor", "done",
-                    f"**Stage {stage_num + 1}: {stage_name}**\n{decision.get('reasoning', '')}")
+                phase = decision.get("phase", "unknown")
+                self.current_phase = phase
+                self.phase_history.append(phase)
 
-                # Execute the stage
-                stage_result = await self._execute_stage(decision, stage_num)
+                # Dynamic complexity: supervisor can adjust max_stages
+                new_max = decision.get("max_stages")
+                if new_max and isinstance(new_max, int) and 4 <= new_max <= 20:
+                    self.max_stages = new_max
+
+                await self._notify("Supervisor", "done",
+                    f"**Stage {stage_num + 1} [{phase.upper()}]: {stage_name}**\n{decision.get('reasoning', '')}")
+
+                # Execute the stage (register as child task for cancellation)
+                stage_coro = self._execute_stage(decision, stage_num)
+                stage_task = asyncio.create_task(stage_coro)
+                if self._job:
+                    self._job._child_tasks.append(stage_task)
+                try:
+                    stage_result = await stage_task
+                except asyncio.CancelledError:
+                    await self._notify("Supervisor", "error", "Stage cancelled")
+                    break
+                finally:
+                    # Clean up completed task to prevent memory leak
+                    if self._job and stage_task in self._job._child_tasks:
+                        self._job._child_tasks.remove(stage_task)
+
+                # Save full results to files + track cost
+                saved_files = self._save_stage_results(stage_num, stage_name, stage_result)
+                stage_cost = sum(r.cost for r in stage_result.responses)
+                self.total_cost += stage_cost
+
+                # Update shared context document
+                ctx_update = decision.get("context_update", "")
+                if ctx_update:
+                    self.context_doc += f"\n### {stage_name} ({phase}):\n{ctx_update}\n"
+                # Compress context every 5 stages to prevent degradation
+                if len(self.stages) > 0 and len(self.stages) % 5 == 0:
+                    await self._compress_context()
+                # Save progress to disk for recovery
+                self._save_progress()
+
                 self.stages.append({
                     "name": stage_name,
+                    "phase": phase,
                     "decision": decision,
                     "result_summary": stage_result.summary or "",
-                    "responses": [r.content[:500] for r in stage_result.responses if not r.is_error],
+                    "saved_files": saved_files,
+                    "cost": stage_cost,
                 })
 
                 # Add responses to main result
                 for resp in stage_result.responses:
                     result.add_response(resp)
 
-                # Build prompt for next supervisor decision
-                stage_output = stage_result.summary or "\n".join(
-                    f"[{r.agent_name}]: {r.content[:1000]}"
-                    for r in stage_result.responses if not r.is_error
-                )
+                # Build prompt with full output + file paths + errors
+                file_refs = "\n".join(f"  {f}" for f in saved_files) if saved_files else "  (none)"
+                output_parts = []
+                errors = []
+                for r in stage_result.responses:
+                    if r.is_error:
+                        errors.append(f"[{r.agent_name}] ERROR: {r.error_message}")
+                    else:
+                        output_parts.append(f"[{r.agent_name}]: {r.content[:3000]}")
+                stage_output = "\n".join(output_parts)
+                if errors:
+                    stage_output += "\n\nAGENT ERRORS:\n" + "\n".join(errors)
+                if stage_result.summary:
+                    stage_output = stage_result.summary + "\n\n" + stage_output
+                stage_output += f"\n\nFull outputs saved to files:\n{file_refs}"
                 prompt = self._build_next_prompt(stage_num, stage_name, stage_output)
 
+                # Notify cost
+                await self._notify("Supervisor", "progress",
+                    f"Stage cost: ${stage_cost:.4f} | Total: ${self.total_cost:.4f}")
                 await self._notify("Supervisor", "start", "Reviewing results, planning next stage...")
+
+            elif action == "run_parallel_stages":
+                stages_data = decision.get("stages", [])
+                if not stages_data:
+                    await self._notify("Supervisor", "error", "No stages in run_parallel_stages")
+                    continue
+                await self._notify("Supervisor", "done",
+                    f"**Running {len(stages_data)} stages in parallel**\n{decision.get('reasoning', '')}")
+
+                # Run all stages concurrently
+                async def _run_one(sd, sn):
+                    sd.setdefault("action", "run_stage")
+                    return await self._execute_stage(sd, sn)
+
+                tasks_list = []
+                for i, sd in enumerate(stages_data):
+                    t = asyncio.create_task(_run_one(sd, stage_num + i))
+                    if self._job:
+                        self._job._child_tasks.append(t)
+                    tasks_list.append((sd, t))
+
+                all_saved = []
+                combined_output = []
+                for sd, t in tasks_list:
+                    try:
+                        sr = await t
+                    except asyncio.CancelledError:
+                        continue
+                    finally:
+                        if self._job and t in self._job._child_tasks:
+                            self._job._child_tasks.remove(t)
+                    sname = sd.get("stage_name", "parallel")
+                    phase = sd.get("phase", "parallel")
+                    self.phase_history.append(phase)
+                    saved = self._save_stage_results(stage_num, sname, sr)
+                    all_saved.extend(saved)
+                    sc = sum(r.cost for r in sr.responses)
+                    self.total_cost += sc
+                    ctx = sd.get("context_update", "")
+                    if ctx:
+                        self.context_doc += f"\n### {sname} ({phase}):\n{ctx}\n"
+                    self.stages.append({
+                        "name": sname, "phase": phase, "decision": sd,
+                        "result_summary": sr.summary or "", "saved_files": saved, "cost": sc,
+                    })
+                    for resp in sr.responses:
+                        result.add_response(resp)
+                    out = sr.summary or "\n".join(
+                        f"[{r.agent_name}]: {r.content[:1000]}" for r in sr.responses
+                    )
+                    combined_output.append(f"### {sname}:\n{out}")
+
+                self._save_progress()
+                file_refs = "\n".join(f"  {f}" for f in all_saved)
+                full_output = "\n\n".join(combined_output) + f"\n\nFull outputs saved:\n{file_refs}"
+                prompt = self._build_next_prompt(stage_num, "parallel stages", full_output)
+                await self._notify("Supervisor", "start", "Reviewing parallel results...")
 
             else:
                 await self._notify("Supervisor", "error", f"Unknown action: {action}")
@@ -252,6 +513,31 @@ You are a manager — delegate the work to agents. Plan a stage now."""
 
         return result
 
+    def _save_stage_results(self, stage_num: int, stage_name: str, stage_result) -> list[str]:
+        """Save full agent outputs to files. Returns list of file paths."""
+        safe_name = "".join(c if c.isalnum() or c in '-_' else '_' for c in stage_name)[:50]
+        stage_dir = self.run_dir / f"stage_{stage_num + 1}_{safe_name}"
+        stage_dir.mkdir(parents=True, exist_ok=True)
+        saved = []
+        for resp in stage_result.responses:
+            if resp.is_error or not resp.content:
+                continue
+            agent_safe = "".join(c if c.isalnum() or c in '-_' else '_' for c in resp.agent_name)[:40]
+            fpath = stage_dir / f"{agent_safe}.md"
+            fpath.write_text(
+                f"# {resp.agent_name}\n"
+                f"## Stage: {stage_name}\n"
+                f"## Cost: ${resp.cost:.4f} | Duration: {resp.duration_ms}ms | Turns: {resp.num_turns}\n\n"
+                f"{resp.content}",
+                encoding="utf-8",
+            )
+            saved.append(str(fpath))
+        # Also save summary if any
+        if stage_result.summary:
+            (stage_dir / "_summary.md").write_text(stage_result.summary, encoding="utf-8")
+            saved.append(str(stage_dir / "_summary.md"))
+        return saved
+
     async def _execute_stage(self, decision: dict, stage_num: int) -> OrchestraResult:
         """Execute a single stage using the coordinator."""
         from .coordinator import OrchestraCoordinator
@@ -259,29 +545,33 @@ You are a manager — delegate the work to agents. Plan a stage now."""
         mode = decision.get("mode", "discuss")
         agents_data = decision.get("agents", [])
         options = decision.get("options", {})
+        timeout = decision.get("timeout")  # optional per-stage timeout
+        # Use refined stage_topic if provided, otherwise fall back to goal
+        stage_topic = decision.get("stage_topic") or self.goal
+        # Append shared context document if it exists
+        if self.context_doc:
+            stage_topic = f"{stage_topic}\n\n## Shared Context (findings from previous stages):\n{self.context_doc}"
 
-        # Create agents in config
-        config = load_config(CONFIG_PATH)
-
+        # Create agents in config (with lock to prevent parallel stage races)
         import yaml
-        raw = {}
-        with open(CONFIG_PATH) as f:
-            raw = yaml.safe_load(f) or {}
-        if "agents" not in raw:
-            raw["agents"] = {}
+        async with _config_lock:
+            raw = {}
+            with open(CONFIG_PATH) as f:
+                raw = yaml.safe_load(f) or {}
+            if "agents" not in raw:
+                raw["agents"] = {}
 
-        for ag in agents_data:
-            raw["agents"][ag["id"]] = {
-                "display_name": ag.get("display_name", ag["id"]),
-                "model": ag.get("model", "sonnet"),
-                "system_prompt": ag.get("system_prompt", ""),
-                "allowed_tools": ag.get("allowed_tools", []),
-                "max_turns": ag.get("max_turns", 30),
-            }
-        with open(CONFIG_PATH, "w") as f:
-            yaml.dump(raw, f, default_flow_style=False, allow_unicode=True, sort_keys=False)
+            for ag in agents_data:
+                raw["agents"][ag["id"]] = {
+                    "display_name": ag.get("display_name", ag["id"]),
+                    "model": ag.get("model", "sonnet"),
+                    "system_prompt": ag.get("system_prompt", ""),
+                    "allowed_tools": ag.get("allowed_tools", []),
+                    "max_turns": ag.get("max_turns", 50),
+                }
+            with open(CONFIG_PATH, "w") as f:
+                yaml.dump(raw, f, default_flow_style=False, allow_unicode=True, sort_keys=False)
 
-        # Reload and run
         config = load_config(CONFIG_PATH)
         coordinator = OrchestraCoordinator(
             config=config,
@@ -290,84 +580,163 @@ You are a manager — delegate the work to agents. Plan a stage now."""
 
         agent_ids = [a["id"] for a in agents_data]
 
-        if mode == "discuss":
-            return await coordinator.discuss(
-                topic=self.goal,
-                agent_names=agent_ids,
-                rounds=options.get("rounds", 2),
-                on_update=self.on_update,
-            )
-        elif mode == "pipeline":
-            steps = options.get("steps", [{"agent": a, "action": "process"} for a in agent_ids])
-            parsed = []
-            for s in steps:
-                if isinstance(s, dict):
-                    parsed.append((s.get("agent", agent_ids[0] if agent_ids else ""), s.get("action", "process")))
-                elif isinstance(s, str):
-                    parsed.append((agent_ids[0] if agent_ids else "", s))
-            return await coordinator.pipeline(
-                topic=self.goal,
-                steps=parsed or [(a, "process") for a in agent_ids],
-                on_update=self.on_update,
-            )
-        elif mode == "parallel":
-            tasks = options.get("tasks", [{"agent": a, "description": "work"} for a in agent_ids])
-            parsed = []
-            for t in tasks:
-                if isinstance(t, dict):
-                    parsed.append((t.get("agent", agent_ids[0] if agent_ids else ""), t.get("description", "work")))
-                elif isinstance(t, str):
-                    parsed.append((agent_ids[0] if agent_ids else "", t))
-            return await coordinator.parallel(
-                topic=self.goal,
-                tasks=parsed or [(a, "work") for a in agent_ids],
-                on_update=self.on_update,
-            )
-        elif mode == "consensus":
-            return await coordinator.consensus(
-                topic=self.goal,
-                agent_names=agent_ids,
-                on_update=self.on_update,
-            )
-        elif mode == "custom":
-            workflow = options.get("workflow", [])
-            return await coordinator.custom(
-                topic=self.goal,
-                workflow=workflow,
-                on_update=self.on_update,
-            )
-        else:
-            return OrchestraResult(mode=mode, topic=self.goal)
+        # Dispatch to mode
+        async def _dispatch():
+            if mode == "discuss":
+                return await coordinator.discuss(
+                    topic=stage_topic, agent_names=agent_ids,
+                    rounds=options.get("rounds", 2), on_update=self.on_update,
+                )
+            elif mode == "pipeline":
+                steps = options.get("steps", [{"agent": a, "action": "process"} for a in agent_ids])
+                parsed = []
+                for s in steps:
+                    if isinstance(s, dict):
+                        parsed.append((s.get("agent", agent_ids[0] if agent_ids else ""), s.get("action", "process")))
+                    elif isinstance(s, str):
+                        parsed.append((agent_ids[0] if agent_ids else "", s))
+                return await coordinator.pipeline(
+                    topic=stage_topic, steps=parsed or [(a, "process") for a in agent_ids],
+                    on_update=self.on_update,
+                )
+            elif mode == "parallel":
+                tasks = options.get("tasks", [{"agent": a, "description": "work"} for a in agent_ids])
+                parsed = []
+                for t in tasks:
+                    if isinstance(t, dict):
+                        parsed.append((t.get("agent", agent_ids[0] if agent_ids else ""), t.get("description", "work")))
+                    elif isinstance(t, str):
+                        parsed.append((agent_ids[0] if agent_ids else "", t))
+                return await coordinator.parallel(
+                    topic=stage_topic, tasks=parsed or [(a, "work") for a in agent_ids],
+                    on_update=self.on_update,
+                )
+            elif mode == "consensus":
+                return await coordinator.consensus(
+                    topic=stage_topic, agent_names=agent_ids, on_update=self.on_update,
+                )
+            elif mode == "custom":
+                workflow = options.get("workflow", [])
+                return await coordinator.custom(
+                    topic=stage_topic, workflow=workflow, on_update=self.on_update,
+                )
+            else:
+                return OrchestraResult(mode=mode, topic=self.goal)
+
+        # Apply optional timeout
+        if timeout and isinstance(timeout, (int, float)) and timeout > 0:
+            try:
+                return await asyncio.wait_for(_dispatch(), timeout=timeout)
+            except asyncio.TimeoutError:
+                if self.on_update:
+                    r = self.on_update("Supervisor", "error", f"Stage timed out after {timeout}s")
+                    if asyncio.iscoroutine(r): await r
+                return OrchestraResult(mode=mode, topic=stage_topic)
+        return await _dispatch()
 
     def _build_next_prompt(self, stage_num: int, stage_name: str, output: str) -> str:
         history = "\n".join(
-            f"Stage {i+1} ({s['name']}): completed"
+            f"Stage {i+1} [{s.get('phase', '?').upper()}] ({s['name']}): {s.get('result_summary', 'completed')[:200]}"
             for i, s in enumerate(self.stages)
         )
+        phase_flow = " → ".join(self.phase_history) if self.phase_history else "none yet"
+        used = len(self.stages)
+        remaining = self.max_stages - used
+
+        # Save full context to file instead of truncating
+        context_section = ""
+        if self.context_doc:
+            ctx_file = self.run_dir / "context.md"
+            ctx_file.write_text(self.context_doc, encoding="utf-8")
+            # Include full context if small, file reference if large
+            if len(self.context_doc) < 8000:
+                context_section = f"\nSHARED CONTEXT:\n{self.context_doc}\n"
+            else:
+                context_section = f"\nSHARED CONTEXT (full doc at {ctx_file}, showing last 4000 chars):\n...{self.context_doc[-4000:]}\n"
+
         return f"""{SUPERVISOR_SYSTEM}
 
 GOAL: "{self.goal}"
 
+PHASE PROGRESSION: {phase_flow}
+STAGES USED: {used} of {self.max_stages} ({remaining} remaining)
+TOTAL COST: ${self.total_cost:.4f}
+{context_section}
 COMPLETED STAGES:
 {history}
 
 LATEST STAGE RESULTS ({stage_name}):
-{output[:3000]}
+{output[:8000]}
 
-Based on these results, what should we do next? Are we closer to the goal?
-If the goal is achieved, use "finish". If more work needed, plan the next stage."""
+What should we do next?"""
 
     def _build_retry_prompt(self, decision: dict) -> str:
         feedback = decision.get("feedback", "")
+        phase_flow = " → ".join(self.phase_history) if self.phase_history else "none yet"
+        used = len(self.stages)
         return f"""{SUPERVISOR_SYSTEM}
 
 GOAL: "{self.goal}"
+
+PHASE PROGRESSION: {phase_flow}
+CURRENT PHASE: {self.current_phase}
+STAGES USED: {used} of {self.max_stages}
 
 PREVIOUS ATTEMPT FAILED. FEEDBACK: {feedback}
 
 Modifications requested: {decision.get('modifications', 'none')}
 
 Plan a corrected stage."""
+
+    async def _compress_context(self):
+        """Summarize context_doc to prevent unbounded growth."""
+        if len(self.context_doc) < 3000:
+            return  # small enough, no compression needed
+        await self._notify("Supervisor", "start", "Compressing context document...")
+        prompt = (
+            f"Summarize the following findings into a concise document. "
+            f"Keep ALL key facts, decisions, numbers, and action items. "
+            f"Remove redundancy and verbose explanations. Same language as original.\n\n"
+            f"{self.context_doc}"
+        )
+        try:
+            compressed = await _call_supervisor(prompt, "haiku")
+            if compressed and len(compressed) < len(self.context_doc):
+                # Save full version to file before replacing
+                archive = self.run_dir / f"context_full_stage_{len(self.stages)}.md"
+                archive.write_text(self.context_doc, encoding="utf-8")
+                self.context_doc = compressed
+                await self._notify("Supervisor", "done",
+                    f"Context compressed: {len(self.context_doc)} chars (full saved to {archive.name})")
+        except Exception as e:
+            await self._notify("Supervisor", "error", f"Context compression failed: {e}")
+
+    def _save_progress(self):
+        """Save progress to disk — both human-readable and machine-recoverable."""
+        # Human-readable
+        progress = self.run_dir / ".progress.md"
+        progress.write_text(
+            f"# Progress: {self.goal}\n\n"
+            f"## Stages completed: {len(self.stages)}\n"
+            f"## Total cost: ${self.total_cost:.4f}\n"
+            f"## Phase history: {' → '.join(self.phase_history)}\n\n"
+            f"## Context Document\n{self.context_doc}\n",
+            encoding="utf-8",
+        )
+        # Machine-recoverable checkpoint
+        checkpoint = {
+            "goal": self.goal,
+            "stages": [{k: v for k, v in s.items() if k != "decision"} for s in self.stages],
+            "context_doc": self.context_doc,
+            "phase_history": self.phase_history,
+            "current_phase": self.current_phase,
+            "total_cost": self.total_cost,
+            "max_stages": self.max_stages,
+            "supervisor_model": self.supervisor_model,
+        }
+        (self.run_dir / ".checkpoint.json").write_text(
+            json.dumps(checkpoint, ensure_ascii=False, indent=2), encoding="utf-8",
+        )
 
     def _save_log(self):
         """Save full execution log to disk."""
@@ -378,6 +747,8 @@ Plan a corrected stage."""
             "goal": self.goal,
             "stages": self.stages,
             "log": self.log,
+            "phase_history": self.phase_history,
+            "context_doc": self.context_doc,
             "timestamp": ts,
         }
         log_file.write_text(json.dumps(log_data, indent=2, ensure_ascii=False))
