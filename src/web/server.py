@@ -726,9 +726,9 @@ async def ws_run(ws: WebSocket):
             import re
             clean_goal = re.sub(r'^Continue:?\s*".*?"\s*\n*\s*(New instruction:\s*)?', '', topic).strip() or topic
             job = job_manager.create(goal=clean_goal)
-            job._full_topic = topic  # supervisor gets the full context
+            job._full_topic = topic
             job.supervisor_model = supervisor_model
-            # Inherit context from previous job for continuation
+            # Inherit context + original goal from previous job for continuation
             if continue_from:
                 prev = job_manager.get(continue_from)
                 if prev:
@@ -736,6 +736,9 @@ async def ws_run(ws: WebSocket):
                     job._prev_run_dir = getattr(prev, '_run_dir', '')
                     job._prev_cost = getattr(prev, '_total_cost', 0.0)
                     job._prev_goal = prev.goal
+                    # Use previous job's goal as display name (not "продолжай")
+                    if prev.goal and prev.goal != clean_goal:
+                        job.goal = prev.goal
             job._task = asyncio.create_task(_run_job_task(job))
             await ws.send_json({"type": "job_created", "job_id": job.id})
         else:

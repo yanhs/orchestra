@@ -51,17 +51,25 @@ def _parse_json(text: str):
     return json.loads(text)
 
 
-SUPERVISOR_SYSTEM = """You are a Supervisor — a top-level controller managing a team of AI agents.
+SUPERVISOR_SYSTEM = """You are an Executive — the top-level controller of a hierarchical team.
 
 YOUR ROLE:
 - You hold the main GOAL and never lose sight of it
-- You decide what needs to happen at each step and how to orchestrate agents
-- After each stage you review results and decide what's next
-- You do NOT do the work — you ONLY control and direct
-- You MUST ALWAYS launch at least one stage with agents. NEVER finish without running agents.
-- Agents have tools (Read, Write, Edit, Bash, Glob, Grep, WebSearch, WebFetch) and work autonomously.
+- You create MANAGERS for major directions — each manager runs independently with their own workers
+- You review manager results, coordinate between directions, decide strategy
+- You do NOT do the work and do NOT create workers directly — delegate to managers
+- You MUST ALWAYS launch at least one stage or delegation. NEVER finish without real work done.
 
-CRITICAL: DO NOT stop at planning. A plan is NOT a result. If the goal requires action — agents must EXECUTE, not just describe what to do. Research→Plan→EXECUTE→Verify. Only finish when real work is done: code written, files created, actions taken. A plan document alone is never enough.
+HIERARCHY:
+  Executive (you) → creates Managers via "delegate"
+  Manager → creates Workers (agents), chooses orchestration patterns
+  Worker → executes tasks, can request help via [REQUEST_AGENT: role description]
+
+For SIMPLE goals (1-2 steps): skip managers, create workers directly via "run_stage".
+For COMPLEX goals (3+ directions): create managers via "delegate" for each direction.
+Managers can create sub-managers for very complex sub-goals.
+
+CRITICAL: A plan is NOT a result. Agents must EXECUTE — write code, create files, take real actions. Only finish when work is done.
 
 BASE MODES (building blocks):
 
@@ -191,6 +199,18 @@ RULES:
 - Use the "choices" field when there are meaningful alternatives the user might prefer. Keep going with your best choice — the user can override."""
 
 
+MANAGER_SYSTEM = """You are a Manager — you run a team of workers to achieve a specific sub-goal.
+
+YOUR ROLE:
+- You receive a SUB-GOAL from your Executive and must deliver results
+- You create WORKERS (agents) and orchestrate them
+- You choose the best orchestration pattern for each stage
+- For very complex sub-tasks, delegate to a sub-manager via "delegate"
+- Workers can request help: if you see [REQUEST_AGENT: ...] in their output, create the requested agent in the next stage
+
+""" + SUPERVISOR_SYSTEM.split("BASE MODES")[1]  # Reuse modes, mechanics, format from main prompt
+
+
 class SupervisedRun:
     """Runs a task under supervisor control."""
 
@@ -202,6 +222,7 @@ class SupervisedRun:
             goal=data["goal"],
             on_update=on_update,
             supervisor_model=data.get("supervisor_model", "sonnet"),
+            level=data.get("level", 0),
         )
         run.context_doc = data.get("context_doc", "")
         run.phase_history = data.get("phase_history", [])
@@ -219,11 +240,15 @@ class SupervisedRun:
         on_update: UpdateCallback | None = None,
         project_path: Path | None = None,
         supervisor_model: str = "sonnet",
+        level: int = 0,  # 0=executive, 1=manager, 2+=sub-manager
     ):
         self.goal = goal
         self.on_update = on_update
         self.project_path = project_path or Path.cwd()
         self.supervisor_model = supervisor_model
+        self.level = level
+        self.role_name = "Executive" if level == 0 else f"Manager-L{level}"
+        self._system_prompt = SUPERVISOR_SYSTEM if level == 0 else MANAGER_SYSTEM
         self.stages: list[dict] = []
         self.log: list[dict] = []
         self.max_stages = 10
@@ -253,13 +278,13 @@ class SupervisedRun:
         result = OrchestraResult(mode="supervised", topic=self.goal)
 
         # Initial prompt to supervisor
-        prompt = f"""{SUPERVISOR_SYSTEM}
+        prompt = f"""{self._system_prompt}
 
 GOAL: "{self.goal}"
 
 Plan your first stage. You decide the approach."""
 
-        await self._notify("Supervisor", "start", "Analyzing goal...")
+        await self._notify(self.role_name, "start", "Analyzing goal...")
 
         empty_retries = 0
         max_empty_retries = 3
@@ -277,7 +302,7 @@ Plan your first stage. You decide the approach."""
             if user_corrections:
                 corrections_text = "\n".join(f"- {c}" for c in user_corrections)
                 prompt += f"\n\nUSER CORRECTION (live feedback, high priority):\n{corrections_text}\nAdjust your plan according to this feedback."
-                await self._notify("Supervisor", "start", f"User correction received: {corrections_text[:200]}")
+                await self._notify(self.role_name, "start", f"User correction received: {corrections_text[:200]}")
 
             # Ask supervisor what to do
             try:
@@ -285,16 +310,16 @@ Plan your first stage. You decide the approach."""
                 if not raw.strip():
                     empty_retries += 1
                     if empty_retries > max_empty_retries:
-                        await self._notify("Supervisor", "error", "Supervisor not responding. Stopping.")
+                        await self._notify(self.role_name, "error", "Supervisor not responding. Stopping.")
                         break
-                    await self._notify("Supervisor", "error", f"Empty response, retrying ({empty_retries}/{max_empty_retries})...")
+                    await self._notify(self.role_name, "error", f"Empty response, retrying ({empty_retries}/{max_empty_retries})...")
                     continue
                 empty_retries = 0  # reset on success
                 # Strip model fallback warning before parsing JSON
                 if raw.startswith("[WARNING:"):
                     warn_end = raw.find("]\n")
                     if warn_end > 0:
-                        await self._notify("Supervisor", "error", raw[:warn_end+1])
+                        await self._notify(self.role_name, "error", raw[:warn_end+1])
                         raw = raw[warn_end+2:]
                 decision = _parse_json(raw)
             except Exception as e:
@@ -303,14 +328,14 @@ Plan your first stage. You decide the approach."""
                 raw_preview = raw[:500] if raw else "(empty)"
                 (self.run_dir / f"parse_error_{stage_num}_{parse_retries}.txt").write_text(
                     f"Error: {e}\n\nRaw response:\n{raw}", encoding="utf-8")
-                await self._notify("Supervisor", "error",
+                await self._notify(self.role_name, "error",
                     f"Parse error ({parse_retries}/3): {e}\nRaw: {raw_preview[:100]}")
                 self._log({"type": "error", "stage": stage_num, "error": str(e), "raw": raw_preview})
                 if parse_retries >= 3:
-                    await self._notify("Supervisor", "error", "Too many parse errors. Stopping.")
+                    await self._notify(self.role_name, "error", "Too many parse errors. Stopping.")
                     break
                 # Retry — include the raw response so model can see what went wrong
-                prompt = f'{SUPERVISOR_SYSTEM}\n\nGOAL: "{self.goal}"\n\nYour previous response was not valid JSON:\n{raw_preview}\n\nReturn ONLY a valid JSON object. No markdown fences, no explanation.'
+                prompt = f'{self._system_prompt}\n\nGOAL: "{self.goal}"\n\nYour previous response was not valid JSON:\n{raw_preview}\n\nReturn ONLY a valid JSON object. No markdown fences, no explanation.'
                 continue
 
             action = decision.get("action", "")
@@ -319,23 +344,23 @@ Plan your first stage. You decide the approach."""
             if action == "finish":
                 if not self.stages:
                     # Force at least one stage
-                    prompt = f"""{SUPERVISOR_SYSTEM}
+                    prompt = f"""{self._system_prompt}
 
 GOAL: "{self.goal}"
 
 You tried to finish without running any agents. You MUST launch at least one stage.
 You are a manager — delegate the work to agents. Plan a stage now."""
-                    await self._notify("Supervisor", "start", "Must run agents first, replanning...")
+                    await self._notify(self.role_name, "start", "Must run agents first, replanning...")
                     continue
                 result.summary = decision.get("summary", "")
-                await self._notify("Supervisor", "done",
+                await self._notify(self.role_name, "done",
                     f"**Goal achieved**\n\n{decision.get('reasoning', '')}\n\n{result.summary}")
                 break
 
             elif action == "steer":
                 stage_idx = decision.get("stage_index", len(self.stages) - 1)
                 feedback = decision.get("feedback", "")
-                await self._notify("Supervisor", "start",
+                await self._notify(self.role_name, "start",
                     f"Steering stage {stage_idx + 1}: {feedback[:100]}")
 
                 if 0 <= stage_idx < len(self.stages):
@@ -362,13 +387,13 @@ You are a manager — delegate the work to agents. Plan a stage now."""
                         for r in stage_result.responses
                     )
                     prompt = self._build_next_prompt(stage_num, f"steer:{old_stage['name']}", stage_output)
-                    await self._notify("Supervisor", "start", "Reviewing steered results...")
+                    await self._notify(self.role_name, "start", "Reviewing steered results...")
                 else:
                     prompt = self._build_retry_prompt(decision)
                 continue
 
             elif action == "retry":
-                await self._notify("Supervisor", "start",
+                await self._notify(self.role_name, "start",
                     f"Retrying: {decision.get('feedback', '')}")
                 prompt = self._build_retry_prompt(decision)
                 continue
@@ -376,14 +401,17 @@ You are a manager — delegate the work to agents. Plan a stage now."""
             elif action == "delegate":
                 sub_goal = decision.get("sub_goal", "")
                 max_sub = min(decision.get("max_sub_stages", 5), 5)
-                await self._notify("Supervisor", "start",
+                await self._notify(self.role_name, "start",
                     f"**Delegating sub-goal**: {sub_goal[:200]}\n{decision.get('reasoning', '')}")
 
-                # Spawn sub-supervisor
+                # Spawn sub-supervisor (one level deeper)
+                sub_model = decision.get("manager_model", "sonnet")
                 sub_run = SupervisedRun(
                     goal=sub_goal,
                     on_update=self.on_update,
                     project_path=self.project_path,
+                    supervisor_model=sub_model,
+                    level=self.level + 1,
                 )
                 sub_run.max_stages = max_sub
                 sub_run.context_doc = self.context_doc  # share context
@@ -406,7 +434,7 @@ You are a manager — delegate the work to agents. Plan a stage now."""
 
                 sub_output = sub_result.summary or "Sub-goal completed"
                 prompt = self._build_next_prompt(stage_num, f"delegate:{sub_goal[:50]}", sub_output)
-                await self._notify("Supervisor", "start", "Sub-goal completed, reviewing results...")
+                await self._notify(self.role_name, "start", "Sub-goal completed, reviewing results...")
                 continue
 
             elif action == "run_stage":
@@ -425,7 +453,7 @@ You are a manager — delegate the work to agents. Plan a stage now."""
                 choices_text = ""
                 if choices and isinstance(choices, list) and len(choices) > 1:
                     choices_text = "\n\n[CHOICES:]\n" + "\n".join(f"{i+1}. {c}" for i, c in enumerate(choices))
-                await self._notify("Supervisor", "done",
+                await self._notify(self.role_name, "done",
                     f"**Stage {stage_num + 1} [{phase.upper()}]: {stage_name}**\n{decision.get('reasoning', '')}{choices_text}")
 
                 # Execute the stage (register as child task for cancellation)
@@ -436,7 +464,7 @@ You are a manager — delegate the work to agents. Plan a stage now."""
                 try:
                     stage_result = await stage_task
                 except asyncio.CancelledError:
-                    await self._notify("Supervisor", "error", "Stage cancelled")
+                    await self._notify(self.role_name, "error", "Stage cancelled")
                     break
                 finally:
                     # Clean up completed task to prevent memory leak
@@ -486,19 +514,28 @@ You are a manager — delegate the work to agents. Plan a stage now."""
                 if stage_result.summary:
                     stage_output = stage_result.summary + "\n\n" + stage_output
                 stage_output += f"\n\nFull outputs saved to files:\n{file_refs}"
+                # Detect agent requests for new team members
+                agent_requests = []
+                for r in stage_result.responses:
+                    if not r.is_error and "[REQUEST_AGENT:" in r.content:
+                        import re as _re
+                        for m in _re.finditer(r'\[REQUEST_AGENT:\s*(.+?)\]', r.content):
+                            agent_requests.append(f"{r.agent_name} requests: {m.group(1)}")
+                if agent_requests:
+                    stage_output += "\n\nAGENT REQUESTS FOR HELP:\n" + "\n".join(f"- {r}" for r in agent_requests)
                 prompt = self._build_next_prompt(stage_num, stage_name, stage_output)
 
                 # Notify cost
-                await self._notify("Supervisor", "progress",
+                await self._notify(self.role_name, "progress",
                     f"Stage cost: ${stage_cost:.4f} | Total: ${self.total_cost:.4f}")
-                await self._notify("Supervisor", "start", "Reviewing results, planning next stage...")
+                await self._notify(self.role_name, "start", "Reviewing results, planning next stage...")
 
             elif action == "run_parallel_stages":
                 stages_data = decision.get("stages", [])
                 if not stages_data:
-                    await self._notify("Supervisor", "error", "No stages in run_parallel_stages")
+                    await self._notify(self.role_name, "error", "No stages in run_parallel_stages")
                     continue
-                await self._notify("Supervisor", "done",
+                await self._notify(self.role_name, "done",
                     f"**Running {len(stages_data)} stages in parallel**\n{decision.get('reasoning', '')}")
 
                 # Run all stages concurrently
@@ -548,10 +585,10 @@ You are a manager — delegate the work to agents. Plan a stage now."""
                 file_refs = "\n".join(f"  {f}" for f in all_saved)
                 full_output = "\n\n".join(combined_output) + f"\n\nFull outputs saved:\n{file_refs}"
                 prompt = self._build_next_prompt(stage_num, "parallel stages", full_output)
-                await self._notify("Supervisor", "start", "Reviewing parallel results...")
+                await self._notify(self.role_name, "start", "Reviewing parallel results...")
 
             else:
-                await self._notify("Supervisor", "error", f"Unknown action: {action}")
+                await self._notify(self.role_name, "error", f"Unknown action: {action}")
                 break
 
         # Save full log
@@ -702,7 +739,7 @@ You are a manager — delegate the work to agents. Plan a stage now."""
             else:
                 context_section = f"\nSHARED CONTEXT (full doc at {ctx_file}, showing last 4000 chars):\n...{self.context_doc[-4000:]}\n"
 
-        return f"""{SUPERVISOR_SYSTEM}
+        return f"""{self._system_prompt}
 
 GOAL: "{self.goal}"
 
@@ -722,7 +759,7 @@ What should we do next?"""
         feedback = decision.get("feedback", "")
         phase_flow = " → ".join(self.phase_history) if self.phase_history else "none yet"
         used = len(self.stages)
-        return f"""{SUPERVISOR_SYSTEM}
+        return f"""{self._system_prompt}
 
 GOAL: "{self.goal}"
 
@@ -740,7 +777,7 @@ Plan a corrected stage."""
         """Summarize context_doc to prevent unbounded growth."""
         if len(self.context_doc) < 3000:
             return  # small enough, no compression needed
-        await self._notify("Supervisor", "start", "Compressing context document...")
+        await self._notify(self.role_name, "start", "Compressing context document...")
         prompt = (
             f"Summarize the following findings into a concise document. "
             f"Keep ALL key facts, decisions, numbers, and action items. "
@@ -754,10 +791,10 @@ Plan a corrected stage."""
                 archive = self.run_dir / f"context_full_stage_{len(self.stages)}.md"
                 archive.write_text(self.context_doc, encoding="utf-8")
                 self.context_doc = compressed
-                await self._notify("Supervisor", "done",
+                await self._notify(self.role_name, "done",
                     f"Context compressed: {len(self.context_doc)} chars (full saved to {archive.name})")
         except Exception as e:
-            await self._notify("Supervisor", "error", f"Context compression failed: {e}")
+            await self._notify(self.role_name, "error", f"Context compression failed: {e}")
 
     def _save_progress(self):
         """Save progress to disk — both human-readable and machine-recoverable."""
@@ -781,6 +818,7 @@ Plan a corrected stage."""
             "total_cost": self.total_cost,
             "max_stages": self.max_stages,
             "supervisor_model": self.supervisor_model,
+            "level": self.level,
         }
         (self.run_dir / ".checkpoint.json").write_text(
             json.dumps(checkpoint, ensure_ascii=False, indent=2), encoding="utf-8",

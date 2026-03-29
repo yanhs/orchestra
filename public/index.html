@@ -1079,32 +1079,64 @@ function switchTab(el){document.querySelectorAll('.otab').forEach(t=>t.classList
 // ── DIAGRAM ──
 function drawDiagram(){
   const area=document.getElementById('diagArea');
-  // Build agent list from tracked outputs (works in supervised mode too)
-  const names=Object.keys(agentOutputs).filter(n=>n!=='Supervisor'&&n!=='System'&&n!=='Error'&&n!=='You');
-  if(!names.length){area.innerHTML='<div class="ph">No agents yet</div>';return}
-  const n=names.length,W=600,H=400,cx=W/2,cy=H/2,R=Math.min(140,Math.max(80,n*25));
+  const all=Object.keys(agentOutputs);
+  // Classify: executives, managers, workers
+  const execs=all.filter(n=>n.startsWith('Executive'));
+  const mgrs=all.filter(n=>n.match(/^Manager/));
+  const workers=all.filter(n=>!n.startsWith('Executive')&&!n.match(/^Manager/)&&n!=='System'&&n!=='Error'&&n!=='You');
+  if(!workers.length&&!mgrs.length&&!execs.length){area.innerHTML='<div class="ph">No agents yet</div>';return}
+
+  const W=650,H=450,cx=W/2;
   let svg=`<svg viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg" style="font-family:Inter,sans-serif">`;
   svg+=`<rect width="${W}" height="${H}" fill="#111113" rx="8"/>`;
-  // Phase label
-  if(S.currentPhase)svg+=`<text x="${cx}" y="20" text-anchor="middle" fill="#71717a" font-size="10" text-transform="uppercase">${PHASE_LABELS[S.currentPhase]||S.currentPhase}</text>`;
-  // Supervisor node
-  svg+=`<circle cx="${cx}" cy="${cy}" r="24" fill="#18181b" stroke="#818cf8" stroke-width="1.5"/>`;
-  svg+=`<text x="${cx}" y="${cy+1}" text-anchor="middle" dominant-baseline="middle" fill="#818cf8" font-size="8" font-weight="600">Supervisor</text>`;
-  names.forEach((name,i)=>{
-    const angle=(2*Math.PI*i/n)-Math.PI/2;
-    const x=cx+R*Math.cos(angle),y=cy+R*Math.sin(angle);
+  if(S.currentPhase)svg+=`<text x="${cx}" y="18" text-anchor="middle" fill="#71717a" font-size="9">${PHASE_LABELS[S.currentPhase]||S.currentPhase}</text>`;
+
+  function drawNode(x,y,name,r,strokeCol){
     const st=S.agentActivity[name]||'off';
-    const col=st==='working'?'#fbbf24':st==='idle'?'#4ade80':'#a1a1aa';
-    svg+=`<line x1="${cx}" y1="${cy}" x2="${x}" y2="${y}" stroke="${st==='working'?'#fbbf24':'#27272a'}" stroke-width="${st==='working'?1.5:0.8}"/>`;
-    svg+=`<circle cx="${x}" cy="${y}" r="22" fill="#18181b" stroke="${col}" stroke-width="${st==='working'?2:1}"/>`;
-    if(st==='working')svg+=`<circle cx="${x}" cy="${y}" r="22" fill="none" stroke="#fbbf24" stroke-width="1" opacity="0.3"><animate attributeName="r" from="22" to="30" dur="1.5s" repeatCount="indefinite"/><animate attributeName="opacity" from="0.3" to="0" dur="1.5s" repeatCount="indefinite"/></circle>`;
+    const col=st==='working'?'#fbbf24':st==='idle'?'#4ade80':strokeCol;
+    svg+=`<circle cx="${x}" cy="${y}" r="${r}" fill="#18181b" stroke="${col}" stroke-width="${st==='working'?2:1.2}"/>`;
+    if(st==='working')svg+=`<circle cx="${x}" cy="${y}" r="${r}" fill="none" stroke="#fbbf24" stroke-width="1" opacity="0.3"><animate attributeName="r" from="${r}" to="${r+8}" dur="1.5s" repeatCount="indefinite"/><animate attributeName="opacity" from="0.3" to="0" dur="1.5s" repeatCount="indefinite"/></circle>`;
     const label=name.length>14?name.slice(0,13)+'…':name;
-    svg+=`<text x="${x}" y="${y+1}" text-anchor="middle" dominant-baseline="middle" fill="#e4e4e7" font-size="7.5" font-weight="500">${esc(label)}</text>`;
-    const msgs=agentOutputs[name]?agentOutputs[name].length:0;
-    svg+=`<text x="${x}" y="${y+13}" text-anchor="middle" fill="#52525b" font-size="6" font-family="JetBrains Mono,monospace">${msgs} msg</text>`;
+    svg+=`<text x="${x}" y="${y+1}" text-anchor="middle" dominant-baseline="middle" fill="#e4e4e7" font-size="7" font-weight="500">${esc(label)}</text>`;
     const dc=st==='working'?'#fbbf24':st==='idle'?'#4ade80':'#3f3f46';
-    svg+=`<circle cx="${x+15}" cy="${y-15}" r="3" fill="${dc}"/>`;
+    svg+=`<circle cx="${x+r-3}" cy="${y-r+3}" r="3" fill="${dc}"/>`;
+  }
+
+  // Layer 1: Executive (top center)
+  const ey=55;
+  const execName=execs[0]||'Executive';
+  drawNode(cx,ey,execName,22,'#818cf8');
+
+  // Layer 2: Managers (middle row)
+  const my=180;
+  const mgrNames=mgrs.length?mgrs:['(direct)'];
+  const mSpacing=Math.min(120,W/(mgrNames.length+1));
+  const mgrPositions=[];
+  mgrNames.forEach((name,i)=>{
+    const mx=((i+1)*W)/(mgrNames.length+1);
+    mgrPositions.push({name,x:mx,y:my});
+    if(name!=='(direct)'){
+      svg+=`<line x1="${cx}" y1="${ey+22}" x2="${mx}" y2="${my-18}" stroke="#818cf8" stroke-width="0.8" stroke-dasharray="4"/>`;
+      drawNode(mx,my,name,18,'#c084fc');
+    }
   });
+
+  // Layer 3: Workers (bottom row, connected to nearest manager or executive)
+  const wy=320;
+  const wSpacing=Math.min(90,W/(workers.length+1));
+  workers.forEach((name,i)=>{
+    const wx=((i+1)*W)/(workers.length+1);
+    // Connect to nearest manager or executive
+    let parent={x:cx,y:ey+22};
+    if(mgrPositions.length&&mgrPositions[0].name!=='(direct)'){
+      // Simple: assign workers round-robin to managers
+      const mp=mgrPositions[i%mgrPositions.length];
+      parent={x:mp.x,y:mp.y+18};
+    }
+    svg+=`<line x1="${parent.x}" y1="${parent.y}" x2="${wx}" y2="${wy-16}" stroke="#3f3f46" stroke-width="0.7"/>`;
+    drawNode(wx,wy,name,16,'#60a5fa');
+  });
+
   svg+=`</svg>`;area.innerHTML=svg;
 }
 
