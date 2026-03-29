@@ -23,10 +23,32 @@ async def _call_supervisor(prompt: str, model: str = "sonnet") -> str:
 
 def _parse_json(text: str):
     text = text.strip()
+    # Strip markdown fences
     if text.startswith("```"):
         text = text.split("\n", 1)[1] if "\n" in text else text[3:]
         text = text.rsplit("```", 1)[0]
-    return json.loads(text.strip())
+    text = text.strip()
+    # Strip [WARNING:...] prefix
+    if text.startswith("[WARNING:"):
+        nl = text.find("\n")
+        if nl >= 0:
+            text = text[nl+1:].strip()
+    # Find JSON object boundaries if there's surrounding text (prefer { over [)
+    if text and text[0] != '{':
+        start = text.find('{')
+        if start >= 0:
+            text = text[start:]
+        elif text[0] != '[':
+            start = text.find('[')
+            if start >= 0:
+                text = text[start:]
+    if text and text[-1] not in ('}', ']'):
+        for end_char in ('}', ']'):
+            end = text.rfind(end_char)
+            if end >= 0:
+                text = text[:end+1]
+                break
+    return json.loads(text)
 
 
 SUPERVISOR_SYSTEM = """You are a Supervisor — a top-level controller managing a team of AI agents.
@@ -163,7 +185,8 @@ RULES:
 - Each stage should produce clear deliverables
 - Review results critically — don't accept low quality
 - You can create ANY agents needed for each stage
-- Reuse agent IDs across stages when you want them to remember previous work"""
+- Reuse agent IDs across stages when you want them to remember previous work
+- When there are meaningful alternatives the user might want to choose from, include them in your reasoning with the marker [CHOICES:] followed by a numbered list. The user can click to select. Don't stop — keep going with your best choice, but show the options."""
 
 
 class SupervisedRun:
@@ -237,7 +260,8 @@ Plan your first stage. You decide the approach."""
         await self._notify("Supervisor", "start", "Analyzing goal...")
 
         empty_retries = 0
-        max_empty_retries = 2
+        max_empty_retries = 3
+        parse_retries = 0
 
         for stage_num in range(self.max_stages):
             # Check for live user corrections (non-blocking)
@@ -264,12 +288,27 @@ Plan your first stage. You decide the approach."""
                     await self._notify("Supervisor", "error", f"Empty response, retrying ({empty_retries}/{max_empty_retries})...")
                     continue
                 empty_retries = 0  # reset on success
+                # Strip model fallback warning before parsing JSON
+                if raw.startswith("[WARNING:"):
+                    warn_end = raw.find("]\n")
+                    if warn_end > 0:
+                        await self._notify("Supervisor", "error", raw[:warn_end+1])
+                        raw = raw[warn_end+2:]
                 decision = _parse_json(raw)
             except Exception as e:
-                await self._notify("Supervisor", "error", f"Parse error: {e}")
-                self._log({"type": "error", "stage": stage_num, "error": str(e)})
-                # Try to continue with simplified prompt
-                prompt = f'{SUPERVISOR_SYSTEM}\n\nGOAL: "{self.goal}"\n\nPrevious attempt had error. Plan a simple stage with 1-2 agents. Return valid JSON.'
+                parse_retries += 1
+                # Log raw response for debugging
+                raw_preview = raw[:500] if raw else "(empty)"
+                (self.run_dir / f"parse_error_{stage_num}_{parse_retries}.txt").write_text(
+                    f"Error: {e}\n\nRaw response:\n{raw}", encoding="utf-8")
+                await self._notify("Supervisor", "error",
+                    f"Parse error ({parse_retries}/3): {e}\nRaw: {raw_preview[:100]}")
+                self._log({"type": "error", "stage": stage_num, "error": str(e), "raw": raw_preview})
+                if parse_retries >= 3:
+                    await self._notify("Supervisor", "error", "Too many parse errors. Stopping.")
+                    break
+                # Retry — include the raw response so model can see what went wrong
+                prompt = f'{SUPERVISOR_SYSTEM}\n\nGOAL: "{self.goal}"\n\nYour previous response was not valid JSON:\n{raw_preview}\n\nReturn ONLY a valid JSON object. No markdown fences, no explanation.'
                 continue
 
             action = decision.get("action", "")
