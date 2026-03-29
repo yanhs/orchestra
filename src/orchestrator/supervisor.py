@@ -139,7 +139,8 @@ To run a stage:
   "options": {{<mode-specific: rounds, steps, tasks>}},
   "context_update": "<key findings to carry forward>",
   "max_stages": <4-20>,
-  "reasoning": "<your reasoning>"
+  "reasoning": "<your reasoning>",
+  "choices": ["<optional: if there are meaningful alternatives the user might prefer, list 2-5 short options here. You keep going with your best choice — user can override by clicking>"]
 }}
 
 To finish:
@@ -180,13 +181,14 @@ To run multiple stages in parallel:
 }}
 
 RULES:
-- Always respond in the same language as the goal
+- Always respond in the same language as the goal. Agent names, their output, reasoning — EVERYTHING must be in the goal's language
+- When creating agents: display_name and system_prompt MUST be in the goal's language
 - Be strategic — don't waste stages on trivial things
 - Each stage should produce clear deliverables
 - Review results critically — don't accept low quality
 - You can create ANY agents needed for each stage
 - Reuse agent IDs across stages when you want them to remember previous work
-- When there are meaningful alternatives the user might want to choose from, include them in your reasoning with the marker [CHOICES:] followed by a numbered list. The user can click to select. Don't stop — keep going with your best choice, but show the options."""
+- Use the "choices" field when there are meaningful alternatives the user might prefer. Keep going with your best choice — the user can override."""
 
 
 class SupervisedRun:
@@ -418,8 +420,13 @@ You are a manager — delegate the work to agents. Plan a stage now."""
                 if new_max and isinstance(new_max, int) and 4 <= new_max <= 20:
                     self.max_stages = new_max
 
+                # Include choices if supervisor provided them
+                choices = decision.get("choices", [])
+                choices_text = ""
+                if choices and isinstance(choices, list) and len(choices) > 1:
+                    choices_text = "\n\n[CHOICES:]\n" + "\n".join(f"{i+1}. {c}" for i, c in enumerate(choices))
                 await self._notify("Supervisor", "done",
-                    f"**Stage {stage_num + 1} [{phase.upper()}]: {stage_name}**\n{decision.get('reasoning', '')}")
+                    f"**Stage {stage_num + 1} [{phase.upper()}]: {stage_name}**\n{decision.get('reasoning', '')}{choices_text}")
 
                 # Execute the stage (register as child task for cancellation)
                 stage_coro = self._execute_stage(decision, stage_num)
@@ -600,11 +607,13 @@ You are a manager — delegate the work to agents. Plan a stage now."""
             if "agents" not in raw:
                 raw["agents"] = {}
 
+            # Detect goal language for agent instructions
+            lang_hint = f"\nIMPORTANT: Respond ONLY in the same language as: \"{self.goal[:50]}\""
             for ag in agents_data:
                 raw["agents"][ag["id"]] = {
                     "display_name": ag.get("display_name", ag["id"]),
                     "model": ag.get("model", "sonnet"),
-                    "system_prompt": ag.get("system_prompt", ""),
+                    "system_prompt": ag.get("system_prompt", "") + lang_hint,
                     "allowed_tools": ag.get("allowed_tools", []),
                     "max_turns": ag.get("max_turns", 50),
                 }

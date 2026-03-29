@@ -122,9 +122,13 @@ class JobManager:
                 job_id = data["id"]
                 if job_id in self.jobs:
                     continue
+                # Clean "Continue:" prefix from goals
+                import re
+                raw_goal = data.get("goal", "")
+                clean_goal = re.sub(r'^Continue:?\s*".*?"\s*\n*\s*(New instruction:\s*)?', '', raw_goal).strip() or raw_goal
                 job = Job(
                     id=job_id,
-                    goal=data.get("goal", ""),
+                    goal=clean_goal,
                     status=data.get("status", "done"),
                     created_at=data.get("created_at", 0),
                     finished_at=data.get("finished_at", 0),

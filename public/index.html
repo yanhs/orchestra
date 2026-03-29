@@ -181,11 +181,11 @@ body.st-running .phase-bar,body.st-done .phase-bar{display:flex}
 .pb-step.done{color:var(--g);border-color:rgba(74,222,128,0.3);background:rgba(74,222,128,0.06)}
 .pb-arrow{color:var(--d);font-size:0.5rem;margin:0 0.05rem}
 /* Prompt bar — always visible */
-.prompt-bar{display:flex;padding:0.4rem 0.5rem;border-top:1px solid var(--b);background:var(--s2);flex-shrink:0;gap:0.3rem;align-items:center}
-.prompt-in{flex:1;padding:0.35rem 0.6rem;background:var(--bg);border:1px solid var(--b);border-radius:5px;color:var(--t);font-size:0.78rem;font-family:inherit}
+.prompt-bar{display:flex;padding:0.4rem 0.5rem;border-top:1px solid var(--b);background:var(--s2);flex-shrink:0;gap:0.25rem;align-items:center}
+.prompt-in{flex:1;min-width:0;padding:0.3rem 0.4rem;background:var(--bg);border:1px solid var(--b);border-radius:4px;color:var(--t);font-size:0.72rem;font-family:inherit}
 .prompt-in:focus{outline:none;border-color:var(--a)}
 .prompt-in::placeholder{color:#52525b}
-.prompt-btn{padding:0.35rem 0.7rem;font-size:0.68rem;font-weight:600;background:var(--a);color:#000;border:none;border-radius:5px;cursor:pointer;white-space:nowrap}
+.prompt-btn{padding:0.3rem 0.4rem;font-size:0.6rem;font-weight:600;background:var(--a);color:#000;border:none;border-radius:4px;cursor:pointer;white-space:nowrap}
 .prompt-btn:hover{filter:brightness(1.15)}
 .prompt-btn.stop{background:var(--r);color:#fff}
 /* Choice buttons in left panel */
@@ -292,6 +292,7 @@ const ALL_TOOLS=['Read','Write','Edit','Bash','Glob','Grep','WebSearch','WebFetc
 const MC={opus:'#c084fc',sonnet:'#60a5fa',haiku:'#4ade80'};
 const MODE_NAMES={supervised:'Supervised',discuss:'Discussion',pipeline:'Pipeline',parallel:'Parallel',consensus:'Consensus',custom:'Custom Workflow'};
 const PHASE_LABELS={research:'Research',deep_dive:'Deep Dive',synthesis:'Synthesis',planning:'Planning',execution:'Execution',review:'Review',delegate:'Delegate',unknown:'...'};
+function cleanTopic(g){return(g||'').replace(/^Continue:?\s*".*?"\s*\n*\s*(New instruction:\s*)?/,'').replace(/^продолжай\s*/i,'').trim()||g||''};
 
 // ── State ──
 let S={
@@ -326,15 +327,15 @@ async function init(){
     const allJobs=await(await fetch(BASE+'/api/jobs')).json();
     for(const j of allJobs){
       const rawGoal=j.goal||'';
-      const cleanTopic=rawGoal.replace(/^Continue: ".*?"\n\n/,'').replace(/^Continue previous task: ".*?"\n\n(New instruction: )?/,'');
-      jobs[j.id]={ws:null,topic:cleanTopic||rawGoal,origTopic:cleanTopic||rawGoal,startTime:j.created_at*1000,status:j.status,agentTimeline:[]};
+      const ct=cleanTopic(rawGoal);
+      jobs[j.id]={ws:null,topic:ct,origTopic:ct,startTime:j.created_at*1000,status:j.status,agentTimeline:[]};
     }
     renderJobTabs();
     // Reconnect to running jobs
     const running=allJobs.filter(j=>j.status==='running');
     if(running.length>0){
       const latest=running[0];
-      S.topic=latest.goal||'';
+      S.topic=cleanTopic(latest.goal);
       S.plan={mode:'supervised',reasoning:'Reconnecting...',agents:[],options:{}};
       document.getElementById('output').innerHTML='';
       activeJobId=latest.id;
@@ -343,14 +344,19 @@ async function init(){
       attachToJob(latest.id);
       return;
     }
-    // Show last finished job if any
-    const finished=allJobs.filter(j=>j.status==='done');
-    if(finished.length>0){
-      activeJobId=finished[0].id;
-      S.currentJobId=finished[0].id;
-      S.topic=finished[0].goal||'';
+    // Show last finished/stopped job if any
+    const recent=allJobs.filter(j=>j.status==='done'||j.status==='stopped');
+    if(recent.length>0){
+      const last=recent[0];
+      activeJobId=last.id;
+      S.currentJobId=last.id;
+      S.topic=cleanTopic(last.goal);
+      S.plan={mode:'supervised',reasoning:'Loaded',agents:[],options:{}};
+      document.getElementById('output').innerHTML='';
       setPhase('done');
       renderJobTabs();
+      // Replay events to restore output
+      attachToJob(last.id);
     }
   }catch(e){}
 }
@@ -599,8 +605,7 @@ async function doSupervised(topic){
   S.topic=topic;
   S.plan={mode:'supervised',reasoning:'Supervisor controls all stages',agents:[],options:{}};
   S.activePhases=[];S.currentPhase=null;
-  agentOutputs={};selectedAgent=null;_seenCards=new Set();
-  document.getElementById('output').innerHTML='';
+  agentOutputs={};selectedAgent=null;  document.getElementById('output').innerHTML='';
   document.getElementById('statsBar').style.display='none';
   document.getElementById('agentList').innerHTML='<div class="ps-label" style="padding:0 0.1rem 0.3rem">Agents</div>';
   renderPhaseBar();
@@ -667,7 +672,7 @@ function renderJobTabs(){
     const j=jobs[id];
     const on=id===activeJobId?' on':'';
     const dot=j.status==='running'?'running':'';
-    const label=(j.topic||id).slice(0,20);
+    const label=cleanTopic(j.topic).slice(0,20)||id.slice(0,15);
     const closeAction=j.status==='running'?`stopJob('${id}')`:`deleteJob('${id}')`;
     return `<div class="jt${on}" onclick="switchJob('${id}')"><span class="jt-dot ${dot}"></span>${esc(label)}<span class="jt-x" onclick="event.stopPropagation();${closeAction}">×</span></div>`;
   }).join('');
@@ -681,8 +686,7 @@ function switchJob(id){
   const j=jobs[id];
   // Reset output for this tab
   S.agentActivity={};S.activePhases=[];S.currentPhase=null;
-  agentOutputs={};selectedAgent=null;_seenCards=new Set();
-  document.getElementById('output').innerHTML='';
+  agentOutputs={};selectedAgent=null;  document.getElementById('output').innerHTML='';
   document.getElementById('statsBar').style.display='none';
   document.getElementById('agentList').innerHTML='<div class="ps-label" style="padding:0 0.1rem 0.3rem">Agents</div>';
   renderPhaseBar();
@@ -774,8 +778,7 @@ function newTask(){
   // Start fresh — clear output but keep other jobs
   activeJobId=null;
   S.currentJobId=null;S.ws=null;S.agentActivity={};S.activePhases=[];S.currentPhase=null;
-  agentOutputs={};selectedAgent=null;_seenCards=new Set();
-  document.getElementById('output').innerHTML='<div class="ph">Enter a goal below to start</div>';
+  agentOutputs={};selectedAgent=null;  document.getElementById('output').innerHTML='<div class="ph">Enter a goal below to start</div>';
   document.getElementById('statsBar').style.display='none';
   document.getElementById('agentList').innerHTML='<div class="ps-label" style="padding:0 0.1rem 0.3rem">Agents</div>';
   renderPhaseBar();
@@ -790,22 +793,22 @@ function fullReset(){
     fetch(BASE+'/api/jobs/'+S.currentJobId+'/stop',{method:'POST'}).catch(()=>{});
   }
   if(S.ws){S.ws.onclose=null;S.ws.close();S.ws=null}
-  S.plan=null;S.topic='';S.agentActivity={};S.currentJobId=null;S.activePhases=[];S.currentPhase=null;agentOutputs={};selectedAgent=null;_seenCards=new Set();
+  S.plan=null;S.topic='';S.agentActivity={};S.currentJobId=null;S.activePhases=[];S.currentPhase=null;
+  agentOutputs={};selectedAgent=null;pendingChoices=[];
+  activeJobId=null;
   document.getElementById('promptIn').value='';
   document.getElementById('output').innerHTML='<div class="ph">Enter a goal below to start</div>';
   document.getElementById('statsBar').style.display='none';
+  document.getElementById('agentList').innerHTML='';
+  renderPhaseBar();
+  renderJobTabs();
   setPhase('topic');
 }
 
 // ── OUTPUT HELPERS ──
-let _seenCards=new Set();
 function addCard(ag,ev,txt){
   const out=document.getElementById('output');
   const cid='a-'+ag.replace(/\s/g,'');
-  // Dedupe: skip if exact same card already shown (replay protection)
-  const cardKey=ag+'|'+ev+'|'+txt.slice(0,100);
-  if(ev!=='progress' && _seenCards.has(cardKey))return;
-  _seenCards.add(cardKey);
 
   // Track agent output
   trackAgent(ag,ev,txt);
@@ -988,7 +991,7 @@ function filterOutput(){
 let _lastGo=0;
 function handlePrompt(){
   // Debounce — prevent double-click duplicates
-  if(Date.now()-_lastGo<2000)return;
+  if(Date.now()-_lastGo<800)return;
   _lastGo=Date.now();
 
   const inp=document.getElementById('promptIn');
@@ -1008,13 +1011,18 @@ function handlePrompt(){
 
 function updatePromptUI(){
   const inp=document.getElementById('promptIn');
-  // Go + Stop always visible, placeholder changes
+  const goBtn=document.getElementById('promptBtn');
+  const stopBtn=document.getElementById('stopBtn');
   if(S.phase==='running'){
     inp.placeholder='Send correction to supervisor...';
-  } else if(S.phase==='done'){
-    inp.placeholder='Enter follow-up or new goal...';
+    goBtn.textContent='Send';
+    goBtn.style.opacity='0.7';
+    stopBtn.style.opacity='1';
   } else {
-    inp.placeholder='Enter a goal...';
+    inp.placeholder='Enter goal or follow-up...';
+    goBtn.textContent='Go';
+    goBtn.style.opacity='1';
+    stopBtn.style.opacity='0.3';
   }
 }
 
@@ -1025,10 +1033,13 @@ function stopCurrent(){
     if(jobs[id])jobs[id].status='stopped';
   }
   if(S.ws){S.ws.onclose=null;S.ws.close();S.ws=null}
-  // Kill all spinners and reset agent statuses
+  // Kill spinners, mark working agents as stopped, keep finished as idle
   document.querySelectorAll('.spinner').forEach(s=>s.remove());
   document.querySelectorAll('.rc.ev-start').forEach(c=>c.classList.replace('ev-start','ev-error'));
-  S.agentActivity={};
+  // Only reset working agents to off, keep idle (finished) agents green
+  for(const name in S.agentActivity){
+    if(S.agentActivity[name]==='working') S.agentActivity[name]='off';
+  }
   S.phase='done';
   updatePromptUI();
   addCard('System','error','Stopped');
@@ -1050,12 +1061,10 @@ async function doContinue(text){
   S.topic=displayTopic;
   // Remove ALL old tabs for this task chain — prevent multiplication
   if(prevJobId){
-    // Delete current and any "continue" duplicates
     const toDelete=Object.keys(jobs).filter(id=>id===prevJobId||jobs[id].topic===displayTopic);
     for(const id of toDelete){
       if(jobs[id]&&jobs[id].ws){try{jobs[id].ws.close()}catch(e){}}
       delete jobs[id];
-      // Also cleanup disk
       fetch(BASE+'/api/jobs/'+id,{method:'DELETE'}).catch(()=>{});
     }
   }

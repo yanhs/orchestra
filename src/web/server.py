@@ -600,7 +600,8 @@ async def _run_job_task(job: Job):
 
     try:
         supervisor_model = getattr(job, 'supervisor_model', 'sonnet')
-        supervised = SupervisedRun(goal=job.goal, on_update=on_update, supervisor_model=supervisor_model)
+        full_topic = getattr(job, '_full_topic', job.goal)
+        supervised = SupervisedRun(goal=full_topic, on_update=on_update, supervisor_model=supervisor_model)
         # Inherit context from previous job (continuation)
         prev_ctx = getattr(job, '_prev_context', '')
         if prev_ctx:
@@ -721,7 +722,11 @@ async def ws_run(ws: WebSocket):
             # Create background job (multiple jobs can run concurrently)
             supervisor_model = msg.get("supervisor_model", "sonnet")
             continue_from = msg.get("continue_from")
-            job = job_manager.create(goal=topic)
+            # Store clean goal for display, pass full topic to supervisor
+            import re
+            clean_goal = re.sub(r'^Continue:?\s*".*?"\s*\n*\s*(New instruction:\s*)?', '', topic).strip() or topic
+            job = job_manager.create(goal=clean_goal)
+            job._full_topic = topic  # supervisor gets the full context
             job.supervisor_model = supervisor_model
             # Inherit context from previous job for continuation
             if continue_from:
