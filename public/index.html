@@ -271,7 +271,7 @@ body.st-running .phase-bar,body.st-done .phase-bar{display:flex}
     <div class="opanel on" id="p-output">
       <div class="phase-bar" id="phaseBar"></div>
       <div class="out" id="output"><div class="ph">Enter a goal below to start</div></div>
-      <div class="stats" id="statsBar" style="display:none"></div>
+      <div class="stats" id="statsBar" style="display:none;font-size:0.58rem"></div>
     </div>
     <div class="opanel" id="p-diagram">
       <div class="diag" id="diagArea"></div>
@@ -605,7 +605,7 @@ async function doSupervised(topic){
   S.topic=topic;
   S.plan={mode:'supervised',reasoning:'Supervisor controls all stages',agents:[],options:{}};
   S.activePhases=[];S.currentPhase=null;
-  agentOutputs={};selectedAgent=null;  document.getElementById('output').innerHTML='';
+  agentOutputs={};agentRoles={};selectedAgent=null;  document.getElementById('output').innerHTML='';
   document.getElementById('statsBar').style.display='none';
   document.getElementById('agentList').innerHTML='<div class="ps-label" style="padding:0 0.1rem 0.3rem">Agents</div>';
   renderPhaseBar();
@@ -686,7 +686,7 @@ function switchJob(id){
   const j=jobs[id];
   // Reset output for this tab
   S.agentActivity={};S.activePhases=[];S.currentPhase=null;
-  agentOutputs={};selectedAgent=null;  document.getElementById('output').innerHTML='';
+  agentOutputs={};agentRoles={};selectedAgent=null;  document.getElementById('output').innerHTML='';
   document.getElementById('statsBar').style.display='none';
   document.getElementById('agentList').innerHTML='<div class="ps-label" style="padding:0 0.1rem 0.3rem">Agents</div>';
   renderPhaseBar();
@@ -778,7 +778,7 @@ function newTask(){
   // Start fresh — clear output but keep other jobs
   activeJobId=null;
   S.currentJobId=null;S.ws=null;S.agentActivity={};S.activePhases=[];S.currentPhase=null;
-  agentOutputs={};selectedAgent=null;  document.getElementById('output').innerHTML='<div class="ph">Enter a goal below to start</div>';
+  agentOutputs={};agentRoles={};selectedAgent=null;  document.getElementById('output').innerHTML='<div class="ph">Enter a goal below to start</div>';
   document.getElementById('statsBar').style.display='none';
   document.getElementById('agentList').innerHTML='<div class="ps-label" style="padding:0 0.1rem 0.3rem">Agents</div>';
   renderPhaseBar();
@@ -794,7 +794,7 @@ function fullReset(){
   }
   if(S.ws){S.ws.onclose=null;S.ws.close();S.ws=null}
   S.plan=null;S.topic='';S.agentActivity={};S.currentJobId=null;S.activePhases=[];S.currentPhase=null;
-  agentOutputs={};selectedAgent=null;pendingChoices=[];
+  agentOutputs={};agentRoles={};selectedAgent=null;pendingChoices=[];
   activeJobId=null;
   document.getElementById('promptIn').value='';
   document.getElementById('output').innerHTML='<div class="ph">Enter a goal below to start</div>';
@@ -813,9 +813,9 @@ function addCard(ag,ev,txt){
   // Track agent output
   trackAgent(ag,ev,txt);
 
-  // Update phase bar from supervisor messages
-  if(ag==='Supervisor' && (ev==='done'||ev==='start')){updatePhaseBar(txt)}
-  if(ag==='Supervisor' && ev==='progress'){updateLiveCost(txt)}
+  // Update phase bar from supervisor/executive messages
+  if(isSupervisorAgent(ag) && (ev==='done'||ev==='start')){updatePhaseBar(txt)}
+  if(isSupervisorAgent(ag) && ev==='progress'){updateLiveCost(txt)}
   // Parse choices from supervisor decisions and agent outputs
   if(ev==='done' && txt.length>20){
     const choices=parseChoices(txt);
@@ -858,7 +858,7 @@ function addCard(ag,ev,txt){
   out.appendChild(c);out.scrollTop=out.scrollHeight;
 }
 function addSum(txt){const out=document.getElementById('output');const c=document.createElement('div');c.className='rc sc';c.innerHTML=`<div class="rc-h"><span class="al">Summary</span></div><div class="rc-b">${fmtMd(txt)}</div>`;out.appendChild(c);out.scrollTop=out.scrollHeight}
-function showStats(d){const b=document.getElementById('statsBar');b.style.display='block';b.textContent=`${d.responses||0} responses | $${(d.cost||0).toFixed(4)} | ${((d.duration_ms||0)/1000).toFixed(1)}s`}
+function showStats(d){const b=document.getElementById('statsBar');b.style.display='block';b.textContent=`$${(d.cost||0).toFixed(4)} | ${((d.duration_ms||0)/1000).toFixed(0)}s | ${d.responses||0} agents`}
 function updateLiveCost(txt){
   const m=txt.match(/Total: \$([0-9.]+)/);
   if(m){const b=document.getElementById('statsBar');b.style.display='block';b.textContent=`Running cost: $${m[1]}`}
@@ -888,11 +888,23 @@ function renderPhaseBar(){
 
 // ── AGENT LIST ──
 let agentOutputs={}; // agent_name -> [{event, text}]
+let agentRoles={};   // agent_name -> 'executive'|'manager'|'worker'
 let selectedAgent=null; // null = show all
 
+function isSupervisorAgent(name){
+  // Supervisor role_name is "Executive" (level 0) or "Manager-L{N}" (level 1+)
+  return name==='Executive'||name==='Supervisor'||/^Manager-L\d+$/i.test(name);
+}
+
 function trackAgent(ag, ev, txt){
-  if(ag==='System'||ag==='Error'||ag==='You')return;
+  if(ag==='System'||ag==='Error'||ag==='You'||ag==='User')return;
   if(!agentOutputs[ag])agentOutputs[ag]=[];
+  // Track hierarchy role from event patterns
+  if(!agentRoles[ag]){
+    if(ag==='Executive'||ag==='Supervisor') agentRoles[ag]='executive';
+    else if(/^Manager-L\d+$/i.test(ag)) agentRoles[ag]='manager';
+    else agentRoles[ag]='worker';
+  }
   // Dedupe: don't add if last entry is identical (replay protection)
   const arr=agentOutputs[ag];
   if(arr.length>0){
@@ -909,7 +921,7 @@ function parseChoices(text){
   // Only parse if text contains explicit [CHOICES:] marker from supervisor
   const marker=text.indexOf('[CHOICES:]');
   if(marker<0)return[];
-  const block=text.slice(marker+9);
+  const block=text.slice(marker+10);
   const choices=[];
   for(const line of block.split('\n')){
     const m=line.match(/^\s*(\d+)[.)]\s+(.{3,150})/);
@@ -920,10 +932,9 @@ function parseChoices(text){
 }
 
 function pickChoice(text){
-  // Send as feedback
+  // Send as feedback — server will broadcast the event back to create the card
   if(S.ws&&S.ws.readyState===1){
     S.ws.send(JSON.stringify({action:'feedback',text}));
-    addCard('You','feedback',text);
   }
   pendingChoices=[];
   renderAgentList();
@@ -947,22 +958,23 @@ function renderAgentList(){
   if(phaseText||costText){
     html+=`<div style="font-size:0.6rem;color:var(--d);padding:0 0.1rem 0.4rem">${phaseText}${costText?' · <span class="mono">'+esc(costText)+'</span>':''}</div>`;
   }
-  // Agents — hierarchical display
+  // Agents — hierarchical display using tracked roles
   const names=Object.keys(agentOutputs);
   if(names.length){
     html+=`<div class="ps-label" style="padding:0 0.1rem 0.3rem">Team</div>`;
     html+=`<div class="al-item${selectedAgent===null?' selected':''}" onclick="selectAgent(null)"><span class="al-dot off"></span><span class="al-name" style="color:var(--d2)">All</span></div>`;
-    // Sort: Executive first, then Managers, then Workers
-    const execs=names.filter(n=>n.match(/^Executive/i));
-    const mgrs=names.filter(n=>n.match(/^Manager/i));
-    const workers=names.filter(n=>!n.match(/^Executive/i)&&!n.match(/^Manager/i)&&n!=='System'&&n!=='Error'&&n!=='You');
+    // Sort: Executive first, then Managers, then Workers (using agentRoles)
+    const execs=names.filter(n=>(agentRoles[n]||'worker')==='executive');
+    const mgrs=names.filter(n=>(agentRoles[n]||'worker')==='manager');
+    const workers=names.filter(n=>(agentRoles[n]||'worker')==='worker');
     const sorted=[...execs,...mgrs,...workers];
     for(const name of sorted){
       const st=S.agentActivity[name]||'off';
       const msgs=agentOutputs[name].length;
       const sel=selectedAgent===name?' selected':'';
-      // Indent: exec=0, manager=12px, worker=24px
-      const indent=name.match(/^Executive/i)?0:name.match(/^Manager/i)?12:24;
+      // Indent based on tracked role: exec=0, manager=12px, worker=24px
+      const role=agentRoles[name]||'worker';
+      const indent=role==='executive'?0:role==='manager'?12:24;
       const lastEv=agentOutputs[name][agentOutputs[name].length-1];
       const snippet=lastEv?lastEv.text.slice(0,40):'';
       html+=`<div class="al-item${sel}" style="margin-left:${indent}px" onclick="selectAgent('${esc(name)}')"><span class="al-dot ${st}"></span><span class="al-name">${esc(name)}</span><span class="al-status">${msgs}</span></div>`;
@@ -1007,8 +1019,9 @@ function handlePrompt(){
 
   if(S.phase==='running'&&S.ws&&S.ws.readyState===1){
     if(!text)return;
+    // Just send via WS — server will broadcast the "User"/"feedback" event back,
+    // which creates the card via addCard. Don't call addCard here to avoid duplicate.
     S.ws.send(JSON.stringify({action:'feedback',text}));
-    addCard('You','feedback',text);
   } else if(S.phase==='done'&&(S.currentJobId||activeJobId)){
     doContinue(text||'продолжай');
   } else if(text){
@@ -1087,10 +1100,10 @@ function switchTab(el){document.querySelectorAll('.otab').forEach(t=>t.classList
 function drawDiagram(){
   const area=document.getElementById('diagArea');
   const all=Object.keys(agentOutputs);
-  // Classify: executives, managers, workers
-  const execs=all.filter(n=>n.startsWith('Executive'));
-  const mgrs=all.filter(n=>n.match(/^Manager/));
-  const workers=all.filter(n=>!n.startsWith('Executive')&&!n.match(/^Manager/)&&n!=='System'&&n!=='Error'&&n!=='You');
+  // Classify using tracked roles: executives, managers, workers
+  const execs=all.filter(n=>(agentRoles[n]||'worker')==='executive');
+  const mgrs=all.filter(n=>(agentRoles[n]||'worker')==='manager');
+  const workers=all.filter(n=>(agentRoles[n]||'worker')==='worker');
   if(!workers.length&&!mgrs.length&&!execs.length){area.innerHTML='<div class="ph">No agents yet</div>';return}
 
   const W=650,H=450,cx=W/2;

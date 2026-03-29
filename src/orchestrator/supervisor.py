@@ -148,7 +148,7 @@ To run a stage:
   "context_update": "<key findings to carry forward>",
   "max_stages": <4-20>,
   "reasoning": "<your reasoning>",
-  "choices": ["<optional: if there are meaningful alternatives the user might prefer, list 2-5 short options here. You keep going with your best choice — user can override by clicking>"]
+  "choices": ["<REQUIRED: always list 2-4 alternative approaches. User sees these as buttons. Example: ['Build SaaS app', 'Create digital product', 'Freelance service']>"]
 }}
 
 To finish:
@@ -196,7 +196,7 @@ RULES:
 - Review results critically — don't accept low quality
 - You can create ANY agents needed for each stage
 - Reuse agent IDs across stages when you want them to remember previous work
-- Use the "choices" field when there are meaningful alternatives the user might prefer. Keep going with your best choice — the user can override."""
+- ALWAYS include "choices" field with 2-4 alternative approaches when starting a stage. The user sees these as clickable buttons and can redirect you. Don't stop — keep going with your best choice."""
 
 
 MANAGER_SYSTEM = """You are a Manager — you run a team of workers to achieve a specific sub-goal.
@@ -543,8 +543,12 @@ You are a manager — delegate the work to agents. Plan a stage now."""
                 if not stages_data:
                     await self._notify(self.role_name, "error", "No stages in run_parallel_stages")
                     continue
+                choices = decision.get("choices", [])
+                choices_text = ""
+                if choices and isinstance(choices, list) and len(choices) > 1:
+                    choices_text = "\n\n[CHOICES:]\n" + "\n".join(f"{i+1}. {c}" for i, c in enumerate(choices))
                 await self._notify(self.role_name, "done",
-                    f"**Running {len(stages_data)} stages in parallel**\n{decision.get('reasoning', '')}")
+                    f"**Running {len(stages_data)} stages in parallel**\n{decision.get('reasoning', '')}{choices_text}")
 
                 # Run all stages concurrently
                 async def _run_one(sd, sn):
