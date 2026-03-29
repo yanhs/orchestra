@@ -287,7 +287,7 @@ GENERAL RULES:
 - IMPORTANT: ALL text MUST be in the SAME LANGUAGE as the TASK"""
 
 
-async def _call_claude(prompt: str, model: str = "opus", max_retries: int = 3) -> str:
+async def _call_claude(prompt: str, model: str = "opus", max_retries: int = 3, system_prompt: str = "") -> str:
     """Helper: call Claude with auto-retry on failure. Prepends model fallback warning."""
     from claude_agent_sdk import ClaudeAgentOptions, ClaudeSDKClient, AssistantMessage, ResultMessage, TextBlock
 
@@ -298,6 +298,8 @@ async def _call_claude(prompt: str, model: str = "opus", max_retries: int = 3) -
     for attempt in range(max_retries):
         try:
             options = ClaudeAgentOptions(model=current_model, max_turns=1, permission_mode="bypassPermissions")
+            if system_prompt:
+                options.system_prompt = system_prompt
             client = ClaudeSDKClient(options)
             content = ""
             try:

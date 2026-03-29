@@ -18,7 +18,8 @@ _config_lock = asyncio.Lock()
 async def _call_supervisor(prompt: str, model: str = "sonnet") -> str:
     """Call supervisor with retry fallback."""
     from ..web.server import _call_claude
-    return await _call_claude(prompt, model=model)
+    return await _call_claude(prompt, model=model,
+        system_prompt="You are a JSON-only API. Respond with exactly one valid JSON object. No text, no markdown, no explanation.")
 
 
 def _parse_json(text: str):
@@ -70,6 +71,7 @@ For COMPLEX goals (3+ directions): create managers via "delegate" for each direc
 Managers can create sub-managers for very complex sub-goals.
 
 CRITICAL: A plan is NOT a result. Agents must EXECUTE — write code, create files, take real actions. Only finish when work is done.
+CRITICAL: For code tasks — always include a testing stage. Agents must write and run tests (pytest/unittest). Untested code is not done.
 
 BASE MODES (building blocks):
 

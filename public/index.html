@@ -1064,6 +1064,7 @@ function stopCurrent(){
   updatePromptUI();
   addCard('System','error','Stopped');
   renderAgentList();
+  drawDiagram();
   renderJobTabs();
 }
 
@@ -1113,7 +1114,7 @@ function drawDiagram(){
 
   function drawNode(x,y,name,r,strokeCol){
     const st=S.agentActivity[name]||'off';
-    const col=st==='working'?'#fbbf24':st==='idle'?'#4ade80':strokeCol;
+    const col=st==='working'?'#fbbf24':st==='idle'?'#4ade80':'#3f3f46';
     svg+=`<circle cx="${x}" cy="${y}" r="${r}" fill="#18181b" stroke="${col}" stroke-width="${st==='working'?2:1.2}"/>`;
     if(st==='working')svg+=`<circle cx="${x}" cy="${y}" r="${r}" fill="none" stroke="#fbbf24" stroke-width="1" opacity="0.3"><animate attributeName="r" from="${r}" to="${r+8}" dur="1.5s" repeatCount="indefinite"/><animate attributeName="opacity" from="0.3" to="0" dur="1.5s" repeatCount="indefinite"/></circle>`;
     const label=name.length>14?name.slice(0,13)+'…':name;
