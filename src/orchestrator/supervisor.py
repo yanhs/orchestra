@@ -124,7 +124,7 @@ MECHANICS:
 - For complex sub-goals, use action "delegate" to spawn a sub-supervisor (up to 5 stages).
 - You can run multiple stages at once: use action "run_parallel_stages" with a "stages" array.
 
-RESPONSE FORMAT — always return valid JSON:
+RESPONSE FORMAT — ONLY valid JSON, nothing else. No text before or after. No explanations. Just one JSON object:
 
 To run a stage:
 {{
@@ -291,7 +291,7 @@ class SupervisedRun:
 
 GOAL: "{self.goal}"
 
-Plan your first stage. You decide the approach."""
+Respond with a JSON object. Plan your first stage."""
             await self._notify(self.role_name, "start", "Analyzing goal...")
 
         empty_retries = 0
@@ -766,7 +766,7 @@ COMPLETED STAGES:
 LATEST STAGE RESULTS ({stage_name}):
 {output[:8000]}
 
-What should we do next?"""
+Respond with a JSON object. What's next?"""
 
     def _build_retry_prompt(self, decision: dict) -> str:
         feedback = decision.get("feedback", "")
