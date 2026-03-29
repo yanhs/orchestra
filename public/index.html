@@ -1215,9 +1215,13 @@ function drawTimeline(){
 async function pollActivity(){
   try{
     const d=await(await fetch(BASE+'/api/activity')).json();
-    const changed=JSON.stringify(d)!==JSON.stringify(S.agentActivity);
-    S.agentActivity=d;
-    if(changed){renderPlan();drawDiagram()}
+    // Merge: server knows who's working, keep idle for agents that finished
+    let changed=false;
+    for(const name in d){
+      if(S.agentActivity[name]!==d[name]){S.agentActivity[name]=d[name];changed=true}
+    }
+    // Don't reset agents to off — if server doesn't mention them, keep last known state
+    if(changed){renderAgentList();drawDiagram()}
   }catch(e){}
 }
 

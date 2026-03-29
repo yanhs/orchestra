@@ -778,8 +778,10 @@ async def ws_run(ws: WebSocket):
                     msg = await ws.receive_json()
                     if msg.get("action") == "feedback" and msg.get("text"):
                         job.add_feedback(msg["text"])
-                except (WebSocketDisconnect, Exception):
+                except WebSocketDisconnect:
                     return
+                except Exception:
+                    pass  # Don't kill on parse errors etc — keep listening
 
         try:
             # Run both tasks concurrently — first to finish wins
