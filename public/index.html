@@ -947,24 +947,31 @@ function renderAgentList(){
   if(phaseText||costText){
     html+=`<div style="font-size:0.6rem;color:var(--d);padding:0 0.1rem 0.4rem">${phaseText}${costText?' · <span class="mono">'+esc(costText)+'</span>':''}</div>`;
   }
-  // Agents
+  // Agents — hierarchical display
   const names=Object.keys(agentOutputs);
   if(names.length){
-    html+=`<div class="ps-label" style="padding:0 0.1rem 0.3rem">Agents</div>`;
+    html+=`<div class="ps-label" style="padding:0 0.1rem 0.3rem">Team</div>`;
     html+=`<div class="al-item${selectedAgent===null?' selected':''}" onclick="selectAgent(null)"><span class="al-dot off"></span><span class="al-name" style="color:var(--d2)">All</span></div>`;
-    for(const name of names){
+    // Sort: Executive first, then Managers, then Workers
+    const execs=names.filter(n=>n.match(/^Executive/i));
+    const mgrs=names.filter(n=>n.match(/^Manager/i));
+    const workers=names.filter(n=>!n.match(/^Executive/i)&&!n.match(/^Manager/i)&&n!=='System'&&n!=='Error'&&n!=='You');
+    const sorted=[...execs,...mgrs,...workers];
+    for(const name of sorted){
       const st=S.agentActivity[name]||'off';
       const msgs=agentOutputs[name].length;
       const sel=selectedAgent===name?' selected':'';
+      // Indent: exec=0, manager=12px, worker=24px
+      const indent=name.match(/^Executive/i)?0:name.match(/^Manager/i)?12:24;
       const lastEv=agentOutputs[name][agentOutputs[name].length-1];
       const snippet=lastEv?lastEv.text.slice(0,40):'';
-      html+=`<div class="al-item${sel}" onclick="selectAgent('${esc(name)}')"><span class="al-dot ${st}"></span><span class="al-name">${esc(name)}</span><span class="al-status">${msgs}</span></div>`;
+      html+=`<div class="al-item${sel}" style="margin-left:${indent}px" onclick="selectAgent('${esc(name)}')"><span class="al-dot ${st}"></span><span class="al-name">${esc(name)}</span><span class="al-status">${msgs}</span></div>`;
       if(sel&&snippet){
-        html+=`<div style="font-size:0.58rem;color:var(--d);padding:0.1rem 0.5rem 0.3rem;word-wrap:break-word">${esc(snippet)}...</div>`;
+        html+=`<div style="font-size:0.58rem;color:var(--d);padding:0.1rem 0.5rem 0.3rem ${indent+20}px;word-wrap:break-word">${esc(snippet)}...</div>`;
       }
     }
   } else {
-    html+=`<div style="font-size:0.68rem;color:var(--d);padding:0.3rem">Waiting for supervisor...</div>`;
+    html+=`<div style="font-size:0.68rem;color:var(--d);padding:0.3rem">Waiting...</div>`;
   }
   el.innerHTML=html;
 }

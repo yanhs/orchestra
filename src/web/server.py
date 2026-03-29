@@ -601,19 +601,26 @@ async def _run_job_task(job: Job):
     try:
         supervisor_model = getattr(job, 'supervisor_model', 'sonnet')
         full_topic = getattr(job, '_full_topic', job.goal)
-        supervised = SupervisedRun(goal=full_topic, on_update=on_update, supervisor_model=supervisor_model)
-        # Inherit context from previous job (continuation)
-        prev_ctx = getattr(job, '_prev_context', '')
-        if prev_ctx:
-            supervised.context_doc = prev_ctx
-            supervised.total_cost = getattr(job, '_prev_cost', 0.0)
-            prev_goal = getattr(job, '_prev_goal', '')
-            if prev_goal:
-                supervised.context_doc += f"\n### PREVIOUS GOAL: {prev_goal}\n"
+
+        # Try to resume from checkpoint if continuing
+        prev_run_dir = getattr(job, '_prev_run_dir', '')
+        checkpoint = Path(prev_run_dir) / '.checkpoint.json' if prev_run_dir else None
+        if checkpoint and checkpoint.exists():
+            supervised = SupervisedRun.from_checkpoint(checkpoint, on_update=on_update)
+            supervised.supervisor_model = supervisor_model
+            supervised.goal = full_topic  # may have new instructions
+        else:
+            supervised = SupervisedRun(goal=full_topic, on_update=on_update, supervisor_model=supervisor_model)
+            # Inherit context from previous job (continuation)
+            prev_ctx = getattr(job, '_prev_context', '')
+            if prev_ctx:
+                supervised.context_doc = prev_ctx
+                supervised.total_cost = getattr(job, '_prev_cost', 0.0)
         # Link feedback queues so user corrections flow through
         job._feedback_queue = supervised.feedback_queue
-        # Link job for child task tracking
+        # Link job for child task tracking + run_dir for resume
         supervised._job = job
+        job._run_dir = str(supervised.run_dir)
         result = await supervised.run()
         active_agents.clear()
         run_dir = save_run(result)
@@ -630,7 +637,9 @@ async def _run_job_task(job: Job):
         })
     except asyncio.CancelledError:
         active_agents.clear()
-        # Preserve context for continuation
+        # Save checkpoint + preserve context for resume
+        try: supervised._save_progress()
+        except: pass
         job._context_doc = getattr(supervised, 'context_doc', '')
         job._total_cost = getattr(supervised, 'total_cost', 0.0)
         job._run_dir = str(getattr(supervised, 'run_dir', ''))

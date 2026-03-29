@@ -277,14 +277,22 @@ class SupervisedRun:
         """Execute the full supervised workflow."""
         result = OrchestraResult(mode="supervised", topic=self.goal)
 
-        # Initial prompt to supervisor
-        prompt = f"""{self._system_prompt}
+        if self.stages:
+            # Resuming from checkpoint — build prompt from last stage
+            last = self.stages[-1]
+            await self._notify(self.role_name, "start",
+                f"Resuming from stage {len(self.stages)} ({last['name']})...")
+            prompt = self._build_next_prompt(
+                len(self.stages) - 1, last["name"],
+                last.get("result_summary", "Stage completed"))
+        else:
+            # Fresh start
+            prompt = f"""{self._system_prompt}
 
 GOAL: "{self.goal}"
 
 Plan your first stage. You decide the approach."""
-
-        await self._notify(self.role_name, "start", "Analyzing goal...")
+            await self._notify(self.role_name, "start", "Analyzing goal...")
 
         empty_retries = 0
         max_empty_retries = 3
@@ -591,7 +599,8 @@ You are a manager — delegate the work to agents. Plan a stage now."""
                 await self._notify(self.role_name, "error", f"Unknown action: {action}")
                 break
 
-        # Save full log
+        # Save final checkpoint + log
+        self._save_progress()
         self._save_log()
 
         return result
