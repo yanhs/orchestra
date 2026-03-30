@@ -1,6 +1,7 @@
 """Supervisor — top-level controller that manages the entire execution."""
 
 import asyncio
+import copy
 import json
 from datetime import datetime, timezone
 from pathlib import Path
@@ -232,6 +233,10 @@ class SupervisedRun:
         run.total_cost = data.get("total_cost", 0.0)
         run.max_stages = data.get("max_stages", 10)
         run.stages = data.get("stages", [])
+        # Restore agent hierarchy if saved
+        saved_hierarchy = data.get("agent_hierarchy")
+        if saved_hierarchy and isinstance(saved_hierarchy, dict):
+            run.agent_hierarchy = saved_hierarchy
         # Use the same run_dir
         run.run_dir = checkpoint_path.parent
         return run
@@ -260,6 +265,10 @@ class SupervisedRun:
         self.feedback_queue: asyncio.Queue = asyncio.Queue()  # live user corrections
         self._job = None  # linked Job for child task tracking
         self.total_cost: float = 0.0
+        # Agent hierarchy: key=display_name, value={parent, level, children}
+        self.agent_hierarchy: dict[str, dict] = {
+            self.role_name: {"parent": None, "level": self.level, "children": []}
+        }
         # Directory for saving full agent outputs — inside project_path so agents can access
         run_ts = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
         self.run_dir: Path = self.project_path / "_orchestra" / "runs" / f"{run_ts}_supervised"
@@ -287,6 +296,9 @@ class SupervisedRun:
             prompt = self._build_next_prompt(
                 len(self.stages) - 1, last["name"],
                 last.get("result_summary", "Stage completed"))
+            # Emit hierarchy on resume so frontend has agent tree
+            if self.agent_hierarchy:
+                await self._notify(self.role_name, "hierarchy", json.dumps(self.agent_hierarchy))
         else:
             # Fresh start
             prompt = f"""{self._system_prompt}
@@ -301,6 +313,10 @@ Respond with a JSON object. Plan your first stage."""
         parse_retries = 0
 
         for stage_num in range(self.max_stages):
+            # Check if we've already consumed enough stages (parallel stages add multiple)
+            if len(self.stages) >= self.max_stages:
+                break
+
             # Check for live user corrections (non-blocking)
             user_corrections = []
             while not self.feedback_queue.empty():
@@ -375,7 +391,7 @@ You are a manager — delegate the work to agents. Plan a stage now."""
 
                 if 0 <= stage_idx < len(self.stages):
                     old_stage = self.stages[stage_idx]
-                    old_decision = old_stage["decision"]
+                    old_decision = copy.deepcopy(old_stage.get("decision", {}))
                     # Inject feedback into agent prompts
                     for ag in old_decision.get("agents", []):
                         ag["system_prompt"] = ag.get("system_prompt", "") + \
@@ -426,6 +442,24 @@ You are a manager — delegate the work to agents. Plan a stage now."""
                 sub_run.max_stages = max_sub
                 sub_run.context_doc = self.context_doc  # share context
                 sub_result = await sub_run.run()
+
+                # Merge sub-supervisor's hierarchy into ours
+                for name, info in sub_run.agent_hierarchy.items():
+                    if name not in self.agent_hierarchy:
+                        self.agent_hierarchy[name] = info
+                    elif name == sub_run.role_name:
+                        # The sub-supervisor itself: update parent to us, merge children
+                        self.agent_hierarchy[name]["parent"] = self.role_name
+                        self.agent_hierarchy[name]["level"] = self.level + 1
+                        for child in info.get("children", []):
+                            if child not in self.agent_hierarchy[name]["children"]:
+                                self.agent_hierarchy[name]["children"].append(child)
+                # Ensure sub-supervisor is in our children list
+                if sub_run.role_name not in self.agent_hierarchy.get(self.role_name, {}).get("children", []):
+                    if self.role_name in self.agent_hierarchy:
+                        self.agent_hierarchy[self.role_name]["children"].append(sub_run.role_name)
+                # Emit updated hierarchy to frontend
+                await self._notify(self.role_name, "hierarchy", json.dumps(self.agent_hierarchy))
 
                 # Merge results
                 for resp in sub_result.responses:
@@ -533,6 +567,7 @@ You are a manager — delegate the work to agents. Plan a stage now."""
                             agent_requests.append(f"{r.agent_name} requests: {m.group(1)}")
                 if agent_requests:
                     stage_output += "\n\nAGENT REQUESTS FOR HELP:\n" + "\n".join(f"- {r}" for r in agent_requests)
+                    stage_output += "\n\nIMPORTANT: Create the following requested agents in your next stage: " + "; ".join(agent_requests)
                 prompt = self._build_next_prompt(stage_num, stage_name, stage_output)
 
                 # Notify cost
@@ -652,12 +687,16 @@ You are a manager — delegate the work to agents. Plan a stage now."""
 
         # Create agents in config (with lock to prevent parallel stage races)
         import yaml
+        current_ids = {ag["id"] for ag in agents_data}
         async with _config_lock:
             raw = {}
             with open(CONFIG_PATH) as f:
                 raw = yaml.safe_load(f) or {}
             if "agents" not in raw:
                 raw["agents"] = {}
+
+            # Clean up: remove agents not in current stage to prevent unbounded growth
+            raw["agents"] = {k: v for k, v in raw["agents"].items() if k in current_ids}
 
             # Detect goal language for agent instructions
             lang_hint = f"\nIMPORTANT: Respond ONLY in the same language as: \"{self.goal[:50]}\""
@@ -671,6 +710,24 @@ You are a manager — delegate the work to agents. Plan a stage now."""
                 }
             with open(CONFIG_PATH, "w") as f:
                 yaml.dump(raw, f, default_flow_style=False, allow_unicode=True, sort_keys=False)
+
+        # Record agents in hierarchy: parent=self.role_name, level=self.level+1
+        for ag in agents_data:
+            display = ag.get("display_name", ag["id"])
+            if display not in self.agent_hierarchy:
+                self.agent_hierarchy[display] = {
+                    "parent": self.role_name,
+                    "level": self.level + 1,
+                    "children": [],
+                }
+                # Add as child of parent
+                if self.role_name in self.agent_hierarchy:
+                    parent_children = self.agent_hierarchy[self.role_name]["children"]
+                    if display not in parent_children:
+                        parent_children.append(display)
+
+        # Emit hierarchy to frontend
+        await self._notify(self.role_name, "hierarchy", json.dumps(self.agent_hierarchy))
 
         config = load_config(CONFIG_PATH)
         coordinator = OrchestraCoordinator(
@@ -726,13 +783,34 @@ You are a manager — delegate the work to agents. Plan a stage now."""
         # Apply optional timeout
         if timeout and isinstance(timeout, (int, float)) and timeout > 0:
             try:
-                return await asyncio.wait_for(_dispatch(), timeout=timeout)
+                stage_result = await asyncio.wait_for(_dispatch(), timeout=timeout)
             except asyncio.TimeoutError:
                 if self.on_update:
                     r = self.on_update("Supervisor", "error", f"Stage timed out after {timeout}s")
                     if asyncio.iscoroutine(r): await r
                 return OrchestraResult(mode=mode, topic=stage_topic)
-        return await _dispatch()
+        else:
+            stage_result = await _dispatch()
+
+        # BUG 1 fix: track summarizer/merge agents that aren't in the decision's agent list
+        known_names = {ag.get("display_name", ag["id"]) for ag in agents_data}
+        for resp in stage_result.responses:
+            name = resp.agent_name
+            if name and name not in self.agent_hierarchy and name not in known_names:
+                self.agent_hierarchy[name] = {
+                    "parent": self.role_name,
+                    "level": self.level + 1,
+                    "children": [],
+                }
+                if self.role_name in self.agent_hierarchy:
+                    parent_children = self.agent_hierarchy[self.role_name]["children"]
+                    if name not in parent_children:
+                        parent_children.append(name)
+        # Re-emit hierarchy if new agents were found
+        if stage_result.responses:
+            await self._notify(self.role_name, "hierarchy", json.dumps(self.agent_hierarchy))
+
+        return stage_result
 
     def _build_next_prompt(self, stage_num: int, stage_name: str, output: str) -> str:
         history = "\n".join(
@@ -826,7 +904,7 @@ Plan a corrected stage."""
         # Machine-recoverable checkpoint
         checkpoint = {
             "goal": self.goal,
-            "stages": [{k: v for k, v in s.items() if k != "decision"} for s in self.stages],
+            "stages": list(self.stages),
             "context_doc": self.context_doc,
             "phase_history": self.phase_history,
             "current_phase": self.current_phase,
@@ -834,6 +912,7 @@ Plan a corrected stage."""
             "max_stages": self.max_stages,
             "supervisor_model": self.supervisor_model,
             "level": self.level,
+            "agent_hierarchy": self.agent_hierarchy,
         }
         (self.run_dir / ".checkpoint.json").write_text(
             json.dumps(checkpoint, ensure_ascii=False, indent=2), encoding="utf-8",

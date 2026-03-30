@@ -605,7 +605,7 @@ async function doSupervised(topic){
   S.topic=topic;
   S.plan={mode:'supervised',reasoning:'Supervisor controls all stages',agents:[],options:{}};
   S.activePhases=[];S.currentPhase=null;
-  agentOutputs={};agentRoles={};selectedAgent=null;  document.getElementById('output').innerHTML='';
+  agentOutputs={};agentRoles={};agentHierarchy={};selectedAgent=null;  document.getElementById('output').innerHTML='';
   document.getElementById('statsBar').style.display='none';
   document.getElementById('agentList').innerHTML='<div class="ps-label" style="padding:0 0.1rem 0.3rem">Agents</div>';
   renderPhaseBar();
@@ -639,8 +639,12 @@ function connectWS(msg){
       if(wsJobId&&jobs[wsJobId]){
         jobs[wsJobId].agentTimeline.push({agent:d.agent,event:d.event,ts:Date.now()});
       }
-      // Only render if this is the active tab
-      if(wsJobId===activeJobId){
+      // Parse hierarchy events — don't render as a card
+      if(d.event==='hierarchy'){
+        try{agentHierarchy=JSON.parse(d.text)}catch(e){}
+        if(wsJobId===activeJobId){renderAgentList();drawDiagram()}
+      } else if(wsJobId===activeJobId){
+        // Only render normal events if this is the active tab
         addCard(d.agent,d.event,d.text);
         if(d.event==='start')S.agentActivity[d.agent]='working';
         else if(d.event==='done'||d.event==='error')S.agentActivity[d.agent]='idle';
@@ -686,7 +690,7 @@ function switchJob(id){
   const j=jobs[id];
   // Reset output for this tab
   S.agentActivity={};S.activePhases=[];S.currentPhase=null;
-  agentOutputs={};agentRoles={};selectedAgent=null;  document.getElementById('output').innerHTML='';
+  agentOutputs={};agentRoles={};agentHierarchy={};selectedAgent=null;  document.getElementById('output').innerHTML='';
   document.getElementById('statsBar').style.display='none';
   document.getElementById('agentList').innerHTML='<div class="ps-label" style="padding:0 0.1rem 0.3rem">Agents</div>';
   renderPhaseBar();
@@ -778,7 +782,7 @@ function newTask(){
   // Start fresh — clear output but keep other jobs
   activeJobId=null;
   S.currentJobId=null;S.ws=null;S.agentActivity={};S.activePhases=[];S.currentPhase=null;
-  agentOutputs={};agentRoles={};selectedAgent=null;  document.getElementById('output').innerHTML='<div class="ph">Enter a goal below to start</div>';
+  agentOutputs={};agentRoles={};agentHierarchy={};selectedAgent=null;  document.getElementById('output').innerHTML='<div class="ph">Enter a goal below to start</div>';
   document.getElementById('statsBar').style.display='none';
   document.getElementById('agentList').innerHTML='<div class="ps-label" style="padding:0 0.1rem 0.3rem">Agents</div>';
   renderPhaseBar();
@@ -794,7 +798,7 @@ function fullReset(){
   }
   if(S.ws){S.ws.onclose=null;S.ws.close();S.ws=null}
   S.plan=null;S.topic='';S.agentActivity={};S.currentJobId=null;S.activePhases=[];S.currentPhase=null;
-  agentOutputs={};agentRoles={};selectedAgent=null;pendingChoices=[];
+  agentOutputs={};agentRoles={};agentHierarchy={};selectedAgent=null;pendingChoices=[];
   activeJobId=null;
   document.getElementById('promptIn').value='';
   document.getElementById('output').innerHTML='<div class="ph">Enter a goal below to start</div>';
@@ -889,6 +893,7 @@ function renderPhaseBar(){
 // ── AGENT LIST ──
 let agentOutputs={}; // agent_name -> [{event, text}]
 let agentRoles={};   // agent_name -> 'executive'|'manager'|'worker'
+let agentHierarchy={}; // name -> {parent, level, children} from backend
 let selectedAgent=null; // null = show all
 
 function isSupervisorAgent(name){
@@ -972,12 +977,22 @@ function renderAgentList(){
       const st=S.agentActivity[name]||'off';
       const msgs=agentOutputs[name].length;
       const sel=selectedAgent===name?' selected':'';
-      // Indent based on tracked role: exec=0, manager=12px, worker=24px
-      const role=agentRoles[name]||'worker';
-      const indent=role==='executive'?0:role==='manager'?12:24;
+      // Use hierarchy data for indent if available, else fall back to role-based
+      const hi=agentHierarchy[name];
+      let indent, parentLabel='';
+      if(hi){
+        indent=(hi.level||0)*16;
+        if(hi.parent)parentLabel=hi.parent;
+      } else {
+        const role=agentRoles[name]||'worker';
+        indent=role==='executive'?0:role==='manager'?12:24;
+      }
       const lastEv=agentOutputs[name][agentOutputs[name].length-1];
       const snippet=lastEv?lastEv.text.slice(0,40):'';
-      html+=`<div class="al-item${sel}" style="margin-left:${indent}px" onclick="selectAgent('${esc(name)}')"><span class="al-dot ${st}"></span><span class="al-name">${esc(name)}</span><span class="al-status">${msgs}</span></div>`;
+      html+=`<div class="al-item${sel}" style="margin-left:${indent}px" onclick="selectAgent('${esc(name).replace(/'/g,"\\&#39;")}')"><span class="al-dot ${st}"></span><span class="al-name">${esc(name)}</span><span class="al-status">${msgs}</span></div>`;
+      if(parentLabel&&indent>0){
+        html+=`<div style="font-size:0.5rem;color:var(--d);padding:0 0.5rem 0.15rem ${indent+20}px;margin-top:-2px">${esc(parentLabel)}</div>`;
+      }
       if(sel&&snippet){
         html+=`<div style="font-size:0.58rem;color:var(--d);padding:0.1rem 0.5rem 0.3rem ${indent+20}px;word-wrap:break-word">${esc(snippet)}...</div>`;
       }
@@ -1107,6 +1122,8 @@ function drawDiagram(){
   const workers=all.filter(n=>(agentRoles[n]||'worker')==='worker');
   if(!workers.length&&!mgrs.length&&!execs.length){area.innerHTML='<div class="ph">No agents yet</div>';return}
 
+  const hasHierarchy=Object.keys(agentHierarchy).length>0;
+
   const W=650,H=450,cx=W/2;
   let svg=`<svg viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg" style="font-family:Inter,sans-serif">`;
   svg+=`<rect width="${W}" height="${H}" fill="#111113" rx="8"/>`;
@@ -1123,40 +1140,98 @@ function drawDiagram(){
     svg+=`<circle cx="${x+r-3}" cy="${y-r+3}" r="3" fill="${dc}"/>`;
   }
 
-  // Layer 1: Executive (top center)
-  const ey=55;
-  const execName=execs[0]||'Executive';
-  drawNode(cx,ey,execName,22,'#818cf8');
-
-  // Layer 2: Managers (middle row)
-  const my=180;
-  const mgrNames=mgrs.length?mgrs:['(direct)'];
-  const mSpacing=Math.min(120,W/(mgrNames.length+1));
-  const mgrPositions=[];
-  mgrNames.forEach((name,i)=>{
-    const mx=((i+1)*W)/(mgrNames.length+1);
-    mgrPositions.push({name,x:mx,y:my});
-    if(name!=='(direct)'){
-      svg+=`<line x1="${cx}" y1="${ey+22}" x2="${mx}" y2="${my-18}" stroke="#818cf8" stroke-width="0.8" stroke-dasharray="4"/>`;
-      drawNode(mx,my,name,18,'#c084fc');
+  if(hasHierarchy){
+    // ── Hierarchy-based layout: group by level, draw actual parent-child edges ──
+    // Collect nodes per level
+    const levels={};
+    const nodePos={}; // name -> {x,y}
+    for(const [name, info] of Object.entries(agentHierarchy)){
+      const lvl=info.level||0;
+      if(!levels[lvl])levels[lvl]=[];
+      // Only show agents we've actually seen
+      if(agentOutputs[name]||lvl===0)levels[lvl].push(name);
     }
-  });
-
-  // Layer 3: Workers (bottom row, connected to nearest manager or executive)
-  const wy=320;
-  const wSpacing=Math.min(90,W/(workers.length+1));
-  workers.forEach((name,i)=>{
-    const wx=((i+1)*W)/(workers.length+1);
-    // Connect to nearest manager or executive
-    let parent={x:cx,y:ey+22};
-    if(mgrPositions.length&&mgrPositions[0].name!=='(direct)'){
-      // Simple: assign workers round-robin to managers
-      const mp=mgrPositions[i%mgrPositions.length];
-      parent={x:mp.x,y:mp.y+18};
+    // Also add agents from agentOutputs not yet in hierarchy (fallback)
+    for(const name of all){
+      let found=false;
+      for(const lvl in levels){if(levels[lvl].includes(name)){found=true;break}}
+      if(!found){
+        const role=agentRoles[name]||'worker';
+        const lvl=role==='executive'?0:role==='manager'?1:2;
+        if(!levels[lvl])levels[lvl]=[];
+        levels[lvl].push(name);
+      }
     }
-    svg+=`<line x1="${parent.x}" y1="${parent.y}" x2="${wx}" y2="${wy-16}" stroke="#3f3f46" stroke-width="0.7"/>`;
-    drawNode(wx,wy,name,16,'#60a5fa');
-  });
+    const sortedLevels=Object.keys(levels).map(Number).sort();
+    const levelCount=sortedLevels.length||1;
+    const levelSpacing=Math.min(120,(H-60)/levelCount);
+
+    // Position nodes per level
+    for(const lvl of sortedLevels){
+      const nodes=levels[lvl];
+      const y=55+lvl*levelSpacing;
+      const spacing=W/(nodes.length+1);
+      nodes.forEach((name,i)=>{
+        const x=(i+1)*spacing;
+        nodePos[name]={x,y};
+      });
+    }
+
+    // Draw edges first (under nodes)
+    for(const [name, info] of Object.entries(agentHierarchy)){
+      if(!nodePos[name])continue;
+      const parentName=info.parent;
+      if(parentName&&nodePos[parentName]){
+        const p=nodePos[parentName];
+        const c=nodePos[name];
+        const lvl=info.level||0;
+        const strokeCol=lvl<=1?'#818cf8':'#3f3f46';
+        const dash=lvl<=1?' stroke-dasharray="4"':'';
+        svg+=`<line x1="${p.x}" y1="${p.y+22}" x2="${c.x}" y2="${c.y-18}" stroke="${strokeCol}" stroke-width="0.8"${dash}/>`;
+      }
+    }
+
+    // Draw nodes
+    for(const [name, pos] of Object.entries(nodePos)){
+      const hi=agentHierarchy[name];
+      const lvl=hi?hi.level:2;
+      const r=lvl===0?22:lvl===1?18:16;
+      const strokeCol=lvl===0?'#818cf8':lvl===1?'#c084fc':'#60a5fa';
+      drawNode(pos.x,pos.y,name,r,strokeCol);
+    }
+  } else {
+    // ── Fallback: old role-based layout (no hierarchy data) ──
+    // Layer 1: Executive (top center)
+    const ey=55;
+    const execName=execs[0]||'Executive';
+    drawNode(cx,ey,execName,22,'#818cf8');
+
+    // Layer 2: Managers (middle row)
+    const my=180;
+    const mgrNames=mgrs.length?mgrs:['(direct)'];
+    const mgrPositions=[];
+    mgrNames.forEach((name,i)=>{
+      const mx=((i+1)*W)/(mgrNames.length+1);
+      mgrPositions.push({name,x:mx,y:my});
+      if(name!=='(direct)'){
+        svg+=`<line x1="${cx}" y1="${ey+22}" x2="${mx}" y2="${my-18}" stroke="#818cf8" stroke-width="0.8" stroke-dasharray="4"/>`;
+        drawNode(mx,my,name,18,'#c084fc');
+      }
+    });
+
+    // Layer 3: Workers (bottom row, connected to nearest manager or executive)
+    const wy=320;
+    workers.forEach((name,i)=>{
+      const wx=((i+1)*W)/(workers.length+1);
+      let parent={x:cx,y:ey+22};
+      if(mgrPositions.length&&mgrPositions[0].name!=='(direct)'){
+        const mp=mgrPositions[i%mgrPositions.length];
+        parent={x:mp.x,y:mp.y+18};
+      }
+      svg+=`<line x1="${parent.x}" y1="${parent.y}" x2="${wx}" y2="${wy-16}" stroke="#3f3f46" stroke-width="0.7"/>`;
+      drawNode(wx,wy,name,16,'#60a5fa');
+    });
+  }
 
   svg+=`</svg>`;area.innerHTML=svg;
 }
