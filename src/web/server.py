@@ -733,9 +733,10 @@ async def ws_run(ws: WebSocket):
             # Create background job (multiple jobs can run concurrently)
             supervisor_model = msg.get("supervisor_model", "sonnet")
             continue_from = msg.get("continue_from")
-            # Store clean goal for display, pass full topic to supervisor
+            # Use display_goal from frontend (most reliable), fallback to regex cleanup
             import re
-            clean_goal = re.sub(r'^Continue:?\s*".*?"\s*\n*\s*(New instruction:\s*)?', '', topic).strip() or topic
+            display_goal = msg.get("display_goal", "")
+            clean_goal = display_goal or re.sub(r'^Continue:?\s*".*?"\s*\n*\s*(New instruction:\s*)?', '', topic).strip() or topic
             job = job_manager.create(goal=clean_goal)
             job._full_topic = topic
             job.supervisor_model = supervisor_model

@@ -1091,7 +1091,7 @@ async function doContinue(text){
   }
   setPhase('running');
   const model=document.getElementById('supervisorModel').value;
-  connectWS({action:'start',topic:fullTopic,supervisor_model:model,continue_from:prevJobId});
+  connectWS({action:'start',topic:fullTopic,supervisor_model:model,continue_from:prevJobId,display_goal:displayTopic});
 }
 
 // ── TABS ──
