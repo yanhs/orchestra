@@ -48,7 +48,8 @@ class PipelineMode(BaseMode):
         while step_num < len(self.steps):
             step = self.steps[step_num]
             agent = step.agent
-            step_label = f"Step {step_num + 1}/{len(self.steps)}: {step.action}"
+            chain = " → ".join(f"**{s.agent.display_name}**" if i == step_num else s.agent.display_name for i, s in enumerate(self.steps))
+            step_label = f"{step.action.title()} [{chain}]"
 
             if on_update:
                 r = on_update(agent.display_name, "start", step_label)
