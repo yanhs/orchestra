@@ -360,11 +360,27 @@ Respond with a JSON object. Plan your first stage."""
                 prompt += f"\n\nUSER CORRECTION (live feedback, high priority):\n{corrections_text}\nAdjust your plan according to this feedback."
                 await self._notify(self.role_name, "start", f"User correction received: {corrections_text[:200]}")
 
-            # Ask supervisor what to do
+            # Ask supervisor what to do (as a full agent with streaming)
             try:
-                async def _sv_progress(text):
+                from ..agents.client import AgentClient
+                from ..agents.definition import AgentRole
+                sv_agent = AgentClient(
+                    role=AgentRole(
+                        name=f"_supervisor_{self.level}",
+                        display_name=self.role_name,
+                        model=self.supervisor_model,
+                        system_prompt="You are a JSON-only API. Respond with exactly one valid JSON object. No text, no markdown, no explanation.",
+                        allowed_tools=[],
+                        max_turns=1,
+                    ),
+                    project_path=self.project_path,
+                )
+                async def _sv_stream(name, text):
                     await self._notify(self.role_name, "progress", text)
-                raw = await _call_supervisor(prompt, self.supervisor_model, on_progress=_sv_progress)
+                sv_response = await sv_agent.run(prompt, on_stream=_sv_stream)
+                raw = sv_response.content
+                if sv_response.is_error:
+                    raw = ""
                 if not raw.strip():
                     empty_retries += 1
                     if empty_retries > max_empty_retries:
