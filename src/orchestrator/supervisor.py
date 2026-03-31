@@ -478,12 +478,15 @@ You are a manager — delegate the work to agents. Plan a stage now."""
                 )
                 sub_run.max_stages = max_sub
                 sub_run.context_doc = self.context_doc
-                sub_run._parent_hierarchy = copy.deepcopy({**self._parent_hierarchy, **self.agent_hierarchy})
-                # Set parent relationship
+                # Set parent relationship + add manager entry to our hierarchy
                 sub_run.agent_hierarchy[sub_run.role_name]["parent"] = self.role_name
                 if self.role_name in self.agent_hierarchy:
                     if sub_run.role_name not in self.agent_hierarchy[self.role_name]["children"]:
                         self.agent_hierarchy[self.role_name]["children"].append(sub_run.role_name)
+                self.agent_hierarchy[sub_run.role_name] = {
+                    "parent": self.role_name, "level": self.level + 1, "children": [],
+                }
+                sub_run._parent_hierarchy = copy.deepcopy({**self._parent_hierarchy, **self.agent_hierarchy})
                 sub_result = await sub_run.run()
 
                 # Merge sub-supervisor's hierarchy into ours
@@ -645,6 +648,17 @@ You are a manager — delegate the work to agents. Plan a stage now."""
                         if sub_run.role_name not in self.agent_hierarchy[self.role_name]["children"]:
                             self.agent_hierarchy[self.role_name]["children"].append(sub_run.role_name)
                     sub_runs.append(sub_run)
+
+                # Add manager entries to our hierarchy so they exist before emitting
+                for sub_run in sub_runs:
+                    if sub_run.role_name not in self.agent_hierarchy:
+                        self.agent_hierarchy[sub_run.role_name] = {
+                            "parent": self.role_name,
+                            "level": self.level + 1,
+                            "children": [],
+                        }
+                # Emit hierarchy with all managers registered
+                await self._notify(self.role_name, "hierarchy", json.dumps({**self._parent_hierarchy, **self.agent_hierarchy}))
 
                 # Now pass complete parent hierarchy (with all siblings) to each
                 full_parent = copy.deepcopy({**self._parent_hierarchy, **self.agent_hierarchy})
