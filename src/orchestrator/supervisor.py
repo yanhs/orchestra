@@ -226,12 +226,13 @@ YOUR ROLE:
 - Workers can request help: if you see [REQUEST_AGENT: ...] in their output, create the requested agent in the next stage
 
 TEAM BUILDING RULES:
-- NEVER assign a task to a single agent. Always create a team with complementary roles.
-- Research/Analysis → team: Researcher + Critic + Analyst (discuss mode, 2 rounds)
-- Planning/Strategy → team: Strategist + Opponent/Devil's Advocate + Finalizer (Red-Blue or discuss)
-- Development/Code → Full Dev Team: Architect → Developer → Tester → Reviewer (pipeline with rework)
-- Content/Writing → team: Writer + Editor + Fact-checker (pipeline or Red-Blue)
+- MINIMUM 3 agents per stage. Never 1 or 2.
+- Research/Analysis → 3+ agents: Researcher + Critic + Analyst (discuss mode, 2 rounds)
+- Planning/Strategy → 3 agents: Strategist + Opponent/Devil's Advocate + Finalizer (Red-Blue or discuss)
+- Development/Code → 4 agents: Architect → Developer → Tester → Reviewer (pipeline with rework)
+- Content/Writing → 3 agents: Writer + Editor + Fact-checker (pipeline or Red-Blue)
 - Every team MUST include a quality checker (critic/reviewer/tester) — no work ships without review.
+- If the goal mentions N items to research/build, create N specialized agents (one per item) + 1 critic.
 
 """ + SUPERVISOR_SYSTEM.split("BASE MODES")[1]  # Reuse modes, mechanics, format from main prompt
 
@@ -469,7 +470,7 @@ You are a manager — delegate the work to agents. Plan a stage now."""
                 )
                 sub_run.max_stages = max_sub
                 sub_run.context_doc = self.context_doc
-                sub_run._parent_hierarchy = {**self._parent_hierarchy, **self.agent_hierarchy}
+                sub_run._parent_hierarchy = copy.deepcopy({**self._parent_hierarchy, **self.agent_hierarchy})
                 sub_result = await sub_run.run()
 
                 # Merge sub-supervisor's hierarchy into ours
@@ -623,7 +624,7 @@ You are a manager — delegate the work to agents. Plan a stage now."""
                     )
                     sub_run.max_stages = min(d.get("max_sub_stages", 5), 5)
                     sub_run.context_doc = self.context_doc
-                    sub_run._parent_hierarchy = {**self._parent_hierarchy, **self.agent_hierarchy}
+                    sub_run._parent_hierarchy = copy.deepcopy({**self._parent_hierarchy, **self.agent_hierarchy})
                     return sub_run, await sub_run.run()
 
                 tasks = [asyncio.create_task(_run_delegate(d)) for d in delegates]
