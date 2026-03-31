@@ -375,9 +375,8 @@ Respond with a JSON object. Plan your first stage."""
                     ),
                     project_path=self.project_path,
                 )
-                async def _sv_stream(name, text):
-                    await self._notify(self.role_name, "progress", text)
-                sv_response = await sv_agent.run(prompt, on_stream=_sv_stream)
+                await self._notify(self.role_name, "progress", "Планирую следующий шаг...")
+                sv_response = await sv_agent.run(prompt)
                 raw = sv_response.content
                 if sv_response.is_error:
                     raw = ""
