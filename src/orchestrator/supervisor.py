@@ -16,11 +16,12 @@ LOG_DIR = Path(__file__).parent.parent.parent / "_orchestra" / "supervised"
 _config_lock = asyncio.Lock()
 
 
-async def _call_supervisor(prompt: str, model: str = "sonnet") -> str:
+async def _call_supervisor(prompt: str, model: str = "sonnet", on_progress=None) -> str:
     """Call supervisor with retry fallback."""
     from ..web.server import _call_claude
     return await _call_claude(prompt, model=model,
-        system_prompt="You are a JSON-only API. Respond with exactly one valid JSON object. No text, no markdown, no explanation.")
+        system_prompt="You are a JSON-only API. Respond with exactly one valid JSON object. No text, no markdown, no explanation.",
+        on_progress=on_progress)
 
 
 def _parse_json(text: str):
@@ -361,7 +362,9 @@ Respond with a JSON object. Plan your first stage."""
 
             # Ask supervisor what to do
             try:
-                raw = await _call_supervisor(prompt, self.supervisor_model)
+                async def _sv_progress(text):
+                    await self._notify(self.role_name, "progress", text)
+                raw = await _call_supervisor(prompt, self.supervisor_model, on_progress=_sv_progress)
                 if not raw.strip():
                     empty_retries += 1
                     if empty_retries > max_empty_retries:
