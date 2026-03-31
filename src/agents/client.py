@@ -109,13 +109,32 @@ class AgentClient:
                     if isinstance(msg, ResultMessage):
                         break
 
-                    # Stream text chunks
+                    # Stream text + tool use
                     if on_stream and isinstance(msg, AssistantMessage):
-                        text = self._extract_text(msg)
-                        if text:
-                            result = on_stream(self.role.display_name, text)
-                            if asyncio.iscoroutine(result):
-                                await result
+                        parts = []
+                        for block in msg.content or []:
+                            if isinstance(block, TextBlock) and block.text:
+                                parts.append(block.text)
+                            elif isinstance(block, ToolUseBlock):
+                                tool_info = f"🔧 {block.name}"
+                                if block.name == 'Bash':
+                                    cmd = (block.input or {}).get('command', '')[:80]
+                                    tool_info += f": {cmd}"
+                                elif block.name in ('Read', 'Write', 'Edit'):
+                                    fp = (block.input or {}).get('file_path', '')
+                                    tool_info += f": {fp}"
+                                elif block.name in ('Grep', 'Glob'):
+                                    pat = (block.input or {}).get('pattern', '')[:40]
+                                    tool_info += f": {pat}"
+                                elif block.name in ('WebSearch', 'WebFetch'):
+                                    q = (block.input or {}).get('query', '') or (block.input or {}).get('url', '')
+                                    tool_info += f": {q[:60]}"
+                                parts.append(tool_info)
+                        if parts:
+                            text = "\n".join(parts)
+                            r = on_stream(self.role.display_name, text)
+                            if asyncio.iscoroutine(r):
+                                await r
             finally:
                 await client.disconnect()
 
