@@ -835,18 +835,22 @@ function addCard(ag,ev,txt){
 
   if(ev==='start'){
     const c=document.createElement('div');c.className='rc ev-start';c.id=cid;
-    c.innerHTML=`<div class="rc-h"><span class="al">${esc(ag)}</span><span class="el">${esc(txt)}</span><div class="spinner"></div></div><div class="rc-b rc-live" style="font-size:0.7rem;color:var(--d);max-height:150px;overflow-y:auto"></div>`;
+    c.innerHTML=`<div class="rc-h"><span class="al">${esc(ag)}</span><span class="el">${esc(txt)}</span><div class="spinner"></div></div><div class="rc-b rc-live" style="font-size:0.7rem;color:var(--d);max-height:400px;overflow-y:auto"></div>`;
     if(selectedAgent&&selectedAgent!==ag)c.style.display='none';
     out.appendChild(c);out.scrollTop=out.scrollHeight;return;
   }
 
   if(ev==='progress'){
-    // Live update — append to active card
+    // Live update — accumulate in active card
     const active=document.getElementById(cid);
     if(active){
       const live=active.querySelector('.rc-live');
       if(live){
-        live.innerHTML=fmtMd(txt);
+        const chunk=document.createElement('div');
+        chunk.style.borderTop='1px solid rgba(255,255,255,0.03)';
+        chunk.style.padding='0.2rem 0';
+        chunk.innerHTML=fmtMd(txt);
+        live.appendChild(chunk);
         live.scrollTop=live.scrollHeight;
         out.scrollTop=out.scrollHeight;
       }
