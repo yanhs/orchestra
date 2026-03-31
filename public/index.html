@@ -191,8 +191,14 @@ body.st-running .phase-bar,body.st-done .phase-bar{display:flex}
 /* Choice buttons in left panel */
 .choices{padding:0 0.1rem 0.4rem}
 .choices .ps-label{margin-bottom:0.25rem}
-.ch-btn{display:block;width:100%;text-align:left;padding:0.3rem 0.5rem;margin-bottom:0.2rem;font-size:0.68rem;background:var(--bg);border:1px solid var(--b);border-radius:4px;color:var(--d2);cursor:pointer;font-family:inherit;line-height:1.4;word-wrap:break-word;transition:all .12s}
+.ch-btn{display:block;width:100%;text-align:left;padding:0.4rem 0.6rem;margin-bottom:0.3rem;font-size:0.72rem;background:var(--bg);border:1px solid var(--b);border-radius:5px;color:var(--d2);cursor:pointer;font-family:inherit;line-height:1.5;word-wrap:break-word;transition:all .12s}
 .ch-btn:hover{border-color:var(--a);color:var(--a);background:var(--ad)}
+.ch-btn.selected{border-color:var(--g);color:var(--g);background:rgba(74,222,128,0.08)}
+.ch-group{margin-bottom:0.8rem;padding-bottom:0.6rem;border-bottom:1px solid var(--b)}
+.ch-group-label{font-size:0.58rem;color:var(--d);margin-bottom:0.3rem;font-weight:600}
+.ch-send{padding:0.35rem 0.8rem;font-size:0.68rem;font-weight:600;background:var(--a);color:#000;border:none;border-radius:5px;cursor:pointer;margin-top:0.4rem}
+.ch-send:hover{filter:brightness(1.15)}
+.ch-send:disabled{opacity:0.3}
 
 /* Cards in output */
 .rc{margin-bottom:0.5rem;border:1px solid var(--b);border-radius:5px;overflow:hidden}
@@ -265,6 +271,7 @@ body.st-running .phase-bar,body.st-done .phase-bar{display:flex}
     <div class="job-tabs" id="jobTabs"></div>
     <div class="out-tabs">
       <div class="otab on" data-p="output" onclick="switchTab(this)">Output</div>
+      <div class="otab" data-p="choices" onclick="switchTab(this)">Choices <span id="choicesBadge" style="display:none;background:var(--y);color:#000;font-size:0.5rem;padding:1px 4px;border-radius:3px;margin-left:2px">0</span></div>
       <div class="otab" data-p="diagram" onclick="switchTab(this)">Diagram</div>
       <div class="otab" data-p="timeline" onclick="switchTab(this)">Timeline</div>
     </div>
@@ -272,6 +279,9 @@ body.st-running .phase-bar,body.st-done .phase-bar{display:flex}
       <div class="phase-bar" id="phaseBar"></div>
       <div class="out" id="output"><div class="ph">Enter a goal below to start</div></div>
       <div class="stats" id="statsBar" style="display:none;font-size:0.58rem"></div>
+    </div>
+    <div class="opanel" id="p-choices">
+      <div class="out" id="choicesPanel" style="padding:0.6rem"></div>
     </div>
     <div class="opanel" id="p-diagram">
       <div class="diag" id="diagArea"></div>
@@ -817,7 +827,7 @@ function fullReset(){
   }
   if(S.ws){S.ws.onclose=null;S.ws.close();S.ws=null}
   S.plan=null;S.topic='';S.agentActivity={};S.currentJobId=null;S.activePhases=[];S.currentPhase=null;
-  agentOutputs={};agentRoles={};agentHierarchy={};selectedAgent=null;pendingChoices=[];
+  agentOutputs={};agentRoles={};agentHierarchy={};selectedAgent=null;allChoiceGroups=[];
   activeJobId=null;
   document.getElementById('promptIn').value='';
   document.getElementById('output').innerHTML='<div class="ph">Enter a goal below to start</div>';
@@ -842,7 +852,11 @@ function addCard(ag,ev,txt){
   // Parse choices from supervisor decisions and agent outputs
   if(ev==='done' && txt.length>20){
     const choices=parseChoices(txt);
-    if(choices.length>1){pendingChoices=choices;renderAgentList()}
+    if(choices.length>1){
+      const stageName=txt.match(/\*\*Stage \d+ \[.*?\]: (.*?)\*\*/);
+      allChoiceGroups.push({stage:stageName?stageName[1]:ag,choices,selected:new Set()});
+      renderChoicesPanel();
+    }
   }
 
   // User feedback card
@@ -960,7 +974,7 @@ function trackAgent(ag, ev, txt){
   renderAgentList();
 }
 
-let pendingChoices=[]; // [{text,source}]
+let allChoiceGroups=[]; // [{stage, choices:[], selected:Set}]
 
 function parseChoices(text){
   // Only parse if text contains explicit [CHOICES:] marker from supervisor
@@ -976,26 +990,52 @@ function parseChoices(text){
   return choices.slice(0,8);
 }
 
-function pickChoice(text){
-  // Send as feedback — server will broadcast the event back to create the card
+function toggleChoice(groupIdx, choiceIdx){
+  const g=allChoiceGroups[groupIdx];
+  if(!g)return;
+  if(g.selected.has(choiceIdx)) g.selected.delete(choiceIdx);
+  else g.selected.add(choiceIdx);
+  renderChoicesPanel();
+}
+
+function sendChoices(groupIdx){
+  const g=allChoiceGroups[groupIdx];
+  if(!g||!g.selected.size)return;
+  const selected=[...g.selected].map(i=>g.choices[i]).join(', ');
   if(S.ws&&S.ws.readyState===1){
-    S.ws.send(JSON.stringify({action:'feedback',text}));
+    S.ws.send(JSON.stringify({action:'feedback',text:`User selected: ${selected}`}));
   }
-  pendingChoices=[];
-  renderAgentList();
+  g.sent=true;
+  renderChoicesPanel();
+}
+
+function renderChoicesPanel(){
+  const panel=document.getElementById('choicesPanel');
+  const badge=document.getElementById('choicesBadge');
+  const unsent=allChoiceGroups.filter(g=>!g.sent).length;
+  if(badge){badge.textContent=unsent;badge.style.display=unsent?'inline':'none'}
+  if(!panel)return;
+  if(!allChoiceGroups.length){panel.innerHTML='<div style="color:var(--d);font-size:0.75rem;padding:1rem">No choices yet</div>';return}
+  let html='';
+  allChoiceGroups.forEach((g,gi)=>{
+    const sent=g.sent?'opacity:0.5':'';
+    html+=`<div class="ch-group" style="${sent}">`;
+    html+=`<div class="ch-group-label">${esc(g.stage)}${g.sent?' (sent)':''}</div>`;
+    g.choices.forEach((c,ci)=>{
+      const sel=g.selected.has(ci)?'selected':'';
+      html+=`<button class="ch-btn ${sel}" onclick="toggleChoice(${gi},${ci})">${esc(c)}</button>`;
+    });
+    if(!g.sent){
+      html+=`<button class="ch-send" onclick="sendChoices(${gi})" ${g.selected.size?'':'disabled'}>Send selected (${g.selected.size})</button>`;
+    }
+    html+=`</div>`;
+  });
+  panel.innerHTML=html;
 }
 
 function renderAgentList(){
   const el=document.getElementById('agentList');
   let html='';
-  // Choices/questions at top — most important
-  if(pendingChoices.length>0){
-    html+=`<div class="choices"><div class="ps-label">Choices</div>`;
-    for(const c of pendingChoices){
-      html+=`<button class="ch-btn" onclick="pickChoice('${esc(c).replace(/'/g,"\\&#39;")}')">${esc(c)}</button>`;
-    }
-    html+=`</div>`;
-  }
   // Phase + cost
   const phaseText=S.currentPhase?`<span style="color:var(--a)">${esc(PHASE_LABELS[S.currentPhase]||S.currentPhase)}</span>`:'';
   const costEl=document.getElementById('statsBar');
