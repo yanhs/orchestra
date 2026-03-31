@@ -1227,7 +1227,12 @@ function handlePrompt(){
         return;
       }
     }
-    doContinue(text||'продолжай');
+    if(!text){
+      doContinue('продолжай');
+    } else {
+      // New text entered after done — start as new task, not continue
+      doSupervised(text);
+    }
   } else if(text){
     doSupervised(text);
   }
