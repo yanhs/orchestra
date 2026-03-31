@@ -717,8 +717,6 @@ function switchJob(id){
     jobs[activeJobId].outputHTML=document.getElementById('output').innerHTML;
     jobs[activeJobId].statsHTML=document.getElementById('statsBar').innerHTML;
     jobs[activeJobId].statsVisible=document.getElementById('statsBar').style.display;
-    jobs[activeJobId].agentListHTML=document.getElementById('agentList').innerHTML;
-    jobs[activeJobId].phaseBarHTML=document.getElementById('phaseBar').innerHTML;
     jobs[activeJobId]._agentOutputs=JSON.parse(JSON.stringify(agentOutputs));
     jobs[activeJobId]._agentRoles=Object.assign({},agentRoles);
     jobs[activeJobId]._agentHierarchy=JSON.parse(JSON.stringify(agentHierarchy));
@@ -739,8 +737,6 @@ function switchJob(id){
     document.getElementById('output').innerHTML=j.outputHTML;
     document.getElementById('statsBar').innerHTML=j.statsHTML||'';
     document.getElementById('statsBar').style.display=j.statsVisible||'none';
-    document.getElementById('agentList').innerHTML=j.agentListHTML||'';
-    document.getElementById('phaseBar').innerHTML=j.phaseBarHTML||'';
     agentOutputs=j._agentOutputs||{};
     agentRoles=j._agentRoles||{};
     agentHierarchy=j._agentHierarchy||{};
@@ -749,6 +745,9 @@ function switchJob(id){
     S.currentPhase=j._currentPhase||null;
     selectedAgent=j._selectedAgent||null;
     allChoiceGroups=j._choiceGroups||[];
+    // Re-render from data (not cached HTML)
+    renderAgentList();
+    renderPhaseBar();
     renderChoicesPanel();
     // Re-connect WS if running
     if(j.status==='running'&&j.ws&&j.ws.readyState===1){
@@ -759,9 +758,10 @@ function switchJob(id){
     // No cache — reset and replay via WS attach
     S.agentActivity={};S.activePhases=[];S.currentPhase=null;
     agentOutputs={};agentRoles={};agentHierarchy={};selectedAgent=null;
+    allChoiceGroups=[];renderChoicesPanel();
     document.getElementById('output').innerHTML='';
     document.getElementById('statsBar').style.display='none';
-    document.getElementById('agentList').innerHTML='<div class="ps-label" style="padding:0 0.1rem 0.3rem">Agents</div>';
+    document.getElementById('agentList').innerHTML='';
     renderPhaseBar();
     if(j&&j.status==='running'&&j.ws&&j.ws.readyState===1){
       S.ws=j.ws;
