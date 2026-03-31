@@ -546,6 +546,8 @@ You are a manager — delegate the work to agents. Plan a stage now."""
                 await self._notify(self.role_name, "done",
                     f"**Stage {stage_num + 1} [{phase.upper()}]: {stage_name}**\n{decision.get('reasoning', '')}{choices_text}")
 
+                # Save checkpoint before execution (so stop mid-stage has state)
+                self._save_progress()
                 # Execute the stage (register as child task for cancellation)
                 stage_coro = self._execute_stage(decision, stage_num)
                 stage_task = asyncio.create_task(stage_coro)
@@ -628,6 +630,9 @@ You are a manager — delegate the work to agents. Plan a stage now."""
                     continue
                 await self._notify(self.role_name, "done",
                     f"**Launching {len(delegates)} parallel Managers**\n{decision.get('reasoning', '')}")
+                # Save checkpoint with decision before starting managers
+                self.stages.append({"name": f"parallel_delegates ({len(delegates)})", "phase": "delegate", "decision": decision, "result_summary": ""})
+                self._save_progress()
 
                 # Pre-create all sub-supervisors and register them BEFORE starting
                 sub_runs = []
@@ -676,7 +681,9 @@ You are a manager — delegate the work to agents. Plan a stage now."""
                 for t in tasks:
                     try:
                         sub_run, sub_result = await t
-                    except (asyncio.CancelledError, Exception):
+                    except (asyncio.CancelledError, Exception) as e:
+                        # Save partial progress even on cancel
+                        self._save_progress()
                         continue
                     finally:
                         if self._job and t in self._job._child_tasks:
@@ -695,6 +702,8 @@ You are a manager — delegate the work to agents. Plan a stage now."""
                     # Merge context
                     if sub_run.context_doc != self.context_doc:
                         self.context_doc = sub_run.context_doc
+                    # Save checkpoint after each manager completes
+                    self._save_progress()
                     self.stages.append({
                         "name": f"delegate:{sub_run.goal[:40]}",
                         "phase": "delegate",

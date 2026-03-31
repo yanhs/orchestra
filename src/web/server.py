@@ -614,10 +614,15 @@ async def _run_job_task(job: Job):
                 pass
             return  # Don't broadcast config events to frontend
         job.add_event(agent_name, event, text)
-        # Keep context_doc synced for continuation even on stop/crash
+        # Keep context_doc + checkpoint synced for continuation
         if hasattr(supervised, 'context_doc'):
             job._context_doc = supervised.context_doc
             job._total_cost = supervised.total_cost
+            job._run_dir = str(supervised.run_dir)
+            # Save checkpoint on every stage completion (agent "done" from supervisor level)
+            if event == "done" and (agent_name.startswith("Manager") or agent_name == "Executive"):
+                try: supervised._save_progress()
+                except: pass
 
     try:
         supervisor_model = getattr(job, 'supervisor_model', 'sonnet')
