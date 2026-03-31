@@ -321,16 +321,27 @@ class SupervisedRun:
         result = OrchestraResult(mode="supervised", topic=self.goal)
 
         if self.stages:
-            # Resuming from checkpoint — build prompt from last stage
+            # Resuming from checkpoint with completed stages
             last = self.stages[-1]
             await self._notify(self.role_name, "start",
                 f"Resuming from stage {len(self.stages)} ({last['name']})...")
             prompt = self._build_next_prompt(
                 len(self.stages) - 1, last["name"],
                 last.get("result_summary", "Stage completed"))
-            # Emit hierarchy on resume so frontend has agent tree
             if self.agent_hierarchy:
                 await self._notify(self.role_name, "hierarchy", json.dumps({**self._parent_hierarchy, **self.agent_hierarchy}))
+        elif self.context_doc:
+            # No completed stages but have context from previous decisions — CONTINUE, don't restart
+            await self._notify(self.role_name, "start",
+                "Continuing from previous progress...")
+            prompt = f"""{self._system_prompt}
+
+GOAL: "{self.goal}"
+
+PREVIOUS PROGRESS (was interrupted, continue from here):
+{self.context_doc}
+
+Do NOT repeat what was already decided. Continue execution. Respond with a JSON object."""
         else:
             # Fresh start
             prompt = f"""{self._system_prompt}
