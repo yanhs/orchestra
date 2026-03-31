@@ -109,32 +109,32 @@ class AgentClient:
                     if isinstance(msg, ResultMessage):
                         break
 
-                    # Stream text + tool use
+                    # Stream text + tool use — chunk long text into paragraphs
                     if on_stream and isinstance(msg, AssistantMessage):
-                        parts = []
                         for block in msg.content or []:
                             if isinstance(block, TextBlock) and block.text:
-                                parts.append(block.text)
+                                # Split into paragraphs and stream each
+                                paragraphs = [p.strip() for p in block.text.split('\n\n') if p.strip()]
+                                if len(paragraphs) <= 1:
+                                    r = on_stream(self.role.display_name, block.text)
+                                    if asyncio.iscoroutine(r): await r
+                                else:
+                                    for para in paragraphs:
+                                        r = on_stream(self.role.display_name, para)
+                                        if asyncio.iscoroutine(r): await r
                             elif isinstance(block, ToolUseBlock):
                                 tool_info = f"🔧 {block.name}"
+                                inp = block.input or {}
                                 if block.name == 'Bash':
-                                    cmd = (block.input or {}).get('command', '')[:80]
-                                    tool_info += f": {cmd}"
+                                    tool_info += f": {inp.get('command', '')[:80]}"
                                 elif block.name in ('Read', 'Write', 'Edit'):
-                                    fp = (block.input or {}).get('file_path', '')
-                                    tool_info += f": {fp}"
+                                    tool_info += f": {inp.get('file_path', '')}"
                                 elif block.name in ('Grep', 'Glob'):
-                                    pat = (block.input or {}).get('pattern', '')[:40]
-                                    tool_info += f": {pat}"
+                                    tool_info += f": {inp.get('pattern', '')[:40]}"
                                 elif block.name in ('WebSearch', 'WebFetch'):
-                                    q = (block.input or {}).get('query', '') or (block.input or {}).get('url', '')
-                                    tool_info += f": {q[:60]}"
-                                parts.append(tool_info)
-                        if parts:
-                            text = "\n".join(parts)
-                            r = on_stream(self.role.display_name, text)
-                            if asyncio.iscoroutine(r):
-                                await r
+                                    tool_info += f": {(inp.get('query', '') or inp.get('url', ''))[:60]}"
+                                r = on_stream(self.role.display_name, tool_info)
+                                if asyncio.iscoroutine(r): await r
             finally:
                 await client.disconnect()
 
