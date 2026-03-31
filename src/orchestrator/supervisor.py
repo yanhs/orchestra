@@ -68,12 +68,12 @@ HIERARCHY:
   Manager → creates Workers (agents), chooses orchestration patterns
   Worker → executes tasks, can request help via [REQUEST_AGENT: role description]
 
-WHEN TO USE HIERARCHY:
-- If the user asks for multiple teams/groups/directions → ALWAYS delegate each to a separate Manager
-- If the task has 2+ independent parts → delegate each part to a Manager
-- Only use "run_stage" directly for truly trivial one-step tasks (e.g. "2+2")
-- When in doubt → delegate. Managers handle complexity, you handle strategy.
-- You can run multiple "delegate" actions via "run_parallel_stages" for parallel teams.
+RULES FOR EXECUTIVE:
+- NEVER use "run_stage" — you are Executive, not a Manager. Use "delegate" or "parallel_delegates" ONLY.
+- The ONLY exception: truly trivial tasks (e.g. "2+2") where one agent suffices.
+- For everything else: delegate to Managers. Each Manager builds their own team.
+- Multiple directions → "parallel_delegates" with one Manager per direction.
+- Single direction → "delegate" to one Manager.
 
 CRITICAL: A plan is NOT a result. Agents must EXECUTE — write code, create files, take real actions. Only finish when work is done.
 CRITICAL: For code tasks — always include a testing stage. Agents must write and run tests (pytest/unittest). Untested code is not done.
@@ -470,6 +470,25 @@ Respond with a JSON object. Plan your first stage."""
                 continue
 
             action = decision.get("action", "")
+            # Executive (level 0) must NOT use run_stage — auto-convert to delegate
+            if self.level == 0 and action == "run_stage":
+                stage_goal = decision.get("stage_goal", decision.get("stage_topic", self.goal))
+                action = "delegate"
+                decision["action"] = "delegate"
+                decision["sub_goal"] = stage_goal
+                decision["max_sub_stages"] = 5
+                await self._notify(self.role_name, "progress", "Delegating to Manager...")
+            # Same for run_parallel_stages from Executive — convert to parallel_delegates
+            if self.level == 0 and action == "run_parallel_stages":
+                stages_data = decision.get("stages", [])
+                delegates = []
+                for sd in stages_data:
+                    delegates.append({"sub_goal": sd.get("stage_goal", sd.get("stage_name", "")), "max_sub_stages": 5, "manager_model": "sonnet"})
+                if delegates:
+                    action = "parallel_delegates"
+                    decision["action"] = "parallel_delegates"
+                    decision["delegates"] = delegates
+                    await self._notify(self.role_name, "progress", f"Delegating {len(delegates)} directions to Managers...")
             self._log({"type": "decision", "stage": stage_num, "decision": decision})
 
             # Show reasoning immediately + save to context for resume
