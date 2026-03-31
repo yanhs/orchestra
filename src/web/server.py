@@ -726,12 +726,20 @@ async def _handle_message_agent(job: Job, agent_id: str, text: str):
     from ..agents.client import AgentClient
     from ..agents.definition import AgentRole
 
-    # Find agent config from the stored agent_configs on the job, or from the YAML config
+    # Find agent config — search by id first, then by display_name
     agent_data = None
-    if hasattr(job, '_agent_configs') and agent_id in job._agent_configs:
-        agent_data = job._agent_configs[agent_id]
-    else:
-        # Try loading from current config
+    actual_id = agent_id
+    if hasattr(job, '_agent_configs'):
+        if agent_id in job._agent_configs:
+            agent_data = job._agent_configs[agent_id]
+        else:
+            # Search by display_name
+            for aid, adata in job._agent_configs.items():
+                if adata.get("display_name") == agent_id:
+                    agent_data = adata
+                    actual_id = aid
+                    break
+    if not agent_data:
         try:
             config = load_config(CONFIG_PATH)
             if agent_id in config.agents:
@@ -743,8 +751,21 @@ async def _handle_message_agent(job: Job, agent_id: str, text: str):
                     "allowed_tools": role.allowed_tools,
                     "max_turns": role.max_turns,
                 }
+            else:
+                for aid, role in config.agents.items():
+                    if role.display_name == agent_id:
+                        agent_data = {
+                            "display_name": role.display_name,
+                            "model": role.model,
+                            "system_prompt": role.system_prompt,
+                            "allowed_tools": role.allowed_tools,
+                            "max_turns": role.max_turns,
+                        }
+                        actual_id = aid
+                        break
         except Exception:
             pass
+    agent_id = actual_id
 
     if not agent_data:
         job.add_event("System", "error", f"Agent '{agent_id}' not found")
@@ -801,8 +822,31 @@ async def ws_run(ws: WebSocket):
             for ev in job.events:
                 await ws.send_json({"type": "update", "agent": ev.agent, "event": ev.event, "text": ev.text})
             if job.status != "running":
-                # Job already finished
+                # Job finished — send result but stay open for direct agent messaging
                 await ws.send_json({"type": "result", **(job.result or {})})
+                # Listen for direct agent messages
+                queue = job.subscribe()
+                async def _send_new():
+                    while True:
+                        ev = await queue.get()
+                        if ev is None: break
+                        await ws.send_json({"type":"update","agent":ev.agent,"event":ev.event,"text":ev.text})
+                async def _recv_msg():
+                    while True:
+                        try:
+                            m = await ws.receive_json()
+                            if m.get("action")=="message_agent" and m.get("agent_id") and m.get("text"):
+                                asyncio.create_task(_handle_message_agent(job, m["agent_id"], m["text"]))
+                        except (WebSocketDisconnect, Exception):
+                            return
+                try:
+                    s=asyncio.create_task(_send_new())
+                    r=asyncio.create_task(_recv_msg())
+                    await asyncio.wait([s,r],return_when=asyncio.FIRST_COMPLETED)
+                    for t in [s,r]:
+                        if not t.done(): t.cancel()
+                finally:
+                    job.unsubscribe(queue)
                 return
         elif action == "start":
             if not topic:
