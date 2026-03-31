@@ -911,7 +911,7 @@ function addCard(ag,ev,txt){
 
   if(ev==='start'){
     const c=document.createElement('div');c.className='rc ev-start';c.id=cid;
-    c.innerHTML=`<div class="rc-h"><span class="al">${esc(ag)}</span><span class="el">${esc(txt)}</span><div class="spinner"></div></div><div class="rc-b rc-live" style="font-size:0.7rem;color:var(--d);max-height:400px;overflow-y:auto"></div>`;
+    c.innerHTML=`<div class="rc-h"><span class="al">${esc(ag)}</span><span class="el">${esc(txt)}</span><div class="spinner"></div></div><div class="rc-b rc-live" style="font-size:0.7rem;color:var(--d);max-height:none;overflow-y:auto"></div>`;
     if(selectedAgent&&selectedAgent!==ag)c.style.display='none';
     out.appendChild(c);out.scrollTop=out.scrollHeight;return;
   }
@@ -941,14 +941,21 @@ function addCard(ag,ev,txt){
     a.querySelectorAll('.spinner').forEach(s=>s.remove());
     a.className=`rc ev-${ev}`;
     a.removeAttribute('id');
-    // Append final result if not empty
-    if(txt&&txt.length>10){
+    // Append final result
+    if(txt&&txt.length>5){
       const res=document.createElement('div');
-      res.style.borderTop='1px solid rgba(255,255,255,0.06)';
+      res.style.borderTop='1px solid rgba(74,222,128,0.15)';
       res.style.padding='0.4rem';
       res.style.fontSize='0.75rem';
-      res.innerHTML=fmtMd(txt);
+      res.style.color='var(--t)';
+      res.innerHTML='<strong style="color:var(--g);font-size:0.65rem">RESULT:</strong><br>'+fmtMd(txt);
       a.appendChild(res);
+    } else {
+      // Mark completion even without text
+      const mark=document.createElement('div');
+      mark.style.cssText='padding:0.2rem 0.4rem;font-size:0.6rem;color:var(--g)';
+      mark.textContent=ev==='done'?'✓ Completed':'✗ Error';
+      a.appendChild(mark);
     }
   } else {
     // No active card — create fresh
