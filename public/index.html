@@ -841,7 +841,9 @@ async function doRun(){
 }
 
 function fin(){
-  // Keep agent activity (idle=green), just mark all working as idle
+  // Kill all spinners and mark working agents as idle
+  document.querySelectorAll('.spinner').forEach(s=>s.remove());
+  document.querySelectorAll('.rc.ev-start').forEach(c=>{c.className='rc ev-done'});
   for(const name in S.agentActivity){
     if(S.agentActivity[name]==='working') S.agentActivity[name]='idle';
   }
