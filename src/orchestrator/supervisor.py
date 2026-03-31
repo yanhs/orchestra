@@ -363,7 +363,6 @@ Respond with a JSON object. Plan your first stage."""
             # Ask supervisor what to do
             try:
                 async def _sv_progress(text):
-                    # Filter out raw JSON — only show human-readable text
                     t = text.strip()
                     if t.startswith('{') or t.startswith('"') or t.startswith('[') or t.startswith('```'):
                         return
@@ -403,10 +402,12 @@ Respond with a JSON object. Plan your first stage."""
             action = decision.get("action", "")
             self._log({"type": "decision", "stage": stage_num, "decision": decision})
 
-            # Show reasoning immediately so user sees what Executive is thinking
+            # Show reasoning immediately + save to context for resume
             reasoning = decision.get("reasoning", "")
             if reasoning:
                 await self._notify(self.role_name, "progress", reasoning)
+                self.context_doc += f"\n### Decision (stage {stage_num+1}): {reasoning[:200]}\n"
+                self._save_progress()
 
             if action == "finish":
                 if not self.stages:
