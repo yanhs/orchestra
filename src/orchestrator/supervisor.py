@@ -896,7 +896,9 @@ You are a manager — delegate the work to agents. Plan a stage now."""
             raw["agents"] = {k: v for k, v in raw["agents"].items() if k in current_ids}
 
             # Detect goal language for agent instructions
-            lang_hint = f"\nIMPORTANT: Respond ONLY in the same language as: \"{self.goal[:50]}\""
+            workspace = self.run_dir / "workspace"
+            workspace.mkdir(parents=True, exist_ok=True)
+            lang_hint = f"\nIMPORTANT: Respond ONLY in the same language as: \"{self.goal[:50]}\"\nWORKSPACE: Save ALL files to {workspace}/ — this is the shared project directory."
             for ag in agents_data:
                 raw["agents"][ag["id"]] = {
                     "display_name": ag.get("display_name", ag["id"]),
