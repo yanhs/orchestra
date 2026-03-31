@@ -831,7 +831,7 @@ function fullReset(){
 // ── OUTPUT HELPERS ──
 function addCard(ag,ev,txt){
   const out=document.getElementById('output');
-  const cid='a-'+ag.replace(/[^\w-]/g,'').slice(0,30);
+  const cid='ag'+Array.from(ag).reduce((h,c)=>(h*31+c.charCodeAt(0))|0,0).toString(36).replace('-','n');
 
   // Track agent output
   trackAgent(ag,ev,txt);
