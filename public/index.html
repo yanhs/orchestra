@@ -774,8 +774,13 @@ async function doRun(){
 }
 
 function fin(){
-  S.agentActivity={};S.ws=null;
+  // Keep agent activity (idle=green), just mark all working as idle
+  for(const name in S.agentActivity){
+    if(S.agentActivity[name]==='working') S.agentActivity[name]='idle';
+  }
+  S.ws=null;
   setPhase('done');
+  renderAgentList();
 }
 
 function newTask(){
