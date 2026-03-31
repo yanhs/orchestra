@@ -334,14 +334,31 @@ class SupervisedRun:
             # No completed stages but have context from previous decisions — CONTINUE, don't restart
             await self._notify(self.role_name, "start",
                 "Continuing from previous progress...")
+            # Find existing agents with sessions
+            from ..orchestrator.sessions import load_sessions
+            existing_sessions = load_sessions()
+            existing_agents = [k for k in existing_sessions.keys() if not k.startswith('_')]
+            agents_info = ""
+            if existing_agents:
+                agents_info = f"\n\nEXISTING AGENTS (already have sessions, REUSE their IDs — they remember everything):\n" + "\n".join(f"- {a}" for a in existing_agents[:20])
+
+            # Find hierarchy info
+            hier_info = ""
+            if self.agent_hierarchy and len(self.agent_hierarchy) > 1:
+                hier_info = "\n\nEXISTING HIERARCHY:\n"
+                for name, info in self.agent_hierarchy.items():
+                    ch = info.get('children', [])
+                    hier_info += f"- {name} (L{info.get('level',0)}){' → ' + ', '.join(ch) if ch else ''}\n"
+
             prompt = f"""{self._system_prompt}
 
 GOAL: "{self.goal}"
 
 PREVIOUS PROGRESS (was interrupted, continue from here):
 {self.context_doc}
-
-Do NOT repeat what was already decided. Continue execution. Respond with a JSON object."""
+{agents_info}
+{hier_info}
+IMPORTANT: Do NOT create new agents or managers. The agents above already exist with full memory. Reuse their exact IDs to continue their work. If managers were already delegated — re-delegate to the SAME managers. Respond with a JSON object."""
         else:
             # Fresh start
             prompt = f"""{self._system_prompt}
