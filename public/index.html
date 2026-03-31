@@ -897,8 +897,7 @@ let agentHierarchy={}; // name -> {parent, level, children} from backend
 let selectedAgent=null; // null = show all
 
 function isSupervisorAgent(name){
-  // Supervisor role_name is "Executive" (level 0) or "Manager-L{N}" (level 1+)
-  return name==='Executive'||name==='Supervisor'||/^Manager-L\d+$/i.test(name);
+  return name==='Executive'||name==='Supervisor'||name.startsWith('Manager');
 }
 
 function trackAgent(ag, ev, txt){

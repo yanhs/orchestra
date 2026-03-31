@@ -67,9 +67,12 @@ HIERARCHY:
   Manager → creates Workers (agents), chooses orchestration patterns
   Worker → executes tasks, can request help via [REQUEST_AGENT: role description]
 
-For SIMPLE goals (1-2 steps): skip managers, create workers directly via "run_stage".
-For COMPLEX goals (3+ directions): create managers via "delegate" for each direction.
-Managers can create sub-managers for very complex sub-goals.
+WHEN TO USE HIERARCHY:
+- If the user asks for multiple teams/groups/directions → ALWAYS delegate each to a separate Manager
+- If the task has 2+ independent parts → delegate each part to a Manager
+- Only use "run_stage" directly for truly trivial one-step tasks (e.g. "2+2")
+- When in doubt → delegate. Managers handle complexity, you handle strategy.
+- You can run multiple "delegate" actions via "run_parallel_stages" for parallel teams.
 
 CRITICAL: A plan is NOT a result. Agents must EXECUTE — write code, create files, take real actions. Only finish when work is done.
 CRITICAL: For code tasks — always include a testing stage. Agents must write and run tests (pytest/unittest). Untested code is not done.
@@ -176,12 +179,23 @@ To retry with completely different approach:
   "modifications": "<changes to agents/mode/options>"
 }}
 
-To delegate a sub-goal to a sub-supervisor:
+To delegate a sub-goal to a Manager:
 {{
   "action": "delegate",
-  "sub_goal": "<specific sub-goal for the sub-supervisor>",
+  "sub_goal": "<specific sub-goal for the manager>",
   "max_sub_stages": <3-5>,
-  "reasoning": "<why this needs its own supervisor>"
+  "manager_model": "<opus|sonnet|haiku>",
+  "reasoning": "<why this needs its own manager>"
+}}
+
+To delegate multiple sub-goals in parallel (one Manager per sub-goal):
+{{
+  "action": "parallel_delegates",
+  "delegates": [
+    {{"sub_goal": "<sub-goal 1>", "max_sub_stages": <3-5>, "manager_model": "<model>"}},
+    {{"sub_goal": "<sub-goal 2>", "max_sub_stages": <3-5>, "manager_model": "<model>"}}
+  ],
+  "reasoning": "<why parallel managers>"
 }}
 
 To run multiple stages in parallel:
@@ -254,7 +268,12 @@ class SupervisedRun:
         self.project_path = project_path or Path.cwd()
         self.supervisor_model = supervisor_model
         self.level = level
-        self.role_name = "Executive" if level == 0 else f"Manager-L{level}"
+        if level == 0:
+            self.role_name = "Executive"
+        else:
+            # Unique name from goal
+            short_goal = goal[:20].strip().replace('"','').replace('\n',' ')
+            self.role_name = f"Manager: {short_goal}"
         self._system_prompt = SUPERVISOR_SYSTEM if level == 0 else MANAGER_SYSTEM
         self.stages: list[dict] = []
         self.log: list[dict] = []
@@ -574,6 +593,68 @@ You are a manager — delegate the work to agents. Plan a stage now."""
                 await self._notify(self.role_name, "progress",
                     f"Stage cost: ${stage_cost:.4f} | Total: ${self.total_cost:.4f}")
                 await self._notify(self.role_name, "start", "Reviewing results, planning next stage...")
+
+            elif action == "parallel_delegates":
+                delegates = decision.get("delegates", [])
+                if not delegates:
+                    await self._notify(self.role_name, "error", "No delegates")
+                    continue
+                await self._notify(self.role_name, "done",
+                    f"**Launching {len(delegates)} parallel Managers**\n{decision.get('reasoning', '')}")
+
+                async def _run_delegate(d):
+                    sub_model = d.get("manager_model", "sonnet")
+                    sub_run = SupervisedRun(
+                        goal=d["sub_goal"],
+                        on_update=self.on_update,
+                        project_path=self.project_path,
+                        supervisor_model=sub_model,
+                        level=self.level + 1,
+                    )
+                    sub_run.max_stages = min(d.get("max_sub_stages", 5), 5)
+                    sub_run.context_doc = self.context_doc
+                    return sub_run, await sub_run.run()
+
+                tasks = [asyncio.create_task(_run_delegate(d)) for d in delegates]
+                if self._job:
+                    self._job._child_tasks.extend(tasks)
+
+                combined_output = []
+                for t in tasks:
+                    try:
+                        sub_run, sub_result = await t
+                    except (asyncio.CancelledError, Exception):
+                        continue
+                    finally:
+                        if self._job and t in self._job._child_tasks:
+                            self._job._child_tasks.remove(t)
+                    # Merge results
+                    for resp in sub_result.responses:
+                        result.add_response(resp)
+                    self.total_cost += sub_run.total_cost
+                    # Merge hierarchy
+                    for name, info in sub_run.agent_hierarchy.items():
+                        if name not in self.agent_hierarchy:
+                            self.agent_hierarchy[name] = info
+                    if sub_run.role_name not in self.agent_hierarchy.get(self.role_name, {}).get("children", []):
+                        if self.role_name in self.agent_hierarchy:
+                            self.agent_hierarchy[self.role_name]["children"].append(sub_run.role_name)
+                    # Merge context
+                    if sub_run.context_doc != self.context_doc:
+                        self.context_doc = sub_run.context_doc
+                    self.stages.append({
+                        "name": f"delegate:{sub_run.goal[:40]}",
+                        "phase": "delegate",
+                        "decision": {"sub_goal": sub_run.goal},
+                        "result_summary": sub_result.summary or "",
+                        "cost": sub_run.total_cost,
+                    })
+                    combined_output.append(f"### Manager: {sub_run.goal[:50]}\n{sub_result.summary or ''}")
+
+                await self._notify(self.role_name, "hierarchy", json.dumps(self.agent_hierarchy))
+                self._save_progress()
+                prompt = self._build_next_prompt(stage_num, "parallel managers", "\n\n".join(combined_output))
+                await self._notify(self.role_name, "start", "Reviewing manager results...")
 
             elif action == "run_parallel_stages":
                 stages_data = decision.get("stages", [])
