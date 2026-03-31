@@ -6,17 +6,17 @@
 <title>Agent Orchestra</title>
 <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
-:root{--bg:#09090b;--s:#111113;--s2:#18181b;--s3:#1e1e22;--b:rgba(255,255,255,0.06);--b2:rgba(255,255,255,0.1);--t:#e4e4e7;--d:#71717a;--d2:#a1a1aa;--a:#818cf8;--ad:rgba(129,140,248,0.12);--g:#4ade80;--y:#fbbf24;--r:#f87171;--bl:#60a5fa;--p:#c084fc;--o:#fb923c}
+:root{--bg:#09090b;--s:#111113;--s2:#18181b;--s3:#1e1e22;--b:rgba(255,255,255,0.06);--b2:rgba(255,255,255,0.1);--t:#e4e4e7;--d:#71717a;--d2:#a1a1aa;--a:#818cf8;--ad:rgba(129,140,248,0.12);--g:#4ade80;--y:#fbbf24;--r:#f87171;--bl:#60a5fa;--p:#c084fc;--o:#fb923c;--shadow-sm:0 2px 8px rgba(0,0,0,0.3);--shadow-md:0 4px 16px rgba(0,0,0,0.4);--shadow-lg:0 8px 32px rgba(0,0,0,0.5)}
 *{margin:0;padding:0;box-sizing:border-box}
 body{background:var(--bg);color:var(--t);font-family:'Inter',system-ui,sans-serif;height:100vh;display:flex;flex-direction:column;-webkit-font-smoothing:antialiased;overflow:hidden}
 .mono{font-family:'JetBrains Mono',monospace}
 
 /* Header */
-.hdr{padding:0.5rem 1rem;border-bottom:1px solid var(--b);display:flex;align-items:center;gap:0.8rem;background:var(--s);flex-shrink:0}
+.hdr{padding:0.5rem 1rem;border-bottom:2px solid;border-image:linear-gradient(to right, var(--a), var(--p)) 1;display:flex;align-items:center;gap:0.8rem;background:var(--s);flex-shrink:0}
 .hdr h1{font-size:0.9rem;font-weight:600} .hdr h1 span{color:var(--a)}
 .hdr-sp{flex:1}
-.hb{padding:0.2rem 0.55rem;font-size:0.68rem;background:var(--s2);border:1px solid var(--b);border-radius:4px;cursor:pointer;color:var(--d2);transition:all .12s}
-.hb:hover{border-color:var(--a);color:var(--a)} .hb.on{background:var(--ad);border-color:var(--a);color:var(--a)}
+.hb{padding:0.2rem 0.55rem;font-size:0.68rem;background:var(--s2);border:1px solid var(--b);border-radius:4px;cursor:pointer;color:var(--d2);transition:all .15s}
+.hb:hover{border-color:var(--a);color:var(--a);box-shadow:var(--shadow-sm)} .hb.on{background:var(--ad);border-color:var(--a);color:var(--a)}
 .hb-r{color:#fff;background:rgba(248,113,113,0.15);border-color:var(--r);font-weight:600}
 
 /* ── STATE: TOPIC — now always shows work layout ── */
@@ -30,8 +30,8 @@ body.st-topic .topic-view{display:none}
 .tv-ta:focus{outline:none;border-color:var(--a)}
 .tv-ta::placeholder{color:#52525b}
 .tv-btns{display:flex;gap:0.5rem;margin-top:0.7rem}
-.btn-plan{flex:1;padding:0.55rem;font-size:0.85rem;font-weight:600;background:var(--a);color:#000;border:none;border-radius:6px;cursor:pointer;transition:all .15s}
-.btn-plan:hover{filter:brightness(1.15)} .btn-plan:disabled{opacity:.35;cursor:not-allowed}
+.btn-plan{flex:1;padding:0.55rem;font-size:0.85rem;font-weight:600;background:linear-gradient(135deg, var(--a), #6366f1);color:#000;border:none;border-radius:6px;cursor:pointer;transition:all .15s;box-shadow:var(--shadow-sm)}
+.btn-plan:hover{filter:brightness(1.15);box-shadow:var(--shadow-md)} .btn-plan:disabled{opacity:.35;cursor:not-allowed}
 .tv-manual{margin-top:0.8rem;text-align:center;font-size:0.72rem}
 .tv-manual a{color:var(--d);cursor:pointer;text-decoration:none} .tv-manual a:hover{color:var(--a)}
 
@@ -39,13 +39,13 @@ body.st-topic .topic-view{display:none}
 .work-view{flex:1;display:flex;overflow:hidden}
 
 /* Plan Card (left) */
-.pc{width:280px;min-width:280px;border-right:1px solid var(--b);background:var(--s);display:flex;flex-direction:column;overflow:hidden}
+.pc{width:300px;min-width:300px;border-right:1px solid var(--b);backdrop-filter:blur(12px);background:rgba(17,17,19,0.85);display:flex;flex-direction:column;overflow:hidden}
 .pc-scroll{flex:1;overflow-y:auto;padding:0.8rem}
 .pc-scroll::-webkit-scrollbar{width:4px} .pc-scroll::-webkit-scrollbar-thumb{background:#333;border-radius:2px}
 /* Job tabs */
 .job-tabs{display:none;border-bottom:1px solid var(--b);background:var(--s2);flex-shrink:0;overflow-y:auto;max-height:5.5rem}
 .job-tabs.has-jobs{display:flex;flex-wrap:wrap}
-.jt{padding:0.3rem 0.6rem;font-size:0.62rem;color:var(--d);cursor:pointer;border-bottom:2px solid transparent;display:flex;align-items:center;gap:0.3rem;flex-shrink:0}
+.jt{padding:0.3rem 0.6rem;font-size:0.62rem;color:var(--d);cursor:pointer;border-bottom:2px solid transparent;display:flex;align-items:center;gap:0.3rem;flex-shrink:0;transition:all .2s ease}
 .jt:hover{color:var(--d2)} .jt.on{color:var(--a);border-bottom-color:var(--a)}
 .jt-dot{width:5px;height:5px;border-radius:50%;background:var(--g)}
 .jt-dot.running{background:var(--y);box-shadow:0 0 3px var(--y)}
@@ -59,11 +59,11 @@ body.st-topic .topic-view{display:none}
 /* Agent list — always visible */
 .agent-list{flex:1;overflow-y:auto;padding:0.4rem}
 .pc-scroll{display:none}
-.al-item{padding:0.35rem 0.5rem;border:1px solid var(--b);border-radius:5px;margin-bottom:0.25rem;cursor:pointer;display:flex;align-items:center;gap:0.35rem;font-size:0.72rem;transition:all .12s}
-.al-item:hover{border-color:var(--b2);background:rgba(255,255,255,0.015)}
-.al-item.selected{border-color:var(--a);background:var(--ad)}
-.al-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0}
-.al-dot.working{background:var(--y);box-shadow:0 0 4px var(--y)}
+.al-item{padding:0.35rem 0.5rem;border:1px solid var(--b);border-radius:5px;margin-bottom:0.25rem;cursor:pointer;display:flex;align-items:center;gap:0.35rem;font-size:0.72rem;transition:all .15s}
+.al-item:hover{border-color:var(--b2);background:rgba(255,255,255,0.015);transform:translateY(-1px)}
+.al-item.selected{border-color:var(--a);background:var(--ad);box-shadow:0 0 8px rgba(129,140,248,0.25)}
+.al-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0;transition:all .2s}
+.al-dot.working{background:var(--y);box-shadow:0 0 6px var(--y)}
 .al-dot.idle{background:var(--g)}
 .al-dot.off{background:var(--d)}
 .al-name{flex:1;font-weight:500}
@@ -141,7 +141,7 @@ body.st-choose .topic-view,body.st-choose .work-view{display:none}
 .add-ag input{flex:1;padding:0.3rem 0.5rem;background:var(--bg);border:1px solid var(--b);border-radius:4px;color:var(--t);font-size:0.72rem;font-family:inherit}
 .add-ag input:focus{outline:none;border-color:var(--a)}
 .add-ag input::placeholder{color:#52525b}
-.add-ag button{padding:0.3rem 0.6rem;font-size:0.68rem;font-weight:600;background:var(--a);color:#000;border:none;border-radius:4px;cursor:pointer;white-space:nowrap}
+.add-ag button{padding:0.3rem 0.6rem;font-size:0.68rem;font-weight:600;background:linear-gradient(135deg, var(--a), #6366f1);color:#000;border:none;border-radius:4px;cursor:pointer;white-space:nowrap;transition:all .15s}
 .add-ag button:disabled{opacity:.4}
 
 /* Mode options */
@@ -156,15 +156,15 @@ body.st-choose .topic-view,body.st-choose .work-view{display:none}
 
 /* Run button area */
 .pc-run{padding:0.7rem 0.8rem;border-top:1px solid var(--b)}
-.btn-run{width:100%;padding:0.5rem;font-size:0.82rem;font-weight:600;background:var(--a);color:#000;border:none;border-radius:6px;cursor:pointer;transition:all .12s}
-.btn-run:hover{filter:brightness(1.15)} .btn-run:disabled{opacity:.35;cursor:not-allowed}
+.btn-run{width:100%;padding:0.5rem;font-size:0.82rem;font-weight:600;background:linear-gradient(135deg, var(--a), #6366f1);color:#000;border:none;border-radius:6px;cursor:pointer;transition:all .15s;box-shadow:var(--shadow-sm)}
+.btn-run:hover{filter:brightness(1.15);box-shadow:var(--shadow-md)} .btn-run:disabled{opacity:.35;cursor:not-allowed}
 .btn-run.stop{background:var(--r);color:#fff}
 
 /* Right: output area */
 .out-area{flex:1;display:flex;flex-direction:column;background:var(--s);overflow:hidden}
 .out-tabs{display:flex;border-bottom:1px solid var(--b);background:var(--s2);flex-shrink:0}
-.otab{padding:0.35rem 0.7rem;font-size:0.7rem;color:var(--d);cursor:pointer;border-bottom:2px solid transparent;transition:all .1s}
-.otab:hover{color:var(--d2)} .otab.on{color:var(--a);border-bottom-color:var(--a)}
+.otab{padding:0.35rem 0.7rem;font-size:0.7rem;color:var(--d);cursor:pointer;border-bottom:2px solid transparent;transition:all .2s ease}
+.otab:hover{color:var(--d2)} .otab.on{color:var(--a);border-bottom-color:var(--a);text-shadow:0 0 8px rgba(129,140,248,0.3)}
 .opanel{flex:1;overflow:hidden;display:none} .opanel.on{display:flex;flex-direction:column}
 .out{flex:1;overflow-y:auto;padding:0.8rem;background:var(--s)}
 .out::-webkit-scrollbar{width:4px} .out::-webkit-scrollbar-thumb{background:#333;border-radius:2px}
@@ -176,17 +176,17 @@ body.st-choose .topic-view,body.st-choose .work-view{display:none}
 .phase-bar{display:none;padding:0.35rem 0.7rem;border-bottom:1px solid var(--b);background:var(--s2);flex-shrink:0;overflow-x:auto}
 body.st-running .phase-bar,body.st-done .phase-bar{display:flex}
 .phase-bar{display:flex;align-items:center;gap:0.15rem;white-space:nowrap}
-.pb-step{padding:0.15rem 0.45rem;font-size:0.58rem;font-weight:600;text-transform:uppercase;letter-spacing:0.04em;border-radius:3px;color:var(--d);background:var(--bg);border:1px solid var(--b);transition:all .2s}
-.pb-step.active{color:var(--y);border-color:var(--y);background:rgba(251,191,36,0.08)}
+.pb-step{padding:0.15rem 0.55rem;font-size:0.58rem;font-weight:600;text-transform:uppercase;letter-spacing:0.04em;border-radius:10px;color:var(--d);background:var(--bg);border:1px solid var(--b);transition:all .2s}
+.pb-step.active{color:var(--y);border-color:var(--y);background:rgba(251,191,36,0.08);box-shadow:0 0 8px rgba(251,191,36,0.2)}
 .pb-step.done{color:var(--g);border-color:rgba(74,222,128,0.3);background:rgba(74,222,128,0.06)}
 .pb-arrow{color:var(--d);font-size:0.5rem;margin:0 0.05rem}
 /* Prompt bar — always visible */
 .prompt-bar{display:flex;padding:0.4rem 0.5rem;border-top:1px solid var(--b);background:var(--s2);flex-shrink:0;gap:0.25rem;align-items:center}
-.prompt-in{flex:1;min-width:0;padding:0.3rem 0.4rem;background:var(--bg);border:1px solid var(--b);border-radius:4px;color:var(--t);font-size:0.72rem;font-family:inherit}
-.prompt-in:focus{outline:none;border-color:var(--a)}
+.prompt-in{flex:1;min-width:0;padding:0.3rem 0.4rem;background:var(--bg);border:1px solid var(--b);border-radius:4px;color:var(--t);font-size:0.72rem;font-family:inherit;transition:all .15s}
+.prompt-in:focus{outline:none;border-color:var(--a);box-shadow:inset 0 0 0 1px var(--a),0 0 8px rgba(129,140,248,0.15)}
 .prompt-in::placeholder{color:#52525b}
-.prompt-btn{padding:0.3rem 0.4rem;font-size:0.6rem;font-weight:600;background:var(--a);color:#000;border:none;border-radius:4px;cursor:pointer;white-space:nowrap}
-.prompt-btn:hover{filter:brightness(1.15)}
+.prompt-btn{padding:0.3rem 0.4rem;font-size:0.6rem;font-weight:600;background:linear-gradient(135deg, var(--a), #6366f1);color:#000;border:none;border-radius:4px;cursor:pointer;white-space:nowrap;transition:all .15s}
+.prompt-btn:hover{filter:brightness(1.15);box-shadow:var(--shadow-sm)}
 .prompt-btn.stop{background:var(--r);color:#fff}
 /* Choice buttons in left panel */
 .choices{padding:0 0.1rem 0.4rem}
@@ -196,19 +196,21 @@ body.st-running .phase-bar,body.st-done .phase-bar{display:flex}
 .ch-btn.selected{border-color:var(--g);color:var(--g);background:rgba(74,222,128,0.08)}
 .ch-group{margin-bottom:0.8rem;padding-bottom:0.6rem;border-bottom:1px solid var(--b)}
 .ch-group-label{font-size:0.58rem;color:var(--d);margin-bottom:0.3rem;font-weight:600}
-.ch-send{padding:0.35rem 0.8rem;font-size:0.68rem;font-weight:600;background:var(--a);color:#000;border:none;border-radius:5px;cursor:pointer;margin-top:0.4rem}
+.ch-send{padding:0.35rem 0.8rem;font-size:0.68rem;font-weight:600;background:linear-gradient(135deg, var(--a), #6366f1);color:#000;border:none;border-radius:5px;cursor:pointer;margin-top:0.4rem;transition:all .15s}
 .ch-send:hover{filter:brightness(1.15)}
 .ch-send:disabled{opacity:0.3}
 
 /* Cards in output */
-.rc{margin-bottom:0.5rem;border:1px solid var(--b);border-radius:5px;overflow:hidden}
+.rc{margin-bottom:0.5rem;border:1px solid var(--b);border-left:4px solid var(--a);border-radius:5px;overflow:hidden;box-shadow:var(--shadow-sm);transition:transform .15s,box-shadow .15s;animation:fadeSlideUp .25s ease-out}
+.rc:hover{transform:translateY(-1px);box-shadow:var(--shadow-md)}
+@keyframes fadeSlideUp{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
 .rc-h{padding:0.3rem 0.5rem;background:var(--s2);display:flex;align-items:center;gap:0.4rem;font-size:0.7rem;font-weight:600}
 .rc-h .al{color:var(--a)} .rc-h .el{color:var(--d);font-weight:400;font-family:'JetBrains Mono',monospace;font-size:0.6rem}
 .rc-b{padding:0.5rem;font-size:0.75rem;line-height:1.6;white-space:pre-wrap;word-wrap:break-word;color:var(--d2)}
-.rc.ev-start{border-color:var(--bl)} .rc.ev-start .rc-h{background:rgba(96,165,250,0.06)} .rc.ev-start .al{color:var(--bl)}
-.rc.ev-done{border-color:var(--g)} .rc.ev-done .rc-h{background:rgba(74,222,128,0.06)} .rc.ev-done .al{color:var(--g)}
-.rc.ev-error{border-color:var(--r)} .rc.ev-error .rc-h{background:rgba(248,113,113,0.06)} .rc.ev-error .al{color:var(--r)}
-.sc{border-color:var(--y)} .sc .rc-h{background:rgba(251,191,36,0.08)} .sc .al{color:var(--y)}
+.rc.ev-start{border-color:var(--bl);border-left-color:var(--bl)} .rc.ev-start .rc-h{background:rgba(96,165,250,0.06)} .rc.ev-start .al{color:var(--bl)}
+.rc.ev-done{border-color:var(--g);border-left-color:var(--g)} .rc.ev-done .rc-h{background:rgba(74,222,128,0.06)} .rc.ev-done .al{color:var(--g)}
+.rc.ev-error{border-color:var(--r);border-left-color:var(--r)} .rc.ev-error .rc-h{background:rgba(248,113,113,0.06)} .rc.ev-error .al{color:var(--r)}
+.sc{border-color:var(--y);border-left-color:var(--y)} .sc .rc-h{background:rgba(251,191,36,0.08)} .sc .al{color:var(--y)}
 @keyframes spin{to{transform:rotate(360deg)}}
 .spinner{width:10px;height:10px;border:2px solid var(--b2);border-top-color:var(--a);border-radius:50%;animation:spin .6s linear infinite}
 @keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
@@ -222,7 +224,7 @@ body.st-running .phase-bar,body.st-done .phase-bar{display:flex}
 .hi .ht{font-size:0.7rem;color:var(--d2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:1px}
 .hi .hx{font-size:0.55rem;color:var(--d);font-family:'JetBrains Mono',monospace;margin-top:2px}
 
-@media(max-width:768px){.pc{width:100%;min-width:100%;max-height:45vh;border-right:none;border-bottom:1px solid var(--b)}.work-view{flex-direction:column}.hist{display:none!important}}
+@media(max-width:768px){.pc{width:100%;min-width:100%;max-height:45vh;border-right:none;border-bottom:1px solid var(--b);backdrop-filter:none;background:var(--s)}.work-view{flex-direction:column}.hist{display:none!important}}
 </style>
 </head>
 <body class="st-topic">
@@ -262,6 +264,7 @@ body.st-running .phase-bar,body.st-done .phase-bar{display:flex}
       <div class="ps-label" style="padding:0 0.1rem 0.3rem">Agents</div>
     </div>
     <div class="prompt-bar" id="promptBar">
+      <span id="promptAgent" style="display:none;font-size:0.6rem;font-weight:600;color:var(--a);white-space:nowrap;padding:0.2rem 0.4rem;background:var(--ad);border-radius:3px;cursor:pointer" onclick="selectAgent(null)"></span>
       <input class="prompt-in" id="promptIn" placeholder="Enter a goal..." onkeydown="if(event.key==='Enter')handlePrompt()">
       <button class="prompt-btn" id="promptBtn" onclick="handlePrompt()">Go</button>
       <button class="prompt-btn stop" id="stopBtn" onclick="stopCurrent()">Stop</button>
@@ -709,26 +712,62 @@ function renderJobTabs(){
 }
 
 function switchJob(id){
+  // Save current job's output HTML before switching
+  if(activeJobId && jobs[activeJobId]){
+    jobs[activeJobId].outputHTML=document.getElementById('output').innerHTML;
+    jobs[activeJobId].statsHTML=document.getElementById('statsBar').innerHTML;
+    jobs[activeJobId].statsVisible=document.getElementById('statsBar').style.display;
+    jobs[activeJobId].agentListHTML=document.getElementById('agentList').innerHTML;
+    jobs[activeJobId].phaseBarHTML=document.getElementById('phaseBar').innerHTML;
+    jobs[activeJobId]._agentOutputs=JSON.parse(JSON.stringify(agentOutputs));
+    jobs[activeJobId]._agentRoles=Object.assign({},agentRoles);
+    jobs[activeJobId]._agentHierarchy=JSON.parse(JSON.stringify(agentHierarchy));
+    jobs[activeJobId]._agentActivity=Object.assign({},S.agentActivity);
+    jobs[activeJobId]._activePhases=[...S.activePhases];
+    jobs[activeJobId]._currentPhase=S.currentPhase;
+    jobs[activeJobId]._selectedAgent=selectedAgent;
+  }
+
   activeJobId=id;
   S.currentJobId=id;
   const j=jobs[id];
-  // Reset output for this tab
-  S.agentActivity={};S.activePhases=[];S.currentPhase=null;
-  agentOutputs={};agentRoles={};agentHierarchy={};selectedAgent=null;  document.getElementById('output').innerHTML='';
-  document.getElementById('statsBar').style.display='none';
-  document.getElementById('agentList').innerHTML='<div class="ps-label" style="padding:0 0.1rem 0.3rem">Agents</div>';
-  renderPhaseBar();
   S.topic=j?j.topic:'';
 
-  // Use existing WS if job is running, otherwise replay via new attach
-  if(j&&j.status==='running'&&j.ws&&j.ws.readyState===1){
-    S.ws=j.ws;
-    setPhase('running');
-    // Re-attach to get replay of events
-    attachToJob(id);
+  // Restore cached HTML if available
+  if(j && j.outputHTML){
+    document.getElementById('output').innerHTML=j.outputHTML;
+    document.getElementById('statsBar').innerHTML=j.statsHTML||'';
+    document.getElementById('statsBar').style.display=j.statsVisible||'none';
+    document.getElementById('agentList').innerHTML=j.agentListHTML||'';
+    document.getElementById('phaseBar').innerHTML=j.phaseBarHTML||'';
+    agentOutputs=j._agentOutputs||{};
+    agentRoles=j._agentRoles||{};
+    agentHierarchy=j._agentHierarchy||{};
+    S.agentActivity=j._agentActivity||{};
+    S.activePhases=j._activePhases||[];
+    S.currentPhase=j._currentPhase||null;
+    selectedAgent=j._selectedAgent||null;
+    // Re-connect WS if running
+    if(j.status==='running'&&j.ws&&j.ws.readyState===1){
+      S.ws=j.ws;
+    }
+    setPhase(j.status==='running'?'running':'done');
   } else {
-    attachToJob(id);
-    setPhase(j&&j.status==='running'?'running':'done');
+    // No cache — reset and replay via WS attach
+    S.agentActivity={};S.activePhases=[];S.currentPhase=null;
+    agentOutputs={};agentRoles={};agentHierarchy={};selectedAgent=null;
+    document.getElementById('output').innerHTML='';
+    document.getElementById('statsBar').style.display='none';
+    document.getElementById('agentList').innerHTML='<div class="ps-label" style="padding:0 0.1rem 0.3rem">Agents</div>';
+    renderPhaseBar();
+    if(j&&j.status==='running'&&j.ws&&j.ws.readyState===1){
+      S.ws=j.ws;
+      setPhase('running');
+      attachToJob(id);
+    } else {
+      attachToJob(id);
+      setPhase(j&&j.status==='running'?'running':'done');
+    }
   }
   renderJobTabs();
 }
@@ -1087,6 +1126,8 @@ function selectAgent(name){
   selectedAgent=name;
   renderAgentList();
   filterOutput();
+  updatePromptUI();
+  document.getElementById('promptIn').focus();
 }
 
 function filterOutput(){
@@ -1112,31 +1153,100 @@ function handlePrompt(){
   const text=inp.value.trim();
   inp.value='';
 
+  // Direct message to selected agent
+  if(selectedAgent && selectedAgent!==null && text && S.ws && S.ws.readyState===1){
+    // Find agent_id from display name by looking through agentOutputs or hierarchy
+    const agentId=findAgentId(selectedAgent);
+    if(agentId){
+      S.ws.send(JSON.stringify({action:'message_agent',agent_id:agentId,text}));
+      return;
+    }
+  }
+
   if(S.phase==='running'&&S.ws&&S.ws.readyState===1){
     if(!text)return;
     // Just send via WS — server will broadcast the "User"/"feedback" event back,
     // which creates the card via addCard. Don't call addCard here to avoid duplicate.
     S.ws.send(JSON.stringify({action:'feedback',text}));
   } else if(S.phase==='done'&&(S.currentJobId||activeJobId)){
+    if(selectedAgent){
+      // Direct message to agent even after job is done — need active WS
+      const agentId=findAgentId(selectedAgent);
+      if(agentId && text){
+        // Re-attach to job to get WS, then send
+        const jobId=S.currentJobId||activeJobId;
+        if(jobId){
+          const proto=location.protocol==='https:'?'wss:':'ws:';
+          const ws=new WebSocket(`${proto}//${location.host}${BASE}/ws/run`);
+          ws.onopen=()=>{
+            ws.send(JSON.stringify({action:'attach',job_id:jobId}));
+            // Wait a tick for attach to process, then send message
+            setTimeout(()=>{
+              ws.send(JSON.stringify({action:'message_agent',agent_id:agentId,text}));
+            }, 200);
+          };
+          ws.onmessage=e=>{
+            const d=JSON.parse(e.data);
+            if(d.type==='update'){
+              addCard(d.agent,d.event,d.text);
+              if(d.event==='start')S.agentActivity[d.agent]='working';
+              else if(d.event==='done'||d.event==='error')S.agentActivity[d.agent]='idle';
+              renderAgentList();drawDiagram();
+            }
+          };
+          S.ws=ws;
+        }
+        return;
+      }
+    }
     doContinue(text||'продолжай');
   } else if(text){
     doSupervised(text);
   }
 }
 
+function findAgentId(displayName){
+  // Try to find agent_id from display_name by checking current config agents
+  // Look in S.agents first (backend config cache)
+  for(const [id, ag] of Object.entries(S.agents||{})){
+    if(ag.display_name===displayName) return id;
+  }
+  // Try to derive from hierarchy — agents are often named with snake_case id
+  // that corresponds to display name
+  const candidate=displayName.toLowerCase().replace(/[^a-z0-9]+/g,'_').replace(/^_|_$/g,'');
+  if(candidate) return candidate;
+  return null;
+}
+
 function updatePromptUI(){
   const inp=document.getElementById('promptIn');
   const goBtn=document.getElementById('promptBtn');
   const stopBtn=document.getElementById('stopBtn');
-  if(S.phase==='running'){
+  const agLabel=document.getElementById('promptAgent');
+
+  // Show selected agent label
+  if(selectedAgent && selectedAgent!==null){
+    agLabel.style.display='inline';
+    agLabel.textContent=selectedAgent+' x';
+    agLabel.title='Click to deselect';
+    inp.placeholder=`Write to ${selectedAgent}...`;
+    goBtn.textContent='Send';
+    goBtn.style.opacity='1';
+  } else if(S.phase==='running'){
+    agLabel.style.display='none';
     inp.placeholder='Send correction to supervisor...';
     goBtn.textContent='Send';
     goBtn.style.opacity='0.7';
-    stopBtn.style.opacity='1';
   } else {
+    agLabel.style.display='none';
     inp.placeholder='Enter goal or follow-up...';
     goBtn.textContent='Go';
     goBtn.style.opacity='1';
+  }
+
+  if(S.phase==='running'){
+    stopBtn.style.opacity='1';
+  } else {
     stopBtn.style.opacity='0.3';
   }
 }

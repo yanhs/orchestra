@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Hello World — Команда Гамма</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+  <!-- Canvas для анимированных частиц -->
+  <canvas id="particlesCanvas"></canvas>
+
+  <!-- Плавающие геометрические фигуры -->
+  <div class="shapes-container" aria-hidden="true">
+    <div class="shape shape--triangle"></div>
+    <div class="shape shape--circle"></div>
+    <div class="shape shape--square"></div>
+    <div class="shape shape--diamond"></div>
+    <div class="shape shape--triangle shape--sm"></div>
+    <div class="shape shape--circle shape--sm"></div>
+  </div>
+
+  <!-- Главный контент -->
+  <main class="scene" id="scene">
+    <div class="scene__inner" id="sceneInner">
+
+      <!-- Декоративное кольцо вокруг текста -->
+      <div class="ring ring--outer"></div>
+      <div class="ring ring--inner"></div>
+
+      <div class="text-block" id="textBlock">
+        <div class="text-block__label">✦ GAMMA TEAM PRESENTS ✦</div>
+
+        <h1 class="title" id="title">
+          <span class="title__word" data-depth="0.6">Hello</span>
+          <span class="title__word title__word--accent" data-depth="0.9">World</span>
+        </h1>
+
+        <p class="subtitle" id="subtitle">
+          <span class="subtitle__char" style="--i:0">К</span><span class="subtitle__char" style="--i:1">о</span><span class="subtitle__char" style="--i:2">м</span><span class="subtitle__char" style="--i:3">а</span><span class="subtitle__char" style="--i:4">н</span><span class="subtitle__char" style="--i:5">д</span><span class="subtitle__char" style="--i:6">а</span>&nbsp;
+          <span class="subtitle__char subtitle__char--accent" style="--i:7">Г</span><span class="subtitle__char subtitle__char--accent" style="--i:8">а</span><span class="subtitle__char subtitle__char--accent" style="--i:9">м</span><span class="subtitle__char subtitle__char--accent" style="--i:10">м</span><span class="subtitle__char subtitle__char--accent" style="--i:11">а</span>
+        </p>
+
+        <div class="cta" id="cta">
+          <span class="cta__dot"></span>
+          <span class="cta__text">Двигайте мышью</span>
+          <span class="cta__dot"></span>
+        </div>
+      </div>
+
+    </div>
+  </main>
+
+  <!-- Счётчик FPS (dev helper) -->
+  <div class="fps" id="fps">60 fps</div>
+
+  <script src="script.js"></script>
+</body>
+</html>

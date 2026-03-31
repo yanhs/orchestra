@@ -362,7 +362,7 @@ Respond with a JSON object. Plan your first stage."""
 
             # Ask supervisor what to do
             try:
-                await self._notify(self.role_name, "progress", "Планирую следующий шаг...")
+                await self._notify(self.role_name, "progress", f"Планирую... ({self.supervisor_model})")
                 raw = await _call_supervisor(prompt, self.supervisor_model)
                 if not raw.strip():
                     empty_retries += 1
@@ -397,6 +397,11 @@ Respond with a JSON object. Plan your first stage."""
 
             action = decision.get("action", "")
             self._log({"type": "decision", "stage": stage_num, "decision": decision})
+
+            # Show reasoning immediately so user sees what Executive is thinking
+            reasoning = decision.get("reasoning", "")
+            if reasoning:
+                await self._notify(self.role_name, "progress", reasoning)
 
             if action == "finish":
                 if not self.stages:
@@ -842,6 +847,18 @@ You are a manager — delegate the work to agents. Plan a stage now."""
 
         # Emit hierarchy to frontend
         await self._notify(self.role_name, "hierarchy", json.dumps({**self._parent_hierarchy, **self.agent_hierarchy}))
+
+        # Emit agent configs so they can be used for direct messaging
+        agent_configs = {}
+        for ag in agents_data:
+            agent_configs[ag["id"]] = {
+                "display_name": ag.get("display_name", ag["id"]),
+                "model": ag.get("model", "sonnet"),
+                "system_prompt": ag.get("system_prompt", ""),
+                "allowed_tools": ag.get("allowed_tools", []),
+                "max_turns": ag.get("max_turns", 50),
+            }
+        await self._notify(self.role_name, "agent_config", json.dumps(agent_configs))
 
         config = load_config(CONFIG_PATH)
         coordinator = OrchestraCoordinator(

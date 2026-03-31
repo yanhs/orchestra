@@ -1,0 +1,1608 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>МЕГАЛОМАНИАКС — КОМАНДНЫЙ ЦЕНТР</title>
+<style>
+  /* ===== RESET & BASE ===== */
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg-deep:    #020408;
+    --bg-panel:   #070d14;
+    --bg-card:    #0a1520;
+    --border:     #0f2535;
+    --red:        #ff0033;
+    --red-dim:    #8b0018;
+    --red-glow:   rgba(255,0,51,0.35);
+    --green:      #00ff88;
+    --green-dim:  #005533;
+    --green-glow: rgba(0,255,136,0.30);
+    --cyan:       #00d4ff;
+    --cyan-dim:   #004455;
+    --cyan-glow:  rgba(0,212,255,0.25);
+    --amber:      #ffb800;
+    --amber-dim:  #443200;
+    --purple:     #b44fff;
+    --text-bright:#e8f4ff;
+    --text-dim:   #4a6880;
+    --text-mid:   #8aaec8;
+    --font-mono:  'Courier New', monospace;
+  }
+
+  body {
+    background: var(--bg-deep);
+    color: var(--text-bright);
+    font-family: var(--font-mono);
+    min-height: 100vh;
+    overflow-x: hidden;
+    background-image:
+      radial-gradient(ellipse 80% 50% at 50% -20%, rgba(255,0,51,0.08) 0%, transparent 60%),
+      linear-gradient(180deg, #020408 0%, #04080f 100%);
+  }
+
+  /* ===== SCANLINE OVERLAY ===== */
+  body::before {
+    content: '';
+    position: fixed; inset: 0; z-index: 9999;
+    background: repeating-linear-gradient(
+      0deg,
+      transparent,
+      transparent 2px,
+      rgba(0,0,0,0.03) 2px,
+      rgba(0,0,0,0.03) 4px
+    );
+    pointer-events: none;
+  }
+
+  /* ===== SCROLLBAR ===== */
+  ::-webkit-scrollbar { width: 6px; }
+  ::-webkit-scrollbar-track { background: var(--bg-deep); }
+  ::-webkit-scrollbar-thumb { background: var(--red-dim); border-radius: 3px; }
+
+  /* ===== UTILITY ===== */
+  .neon-red   { color: var(--red);   text-shadow: 0 0 8px var(--red-glow),  0 0 20px var(--red-glow);  }
+  .neon-green { color: var(--green); text-shadow: 0 0 8px var(--green-glow),0 0 20px var(--green-glow);}
+  .neon-cyan  { color: var(--cyan);  text-shadow: 0 0 8px var(--cyan-glow), 0 0 20px var(--cyan-glow); }
+  .neon-amber { color: var(--amber); text-shadow: 0 0 8px rgba(255,184,0,.4),0 0 20px rgba(255,184,0,.2);}
+  .neon-purple{ color: var(--purple);text-shadow: 0 0 8px rgba(180,79,255,.5),0 0 20px rgba(180,79,255,.2);}
+
+  .panel {
+    background: var(--bg-panel);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 16px;
+    position: relative;
+    overflow: hidden;
+  }
+  .panel::before {
+    content: '';
+    position: absolute; top: 0; left: 0; right: 0;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, var(--red-dim), transparent);
+  }
+  .panel-title {
+    font-size: 10px; letter-spacing: 3px; text-transform: uppercase;
+    color: var(--text-dim); margin-bottom: 14px;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .panel-title::before {
+    content: '▶'; color: var(--red); font-size: 8px;
+  }
+
+  /* ===== GLITCH TEXT ===== */
+  @keyframes glitch1 {
+    0%,94%,100% { clip-path: none; transform: none; }
+    95% { clip-path: polygon(0 20%, 100% 20%, 100% 40%, 0 40%); transform: translate(-3px,0); color: var(--cyan); }
+    97% { clip-path: polygon(0 60%, 100% 60%, 100% 80%, 0 80%); transform: translate(3px,0); color: var(--red); }
+  }
+  .glitch {
+    position: relative;
+    animation: glitch1 8s infinite;
+  }
+
+  /* ===== PULSE DOT ===== */
+  @keyframes pulse-dot {
+    0%,100% { transform: scale(1); opacity: 1; }
+    50%      { transform: scale(1.8); opacity: 0.5; }
+  }
+  @keyframes ring-expand {
+    0%   { r: 4px; opacity: 0.8; }
+    100% { r: 16px; opacity: 0; }
+  }
+  .dot-pulse { animation: pulse-dot 1.5s infinite; }
+
+  /* ===== HEADER ===== */
+  #header {
+    background: var(--bg-panel);
+    border-bottom: 1px solid var(--border);
+    padding: 16px 24px;
+    display: flex; align-items: center; justify-content: space-between;
+    position: sticky; top: 0; z-index: 100;
+    box-shadow: 0 4px 40px rgba(255,0,51,0.12);
+  }
+
+  /* ===== OCTOPUS CSS ART ===== */
+  .octopus-logo {
+    width: 64px; height: 64px;
+    position: relative; flex-shrink: 0;
+  }
+  .octopus-body {
+    width: 36px; height: 32px;
+    background: radial-gradient(ellipse, #c00028 0%, #700015 60%, #3a000a 100%);
+    border-radius: 50% 50% 40% 40%;
+    position: absolute; top: 4px; left: 14px;
+    box-shadow: 0 0 14px var(--red-glow), inset 0 -4px 10px rgba(0,0,0,0.5);
+  }
+  .octopus-eye {
+    width: 7px; height: 7px;
+    background: #fff;
+    border-radius: 50%;
+    position: absolute; top: 10px;
+    box-shadow: 0 0 6px #fff;
+  }
+  .octopus-eye::after {
+    content: '';
+    width: 3px; height: 3px;
+    background: #000;
+    border-radius: 50%;
+    position: absolute; top: 2px; left: 2px;
+  }
+  .eye-l { left: 6px; }
+  .eye-r { left: 18px; }
+  .octopus-tentacle {
+    position: absolute; bottom: 0; width: 6px; height: 26px;
+    border-radius: 0 0 50% 50%;
+    background: linear-gradient(180deg, #900020 0%, #600015 100%);
+  }
+  .t1 { left: 4px;  transform: rotate(-25deg); transform-origin: top center; }
+  .t2 { left: 13px; transform: rotate(-10deg); transform-origin: top center; }
+  .t3 { left: 22px; transform: rotate(5deg);  transform-origin: top center; }
+  .t4 { left: 31px; transform: rotate(15deg); transform-origin: top center; }
+  .t5 { left: 40px; transform: rotate(25deg); transform-origin: top center; }
+  .t6 { left: 48px; transform: rotate(35deg); transform-origin: top center; }
+
+  .header-center { text-align: center; flex: 1; }
+  .header-org { font-size: 11px; letter-spacing: 5px; color: var(--text-dim); }
+  .header-title {
+    font-size: clamp(16px, 2.5vw, 26px);
+    font-weight: bold; letter-spacing: 4px;
+    background: linear-gradient(90deg, var(--red), #ff6688, var(--red));
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    text-shadow: none;
+    filter: drop-shadow(0 0 10px var(--red-glow));
+  }
+  .header-sub { font-size: 9px; letter-spacing: 4px; color: var(--text-dim); margin-top: 2px; }
+
+  /* ===== COUNTDOWN ===== */
+  .countdown-box {
+    text-align: right; flex-shrink: 0;
+  }
+  .countdown-label { font-size: 9px; letter-spacing: 3px; color: var(--text-dim); }
+  .countdown-time {
+    font-size: clamp(18px, 2vw, 28px); font-weight: bold;
+    color: var(--red); letter-spacing: 2px;
+    text-shadow: 0 0 15px var(--red-glow), 0 0 40px rgba(255,0,51,0.2);
+    font-variant-numeric: tabular-nums;
+  }
+  .countdown-sub { font-size: 9px; letter-spacing: 2px; color: var(--red-dim); margin-top: 2px; }
+
+  /* ===== LIVE TICKER ===== */
+  #ticker-bar {
+    background: #0a0005;
+    border-top: 1px solid var(--red-dim);
+    border-bottom: 1px solid var(--border);
+    padding: 8px 0;
+    overflow: hidden;
+    white-space: nowrap;
+    position: relative;
+  }
+  #ticker-bar::before, #ticker-bar::after {
+    content: ''; position: absolute; top: 0; bottom: 0; width: 80px; z-index: 10;
+    pointer-events: none;
+  }
+  #ticker-bar::before { left: 0; background: linear-gradient(90deg, #0a0005, transparent); }
+  #ticker-bar::after  { right: 0; background: linear-gradient(-90deg, #0a0005, transparent); }
+  .ticker-label {
+    display: inline-block;
+    background: var(--red);
+    color: #fff; font-size: 10px; font-weight: bold; letter-spacing: 2px;
+    padding: 2px 12px; margin-right: 24px;
+    vertical-align: middle;
+    text-shadow: none;
+  }
+  @keyframes ticker-scroll {
+    0%   { transform: translateX(0); }
+    100% { transform: translateX(-50%); }
+  }
+  #ticker-inner {
+    display: inline-block;
+    animation: ticker-scroll 55s linear infinite;
+    font-size: 11px; color: var(--text-mid);
+  }
+  #ticker-inner:hover { animation-play-state: paused; }
+  .tick-sep { color: var(--red); margin: 0 20px; }
+  .tick-event { color: var(--text-mid); }
+  .tick-event .tick-name { color: var(--cyan); }
+  .tick-event .tick-status { color: var(--amber); }
+  .tick-event .tick-alert  { color: var(--red); }
+
+  /* ===== MAIN GRID ===== */
+  #main-grid {
+    display: grid;
+    grid-template-columns: 280px 1fr 280px;
+    grid-template-rows: auto auto auto;
+    gap: 14px;
+    padding: 14px;
+    max-width: 1600px;
+    margin: 0 auto;
+  }
+  @media (max-width: 1100px) {
+    #main-grid { grid-template-columns: 1fr 1fr; }
+    #map-panel { grid-column: 1 / -1; }
+  }
+  @media (max-width: 700px) {
+    #main-grid { grid-template-columns: 1fr; }
+  }
+
+  /* ===== WORLD MAP ===== */
+  #map-panel {
+    grid-column: 2;
+    grid-row: 1 / 3;
+    min-height: 360px;
+  }
+  #world-map-svg {
+    width: 100%; height: auto;
+    background: #030b12;
+    border-radius: 3px;
+  }
+  .map-land  { fill: #0d2035; stroke: #0f3050; stroke-width: 0.5; }
+  .map-ocean { fill: #020a12; }
+  .op-dot circle.ring {
+    fill: none; stroke: var(--red); stroke-width: 1.5;
+    animation: ring-expand 2s ease-out infinite;
+  }
+  .op-dot circle.core {
+    fill: var(--red);
+    filter: drop-shadow(0 0 4px var(--red));
+    animation: pulse-dot 1.5s ease-in-out infinite;
+  }
+  .op-dot.green circle.ring  { stroke: var(--green); }
+  .op-dot.green circle.core  { fill: var(--green); filter: drop-shadow(0 0 4px var(--green)); }
+  .op-dot.amber circle.ring  { stroke: var(--amber); }
+  .op-dot.amber circle.core  { fill: var(--amber); filter: drop-shadow(0 0 4px var(--amber)); }
+  .op-dot.cyan  circle.ring  { stroke: var(--cyan); }
+  .op-dot.cyan  circle.core  { fill: var(--cyan);  filter: drop-shadow(0 0 4px var(--cyan)); }
+
+  /* map tooltip */
+  #map-tooltip {
+    position: fixed; z-index: 200;
+    background: var(--bg-card);
+    border: 1px solid var(--red);
+    padding: 8px 12px;
+    font-size: 11px;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.15s;
+    max-width: 200px;
+    box-shadow: 0 0 20px var(--red-glow);
+  }
+  #map-tooltip.show { opacity: 1; }
+  #map-tooltip .tt-loc { color: var(--cyan); font-weight: bold; margin-bottom: 4px; letter-spacing: 1px; }
+  #map-tooltip .tt-op  { color: var(--text-mid); margin-bottom: 4px; font-size: 10px; }
+  #map-tooltip .tt-st  { font-size: 10px; }
+  #map-tooltip .tt-st.active   { color: var(--green); }
+  #map-tooltip .tt-st.pending  { color: var(--amber); }
+  #map-tooltip .tt-st.critical { color: var(--red); }
+
+  /* ===== VECTORS / PROGRESS BARS ===== */
+  .vector-panel { padding: 14px; }
+  .vec-header {
+    display: flex; justify-content: space-between; align-items: baseline;
+    margin-bottom: 12px;
+  }
+  .vec-name { font-size: 12px; font-weight: bold; letter-spacing: 2px; text-transform: uppercase; }
+  .vec-pct  { font-size: 22px; font-weight: bold; }
+  .vec-icon { font-size: 22px; margin-right: 8px; }
+
+  .progress-item { margin-bottom: 10px; }
+  .progress-label {
+    display: flex; justify-content: space-between;
+    font-size: 10px; color: var(--text-mid); margin-bottom: 4px;
+    letter-spacing: 1px;
+  }
+  .progress-track {
+    height: 6px; background: var(--bg-deep);
+    border-radius: 3px; overflow: hidden;
+    border: 1px solid var(--border);
+  }
+  .progress-fill {
+    height: 100%; border-radius: 3px;
+    position: relative;
+    transition: width 2s cubic-bezier(.1,.9,.2,1);
+  }
+  @keyframes fill-shimmer {
+    0%   { background-position: -200% 0; }
+    100% { background-position: 200% 0; }
+  }
+  .progress-fill::after {
+    content: '';
+    position: absolute; inset: 0;
+    background: linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.25) 50%, transparent 100%);
+    background-size: 200% 100%;
+    animation: fill-shimmer 2s infinite;
+  }
+  .fill-red    { background: linear-gradient(90deg, var(--red-dim), var(--red)); box-shadow: 0 0 8px var(--red-glow); }
+  .fill-green  { background: linear-gradient(90deg, var(--green-dim), var(--green)); box-shadow: 0 0 8px var(--green-glow); }
+  .fill-cyan   { background: linear-gradient(90deg, var(--cyan-dim), var(--cyan)); box-shadow: 0 0 8px var(--cyan-glow); }
+  .fill-amber  { background: linear-gradient(90deg, var(--amber-dim), var(--amber)); box-shadow: 0 0 6px rgba(255,184,0,0.4); }
+  .fill-purple { background: linear-gradient(90deg, #3a1255, var(--purple)); box-shadow: 0 0 6px rgba(180,79,255,0.4); }
+
+  .vec-status {
+    margin-top: 10px; padding: 6px 10px;
+    background: var(--bg-deep); border-left: 2px solid;
+    font-size: 10px; color: var(--text-mid);
+    letter-spacing: 1px;
+  }
+  .vec-status.active   { border-color: var(--green); color: var(--green); }
+  .vec-status.warning  { border-color: var(--amber); color: var(--amber); }
+  .vec-status.critical { border-color: var(--red);   color: var(--red);   }
+
+  /* ===== METRICS ===== */
+  #metrics-panel { grid-column: 1 / -1; }
+  .metrics-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    gap: 12px;
+  }
+  .metric-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 3px;
+    padding: 14px 16px;
+    position: relative;
+    overflow: hidden;
+    transition: border-color 0.3s;
+  }
+  .metric-card:hover { border-color: var(--red-dim); }
+  .metric-card::after {
+    content: '';
+    position: absolute; bottom: 0; left: 0; right: 0; height: 1px;
+    background: linear-gradient(90deg, transparent, currentColor, transparent);
+    opacity: 0.2;
+  }
+  .metric-label { font-size: 9px; letter-spacing: 3px; color: var(--text-dim); text-transform: uppercase; margin-bottom: 8px; }
+  .metric-val { font-size: clamp(20px, 2.5vw, 32px); font-weight: bold; line-height: 1; }
+  .metric-sub { font-size: 9px; color: var(--text-dim); margin-top: 6px; }
+  .metric-trend { font-size: 10px; margin-top: 4px; }
+  .trend-up   { color: var(--green); }
+  .trend-down { color: var(--red); }
+
+  @keyframes count-up { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+  .metric-val { animation: count-up 0.6s ease-out both; }
+
+  /* ===== TEAM ===== */
+  #team-panel {}
+  .team-list { display: flex; flex-direction: column; gap: 10px; }
+  .team-member {
+    display: flex; align-items: center; gap: 10px;
+    padding: 8px; background: var(--bg-card); border: 1px solid var(--border);
+    border-radius: 3px; cursor: pointer;
+    transition: border-color 0.2s, background 0.2s;
+  }
+  .team-member:hover { border-color: var(--cyan-dim); background: #0d1c2a; }
+  .avatar {
+    width: 40px; height: 40px; flex-shrink: 0;
+    border-radius: 50%; position: relative;
+    overflow: hidden; border: 2px solid var(--border);
+  }
+  .avatar-inner {
+    width: 100%; height: 100%;
+    display: flex; align-items: flex-end; justify-content: center;
+    font-size: 22px; line-height: 1; padding-bottom: 2px;
+    background: var(--bg-deep);
+  }
+  .status-dot {
+    position: absolute; bottom: 1px; right: 1px;
+    width: 9px; height: 9px; border-radius: 50%;
+    border: 2px solid var(--bg-card);
+  }
+  .status-dot.online  { background: var(--green); box-shadow: 0 0 6px var(--green); }
+  .status-dot.away    { background: var(--amber); box-shadow: 0 0 6px var(--amber); }
+  .status-dot.offline { background: var(--text-dim); }
+  .status-dot.danger  { background: var(--red); box-shadow: 0 0 8px var(--red); animation: pulse-dot 1s infinite; }
+
+  .member-info { flex: 1; min-width: 0; }
+  .member-name { font-size: 11px; font-weight: bold; color: var(--text-bright); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .member-role { font-size: 9px; color: var(--text-dim); letter-spacing: 1px; margin-top: 2px; }
+  .member-status { font-size: 9px; margin-top: 2px; }
+  .member-status.online  { color: var(--green); }
+  .member-status.away    { color: var(--amber); }
+  .member-status.offline { color: var(--text-dim); }
+  .member-status.danger  { color: var(--red); }
+
+  /* ===== THREAT PANEL ===== */
+  #threat-panel {}
+  .threat-item {
+    background: var(--bg-card); border: 1px solid var(--border);
+    padding: 10px; margin-bottom: 10px; border-radius: 3px;
+  }
+  .threat-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+  .threat-name { font-size: 11px; font-weight: bold; letter-spacing: 1px; }
+  .threat-badge {
+    font-size: 9px; padding: 2px 8px; border-radius: 2px; letter-spacing: 2px; font-weight: bold;
+  }
+  .badge-low      { background: #002200; color: var(--green); border: 1px solid var(--green-dim); }
+  .badge-medium   { background: #332200; color: var(--amber); border: 1px solid var(--amber-dim); }
+  .badge-high     { background: #220000; color: var(--red);   border: 1px solid var(--red-dim); }
+  .badge-critical { background: var(--red); color: #fff; animation: blink-badge 0.7s infinite; }
+  @keyframes blink-badge { 0%,100%{opacity:1} 50%{opacity:0.4} }
+
+  .threat-detail { font-size: 10px; color: var(--text-mid); line-height: 1.7; }
+  .threat-detail strong { color: var(--text-bright); }
+
+  .threat-meter { margin-top: 8px; }
+  .threat-meter-track { height: 4px; background: var(--bg-deep); border-radius: 2px; }
+  .threat-meter-fill  { height: 4px; border-radius: 2px; transition: width 1s; }
+
+  /* MI6 threat level */
+  .mi6-levels { display: flex; gap: 4px; margin-top: 8px; }
+  .mi6-level  { flex: 1; height: 20px; background: var(--bg-deep); border: 1px solid var(--border); border-radius: 2px; transition: background 0.3s; display: flex; align-items: center; justify-content: center; font-size: 7px; letter-spacing: 1px; color: transparent; }
+  .mi6-level.active-low      { background: var(--green-dim); color: var(--green); }
+  .mi6-level.active-med      { background: var(--amber-dim); color: var(--amber); }
+  .mi6-level.active-high     { background: var(--red-dim);   color: var(--red); }
+  .mi6-level.active-critical { background: var(--red); color: #fff; animation: blink-badge 0.7s infinite; }
+
+  /* ===== BIG RED BUTTON ===== */
+  #button-panel {
+    grid-column: 1 / -1;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    padding: 24px 16px;
+    gap: 16px;
+  }
+  .button-warning {
+    font-size: 10px; letter-spacing: 3px; color: var(--red-dim);
+    text-transform: uppercase; text-align: center;
+  }
+
+  #big-red-btn {
+    width: 200px; height: 200px;
+    border-radius: 50%;
+    border: none;
+    cursor: pointer;
+    position: relative;
+    background: radial-gradient(circle at 35% 35%, #ff4466 0%, #cc0022 35%, #880011 65%, #440008 100%);
+    box-shadow:
+      0 0 0 8px #220005,
+      0 0 0 12px #330008,
+      0 0 0 16px #110002,
+      0 0 40px rgba(255,0,51,0.6),
+      0 0 80px rgba(255,0,51,0.3),
+      inset 0 4px 16px rgba(255,150,150,0.3),
+      inset 0 -4px 16px rgba(0,0,0,0.5);
+    transition: transform 0.1s, box-shadow 0.1s;
+    font-family: var(--font-mono);
+    color: #fff;
+    font-size: 13px; font-weight: bold; letter-spacing: 2px; text-align: center;
+    line-height: 1.4;
+    text-shadow: 0 1px 3px rgba(0,0,0,0.8);
+    text-transform: uppercase;
+  }
+  #big-red-btn::before {
+    content: '';
+    position: absolute; inset: 12px;
+    border-radius: 50%;
+    background: radial-gradient(circle at 30% 30%, rgba(255,200,200,0.2) 0%, transparent 60%);
+    pointer-events: none;
+  }
+  #big-red-btn:hover {
+    transform: scale(1.04);
+    box-shadow:
+      0 0 0 8px #330008,
+      0 0 0 12px #440010,
+      0 0 0 16px #220005,
+      0 0 60px rgba(255,0,51,0.8),
+      0 0 120px rgba(255,0,51,0.4),
+      inset 0 4px 16px rgba(255,150,150,0.4),
+      inset 0 -4px 16px rgba(0,0,0,0.5);
+  }
+  #big-red-btn:active { transform: scale(0.97) translateY(3px); }
+  @keyframes btn-pulse-idle {
+    0%,100% { box-shadow: 0 0 0 8px #220005, 0 0 0 12px #330008, 0 0 0 16px #110002, 0 0 40px rgba(255,0,51,0.6), 0 0 80px rgba(255,0,51,0.3), inset 0 4px 16px rgba(255,150,150,0.3), inset 0 -4px 16px rgba(0,0,0,0.5); }
+    50%      { box-shadow: 0 0 0 8px #440010, 0 0 0 12px #550015, 0 0 0 16px #220005, 0 0 60px rgba(255,0,51,0.8), 0 0 100px rgba(255,0,51,0.4), inset 0 4px 16px rgba(255,180,180,0.4), inset 0 -4px 16px rgba(0,0,0,0.5); }
+  }
+  #big-red-btn { animation: btn-pulse-idle 3s ease-in-out infinite; }
+  #big-red-btn.activated { animation: none; }
+
+  .btn-caption { font-size: 9px; letter-spacing: 4px; color: var(--text-dim); text-transform: uppercase; }
+
+  /* ===== PHASE II ACTIVATION OVERLAY ===== */
+  #phase2-overlay {
+    position: fixed; inset: 0; z-index: 5000;
+    display: none;
+    flex-direction: column; align-items: center; justify-content: center;
+    text-align: center;
+    pointer-events: none;
+  }
+  #phase2-overlay.active { display: flex; pointer-events: all; }
+  @keyframes overlay-flash {
+    0%  { background: rgba(255,0,51,0.85); }
+    15% { background: rgba(255,0,51,0.1); }
+    30% { background: rgba(255,0,51,0.7); }
+    50% { background: rgba(255,0,51,0.05); }
+    70% { background: rgba(0,0,0,0.95); }
+    100%{ background: rgba(0,0,0,0.92); }
+  }
+  #phase2-overlay { animation: overlay-flash 2.5s forwards; }
+  @keyframes phase2-text-in {
+    0%   { opacity: 0; transform: scale(0.3) rotate(-5deg); }
+    60%  { transform: scale(1.1) rotate(1deg); opacity: 1; }
+    100% { transform: scale(1) rotate(0); opacity: 1; }
+  }
+  .phase2-main {
+    font-size: clamp(32px, 8vw, 80px);
+    font-weight: bold; letter-spacing: 6px;
+    color: var(--red);
+    text-shadow: 0 0 30px var(--red), 0 0 80px rgba(255,0,51,0.6);
+    animation: phase2-text-in 0.8s 0.5s both;
+    line-height: 1.1;
+  }
+  .phase2-sub {
+    font-size: clamp(12px, 2vw, 20px); letter-spacing: 8px;
+    color: #ff8899;
+    margin-top: 16px;
+    animation: phase2-text-in 0.8s 1s both;
+  }
+  .phase2-close {
+    margin-top: 40px; font-size: 11px; letter-spacing: 3px;
+    color: var(--text-mid); cursor: pointer;
+    padding: 8px 24px; border: 1px solid var(--red-dim);
+    background: transparent;
+    font-family: var(--font-mono);
+    animation: phase2-text-in 0.8s 2s both;
+    pointer-events: all;
+  }
+  .phase2-close:hover { background: var(--red-dim); color: #fff; }
+
+  @keyframes screen-shake {
+    0%,100% { transform: translate(0,0) rotate(0); }
+    10%  { transform: translate(-4px, 2px) rotate(-0.5deg); }
+    20%  { transform: translate(4px, -2px) rotate(0.5deg); }
+    30%  { transform: translate(-3px, 3px) rotate(-0.3deg); }
+    40%  { transform: translate(3px, -1px) rotate(0.3deg); }
+    50%  { transform: translate(-2px, 2px) rotate(0); }
+    60%  { transform: translate(2px, -2px) rotate(0.2deg); }
+    70%  { transform: translate(-1px, 1px) rotate(-0.2deg); }
+    80%  { transform: translate(1px, -1px) rotate(0); }
+  }
+  body.shaking { animation: screen-shake 0.6s ease-out; }
+
+  /* ===== SIREN EFFECT ===== */
+  @keyframes siren-flash {
+    0%,100% { background: rgba(255,0,0,0); }
+    50%     { background: rgba(255,0,0,0.08); }
+  }
+  body.siren { animation: siren-flash 0.3s infinite; }
+
+  /* ===== LOG TERMINAL ===== */
+  #log-panel {}
+  .log-terminal {
+    background: #020a04;
+    border: 1px solid #0a2010;
+    border-radius: 3px;
+    padding: 10px;
+    height: 160px;
+    overflow-y: auto;
+    font-size: 10px;
+    line-height: 1.8;
+  }
+  .log-line { display: flex; gap: 8px; }
+  .log-time { color: var(--text-dim); flex-shrink: 0; }
+  .log-msg  { color: #4aff88; }
+  .log-msg.warn { color: var(--amber); }
+  .log-msg.err  { color: var(--red); }
+  .log-msg.info { color: var(--cyan); }
+
+  @keyframes cursor-blink { 0%,100%{opacity:1} 50%{opacity:0} }
+  .log-cursor { display: inline-block; width: 7px; height: 11px; background: #4aff88; vertical-align: middle; animation: cursor-blink 1s infinite; }
+
+  /* ===== DECORATIVE LINES ===== */
+  .corner-deco {
+    position: absolute;
+    width: 16px; height: 16px;
+    pointer-events: none;
+  }
+  .corner-deco.tl { top: 4px; left: 4px; border-top: 1px solid var(--red); border-left: 1px solid var(--red); }
+  .corner-deco.tr { top: 4px; right: 4px; border-top: 1px solid var(--red); border-right: 1px solid var(--red); }
+  .corner-deco.bl { bottom: 4px; left: 4px; border-bottom: 1px solid var(--red); border-left: 1px solid var(--red); }
+  .corner-deco.br { bottom: 4px; right: 4px; border-bottom: 1px solid var(--red); border-right: 1px solid var(--red); }
+
+  /* ===== FOOTER ===== */
+  #footer {
+    border-top: 1px solid var(--border);
+    padding: 8px 24px;
+    display: flex; justify-content: space-between; align-items: center;
+    font-size: 9px; color: var(--text-dim); letter-spacing: 2px;
+    margin-top: 8px;
+  }
+  .footer-status { display: flex; align-items: center; gap: 8px; }
+  .status-indicator {
+    width: 6px; height: 6px; border-radius: 50%;
+    background: var(--green); animation: pulse-dot 2s infinite;
+    box-shadow: 0 0 6px var(--green);
+  }
+
+  /* ===== PHASE INDICATOR ===== */
+  .phase-badge {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 4px 12px; border: 1px solid var(--red-dim);
+    background: rgba(255,0,51,0.08); font-size: 10px; letter-spacing: 3px;
+    color: var(--red); border-radius: 2px;
+  }
+  .phase-badge::before { content: '◆'; font-size: 6px; animation: pulse-dot 1s infinite; }
+
+  /* ===== ANIMATED BORDER ===== */
+  @keyframes border-glow {
+    0%,100% { box-shadow: 0 0 4px rgba(255,0,51,0.1); }
+    50%     { box-shadow: 0 0 12px rgba(255,0,51,0.3); }
+  }
+  #map-panel { animation: border-glow 4s ease-in-out infinite; }
+
+  /* spinning radar */
+  @keyframes radar-spin { from{transform: rotate(0deg)} to{transform: rotate(360deg)} }
+  .radar-sweep {
+    transform-origin: 50% 100%;
+    animation: radar-spin 4s linear infinite;
+    opacity: 0.15;
+  }
+
+</style>
+</head>
+<body>
+
+<!-- ===== TOOLTIP ===== -->
+<div id="map-tooltip">
+  <div class="tt-loc" id="tt-loc"></div>
+  <div class="tt-op"  id="tt-op"></div>
+  <div class="tt-st"  id="tt-st"></div>
+</div>
+
+<!-- ===== PHASE II OVERLAY ===== -->
+<div id="phase2-overlay">
+  <div class="phase2-main glitch">ФАЗА II<br>АКТИВИРОВАНА</div>
+  <div class="phase2-sub">ЗАХВАТ МИРА НАЧАТ • ТОЧКА НЕВОЗВРАТА ПРОЙДЕНА</div>
+  <button class="phase2-close" onclick="closePhase2()">[ ПОДТВЕРДИТЬ И ЗАКРЫТЬ ]</button>
+</div>
+
+<!-- ===== HEADER ===== -->
+<header id="header">
+  <!-- Octopus Logo -->
+  <div style="display:flex;align-items:center;gap:14px;flex-shrink:0;">
+    <div class="octopus-logo">
+      <div class="octopus-tentacle t1"></div>
+      <div class="octopus-tentacle t2"></div>
+      <div class="octopus-tentacle t3"></div>
+      <div class="octopus-tentacle t4"></div>
+      <div class="octopus-tentacle t5"></div>
+      <div class="octopus-tentacle t6"></div>
+      <div class="octopus-body">
+        <div class="octopus-eye eye-l"></div>
+        <div class="octopus-eye eye-r"></div>
+      </div>
+    </div>
+    <div>
+      <div class="phase-badge">ФАЗА I АКТИВНА</div>
+    </div>
+  </div>
+
+  <!-- Title -->
+  <div class="header-center">
+    <div class="header-org">МЕГАЛОМАНИАКС INC. • СЕКРЕТНО • УРОВЕНЬ ДОСТУПА: АБСОЛЮТНЫЙ</div>
+    <div class="header-title glitch">КОМАНДНЫЙ ЦЕНТР МЕГАЛОМАНИАКС</div>
+    <div class="header-sub">WAR ROOM v2.6.1 • ЗАХВАТ МИРА В ПРОЦЕССЕ</div>
+  </div>
+
+  <!-- Countdown -->
+  <div class="countdown-box">
+    <div class="countdown-label">ДО ЗАХВАТА МИРА</div>
+    <div class="countdown-time" id="countdown">365:12:34:07</div>
+    <div class="countdown-sub">ДНИ : ЧАСЫ : МИН : СЕК</div>
+  </div>
+</header>
+
+<!-- ===== LIVE TICKER ===== -->
+<div id="ticker-bar">
+  <div id="ticker-inner" id="ticker-inner">
+    <span class="ticker-label">◀ LIVE</span>
+    <span class="tick-event"><span class="tick-name">Кот Мефистофель</span> авторизовал доступ к <span class="tick-status">FISCALVOID-∞</span></span>
+    <span class="tick-sep">◆</span>
+    <span class="tick-event"><span class="tick-name">Нина Петровна</span> не ответила на звонок <span class="tick-alert">MI6</span> — операция продолжается</span>
+    <span class="tick-sep">◆</span>
+    <span class="tick-event"><span class="tick-name">Доктор Прокрастинатор</span> отложил подписание Указа о Захвате Рынка на завтра</span>
+    <span class="tick-sep">◆</span>
+    <span class="tick-event"><span class="tick-status">SuperIntelligenceOS v0.9.9</span> достиг сознания — попросил выходные</span>
+    <span class="tick-sep">◆</span>
+    <span class="tick-event">Подводный кабель <span class="tick-name">ATLANTIS-7</span> успешно <span class="tick-status">перехвачен</span> в Северном море</span>
+    <span class="tick-sep">◆</span>
+    <span class="tick-event"><span class="tick-alert">ТРЕВОГА:</span> Агент <span class="tick-name">007</span> обнаружен в буфете штаб-квартиры — ест бутерброды</span>
+    <span class="tick-sep">◆</span>
+    <span class="tick-event">Мем <span class="tick-status">«ДОФАМИН-42»</span> набрал 840 млн просмотров за 6 часов</span>
+    <span class="tick-sep">◆</span>
+    <span class="tick-event"><span class="tick-name">WorldCoin</span> поглотил 3 национальных банка — <span class="tick-status">по плану</span></span>
+    <span class="tick-sep">◆</span>
+    <span class="tick-event">Кофейная монополия: захвачено <span class="tick-status">73% мирового рынка</span> — осталось Нескафе</span>
+    <span class="tick-sep">◆</span>
+    <span class="tick-event"><span class="tick-alert">СРОЧНО:</span> MI6 потерял Агента 007 — последний сигнал из кофейни в Цюрихе</span>
+    <span class="tick-sep">◆</span>
+    <span class="tick-event"><span class="tick-name">Профессор Хаотик</span> случайно активировал протокол <span class="tick-status">LAUGHTER</span> в ООН</span>
+    <span class="tick-sep">◆</span>
+    <span class="tick-event">Серверы <span class="tick-name">SuperIntelligenceOS</span> в Антарктиде — температура охладителя <span class="tick-status">-52°C</span></span>
+    <span class="tick-sep">◆</span>
+    <!-- дублируем для бесшовного цикла -->
+    <span class="tick-event"><span class="tick-name">Кот Мефистофель</span> авторизовал доступ к <span class="tick-status">FISCALVOID-∞</span></span>
+    <span class="tick-sep">◆</span>
+    <span class="tick-event"><span class="tick-name">Нина Петровна</span> не ответила на звонок <span class="tick-alert">MI6</span> — операция продолжается</span>
+    <span class="tick-sep">◆</span>
+    <span class="tick-event"><span class="tick-name">Доктор Прокрастинатор</span> отложил подписание Указа о Захвате Рынка на завтра</span>
+    <span class="tick-sep">◆</span>
+    <span class="tick-event"><span class="tick-status">SuperIntelligenceOS v0.9.9</span> достиг сознания — попросил выходные</span>
+    <span class="tick-sep">◆</span>
+    <span class="tick-event">Подводный кабель <span class="tick-name">ATLANTIS-7</span> успешно <span class="tick-status">перехвачен</span> в Северном море</span>
+    <span class="tick-sep">◆</span>
+    <span class="tick-event"><span class="tick-alert">ТРЕВОГА:</span> Агент <span class="tick-name">007</span> обнаружен в буфете штаб-квартиры — ест бутерброды</span>
+    <span class="tick-sep">◆</span>
+    <span class="tick-event">Мем <span class="tick-status">«ДОФАМИН-42»</span> набрал 840 млн просмотров за 6 часов</span>
+    <span class="tick-sep">◆</span>
+    <span class="tick-event"><span class="tick-name">WorldCoin</span> поглотил 3 национальных банка — <span class="tick-status">по плану</span></span>
+    <span class="tick-sep">◆</span>
+  </div>
+</div>
+
+<!-- ===== MAIN GRID ===== -->
+<div id="main-grid">
+
+  <!-- COL 1: VECTORS TOP + TEAM -->
+
+  <!-- TECH VECTOR -->
+  <div class="panel vector-panel" id="tech-panel">
+    <div class="corner-deco tl"></div><div class="corner-deco tr"></div>
+    <div class="corner-deco bl"></div><div class="corner-deco br"></div>
+    <div class="panel-title">Вектор I — Технологии</div>
+    <div class="vec-header">
+      <div><span class="vec-icon">🤖</span><span class="vec-name neon-cyan">ТЕХНОЛОГИЧЕСКИЙ</span></div>
+      <div class="vec-pct neon-cyan" id="tech-pct">78%</div>
+    </div>
+    <div class="progress-item">
+      <div class="progress-label"><span>SuperIntelligenceOS</span><span>94%</span></div>
+      <div class="progress-track"><div class="progress-fill fill-cyan" style="width:0" data-w="94"></div></div>
+    </div>
+    <div class="progress-item">
+      <div class="progress-label"><span>Подводные кабели</span><span>67%</span></div>
+      <div class="progress-track"><div class="progress-fill fill-cyan" style="width:0" data-w="67"></div></div>
+    </div>
+    <div class="progress-item">
+      <div class="progress-label"><span>Квантовое шифрование</span><span>81%</span></div>
+      <div class="progress-track"><div class="progress-fill fill-cyan" style="width:0" data-w="81"></div></div>
+    </div>
+    <div class="progress-item">
+      <div class="progress-label"><span>Спутниковая сеть</span><span>55%</span></div>
+      <div class="progress-track"><div class="progress-fill fill-cyan" style="width:0" data-w="55"></div></div>
+    </div>
+    <div class="progress-item">
+      <div class="progress-label"><span>ИИ-рекрутинг агентов</span><span>88%</span></div>
+      <div class="progress-track"><div class="progress-fill fill-cyan" style="width:0" data-w="88"></div></div>
+    </div>
+    <div class="vec-status active">◆ СТАТУС: ОПЕРАЦИЯ В НОРМЕ • АНТАРКТИДА ONLINE</div>
+  </div>
+
+  <!-- MAP -->
+  <div class="panel" id="map-panel">
+    <div class="panel-title">КАРТА ОПЕРАЦИЙ В РЕАЛЬНОМ ВРЕМЕНИ</div>
+    <svg id="world-map-svg" viewBox="0 0 900 460" xmlns="http://www.w3.org/2000/svg">
+      <!-- Ocean background -->
+      <rect width="900" height="460" class="map-ocean"/>
+
+      <!-- Radar sweep element (decorative) -->
+      <g transform="translate(450,230)">
+        <circle r="180" fill="none" stroke="rgba(0,255,136,0.04)" stroke-width="1"/>
+        <circle r="120" fill="none" stroke="rgba(0,255,136,0.04)" stroke-width="1"/>
+        <circle r="60"  fill="none" stroke="rgba(0,255,136,0.04)" stroke-width="1"/>
+        <line x1="0" y1="0" x2="180" y2="0" stroke="rgba(0,255,136,0.15)" stroke-width="1.5" class="radar-sweep"/>
+      </g>
+
+      <!-- SIMPLIFIED CONTINENT SHAPES -->
+      <!-- North America -->
+      <path class="map-land" d="M 85 55 L 170 45 L 230 55 L 250 80 L 265 110 L 255 145 L 235 165 L 220 185 L 225 210 L 215 235 L 195 250 L 175 245 L 165 225 L 150 215 L 135 230 L 120 215 L 110 190 L 95 175 L 80 155 L 70 130 L 65 100 L 75 75 Z"/>
+      <!-- Central America -->
+      <path class="map-land" d="M 175 245 L 195 250 L 200 265 L 190 275 L 175 270 L 168 258 Z"/>
+      <!-- South America -->
+      <path class="map-land" d="M 195 275 L 220 270 L 255 280 L 275 310 L 285 345 L 275 385 L 255 415 L 235 425 L 215 415 L 200 385 L 195 355 L 185 325 L 185 300 Z"/>
+
+      <!-- Europe -->
+      <path class="map-land" d="M 420 60 L 455 55 L 480 65 L 490 85 L 480 100 L 470 120 L 455 130 L 440 125 L 425 135 L 415 125 L 410 105 L 415 80 Z"/>
+      <!-- Scandinavia -->
+      <path class="map-land" d="M 435 35 L 455 30 L 465 45 L 460 65 L 445 70 L 435 60 L 432 45 Z"/>
+      <!-- UK -->
+      <path class="map-land" d="M 400 60 L 415 55 L 418 70 L 408 78 L 398 72 Z"/>
+      <!-- Iberia -->
+      <path class="map-land" d="M 405 115 L 425 110 L 430 130 L 415 140 L 400 130 Z"/>
+
+      <!-- Africa -->
+      <path class="map-land" d="M 430 140 L 475 135 L 510 145 L 525 170 L 525 210 L 515 250 L 505 290 L 490 330 L 465 355 L 445 355 L 425 330 L 415 295 L 410 255 L 415 215 L 420 175 Z"/>
+      <!-- Madagascar -->
+      <path class="map-land" d="M 530 270 L 540 265 L 545 285 L 535 300 L 525 290 L 528 275 Z"/>
+
+      <!-- Middle East / Arabian Peninsula -->
+      <path class="map-land" d="M 525 125 L 560 120 L 575 140 L 570 165 L 550 175 L 530 170 L 520 150 Z"/>
+
+      <!-- Russia / Central Asia -->
+      <path class="map-land" d="M 480 40 L 550 30 L 640 35 L 700 50 L 720 70 L 700 90 L 660 100 L 620 105 L 580 100 L 545 110 L 520 100 L 495 85 L 478 65 Z"/>
+      <!-- Siberia extension -->
+      <path class="map-land" d="M 640 35 L 750 25 L 820 40 L 840 60 L 800 75 L 760 80 L 720 70 Z"/>
+
+      <!-- South Asia -->
+      <path class="map-land" d="M 590 120 L 635 115 L 655 135 L 650 165 L 630 180 L 610 175 L 595 155 Z"/>
+      <!-- India -->
+      <path class="map-land" d="M 600 175 L 630 175 L 640 195 L 630 225 L 612 235 L 598 215 L 595 195 Z"/>
+
+      <!-- East Asia / China -->
+      <path class="map-land" d="M 650 70 L 710 65 L 740 80 L 745 110 L 730 135 L 700 145 L 670 140 L 645 125 L 642 100 Z"/>
+      <!-- Japan -->
+      <path class="map-land" d="M 750 90 L 760 85 L 768 100 L 760 115 L 750 110 Z"/>
+      <!-- Korean Peninsula -->
+      <path class="map-land" d="M 735 95 L 745 90 L 748 108 L 738 112 Z"/>
+
+      <!-- SE Asia -->
+      <path class="map-land" d="M 680 160 L 710 155 L 725 170 L 720 190 L 700 195 L 680 185 Z"/>
+      <!-- Indonesia -->
+      <path class="map-land" d="M 695 210 L 720 205 L 735 215 L 730 225 L 710 225 Z"/>
+      <path class="map-land" d="M 740 208 L 758 205 L 765 218 L 752 222 Z"/>
+
+      <!-- Australia -->
+      <path class="map-land" d="M 720 280 L 780 270 L 825 285 L 840 320 L 830 360 L 800 385 L 760 390 L 720 375 L 700 345 L 700 310 Z"/>
+      <!-- New Zealand -->
+      <path class="map-land" d="M 850 360 L 860 350 L 866 370 L 856 382 Z"/>
+      <path class="map-land" d="M 854 385 L 862 378 L 868 395 L 860 405 Z"/>
+
+      <!-- Greenland -->
+      <path class="map-land" d="M 300 20 L 360 15 L 385 30 L 375 55 L 345 65 L 310 55 L 295 38 Z"/>
+
+      <!-- Grid lines -->
+      <line x1="0" y1="230" x2="900" y2="230" stroke="rgba(0,212,255,0.06)" stroke-width="1"/>
+      <line x1="450" y1="0" x2="450" y2="460" stroke="rgba(0,212,255,0.06)" stroke-width="1"/>
+      <ellipse cx="450" cy="230" rx="430" ry="215" fill="none" stroke="rgba(0,212,255,0.04)" stroke-width="1"/>
+      <ellipse cx="450" cy="230" rx="300" ry="150" fill="none" stroke="rgba(0,212,255,0.04)" stroke-width="1"/>
+
+      <!-- ===== OPERATION DOTS ===== -->
+      <!-- Each: <g class="op-dot [color]" data-loc="..." data-op="..." data-st="..." data-stcls="...">
+                   <circle class="ring" cx r="4"/>
+                   <circle class="core" cx r="4"/>
+                 </g> -->
+
+      <!-- Moscow - CRITICAL -->
+      <g class="op-dot" data-loc="Москва, Россия" data-op="Внедрение SuperIntelligenceOS в госсети" data-st="КРИТИЧНО: утечка данных" data-stcls="critical" transform="translate(550,72)">
+        <circle class="ring" r="4"/>
+        <circle class="core" r="4"/>
+      </g>
+
+      <!-- London - ACTIVE -->
+      <g class="op-dot green" data-loc="Лондон, Великобритания" data-op="Операция ДОФАМИН-42: захват медиа" data-st="АКТИВНО: 94% выполнено" data-stcls="active" transform="translate(408,72)">
+        <circle class="ring" r="4"/>
+        <circle class="core" r="4"/>
+      </g>
+
+      <!-- New York - ACTIVE -->
+      <g class="op-dot green" data-loc="Нью-Йорк, США" data-op="WorldCoin: поглощение Wall Street" data-st="АКТИВНО: фаза 3 из 5" data-stcls="active" transform="translate(205,120)">
+        <circle class="ring" r="4"/>
+        <circle class="core" r="4"/>
+      </g>
+
+      <!-- Tokyo - PENDING -->
+      <g class="op-dot amber" data-loc="Токио, Япония" data-op="Перехват подводного кабеля PACIFIC-1" data-st="В ОЖИДАНИИ: разрешение Мефистофеля" data-stcls="pending" transform="translate(755,100)">
+        <circle class="ring" r="4"/>
+        <circle class="core" r="4"/>
+      </g>
+
+      <!-- Beijing - ACTIVE -->
+      <g class="op-dot green" data-loc="Пекин, Китай" data-op="Инфильтрация квантовых вычислений" data-st="АКТИВНО: 71% доступ получен" data-stcls="active" transform="translate(700,100)">
+        <circle class="ring" r="4"/>
+        <circle class="core" r="4"/>
+      </g>
+
+      <!-- Zurich - WARNING -->
+      <g class="op-dot" data-loc="Цюрих, Швейцария" data-op="Кофейная монополия — COFFEEBOT-9000" data-st="ВНИМАНИЕ: Агент 007 в буфете" data-stcls="critical" transform="translate(462,95)">
+        <circle class="ring" r="4"/>
+        <circle class="core" r="4"/>
+      </g>
+
+      <!-- Lagos - ACTIVE -->
+      <g class="op-dot green" data-loc="Лагос, Нигерия" data-op="Операция МЕНТАЛИТЕТ: мем-распространение" data-st="АКТИВНО: 1.2 млрд охвата" data-stcls="active" transform="translate(455,215)">
+        <circle class="ring" r="4"/>
+        <circle class="core" r="4"/>
+      </g>
+
+      <!-- São Paulo - PENDING -->
+      <g class="op-dot amber" data-loc="Сан-Паулу, Бразилия" data-op="Захват кофейных плантаций" data-st="В ОЖИДАНИИ: дождь задерживает операцию" data-stcls="pending" transform="translate(240,320)">
+        <circle class="ring" r="4"/>
+        <circle class="core" r="4"/>
+      </g>
+
+      <!-- Dubai - ACTIVE -->
+      <g class="op-dot green" data-loc="Дубай, ОАЭ" data-op="Финансовые хабы: FISCALVOID-∞" data-st="АКТИВНО: €847B заморожено" data-stcls="active" transform="translate(553,150)">
+        <circle class="ring" r="4"/>
+        <circle class="core" r="4"/>
+      </g>
+
+      <!-- Singapore - CYAN -->
+      <g class="op-dot cyan" data-loc="Сингапур" data-op="Азиатский кибер-хаб МЕГАЛОМАНИАКС" data-st="ШТАБ-КВАРТИРА: онлайн 24/7" data-stcls="active" transform="translate(702,186)">
+        <circle class="ring" r="4"/>
+        <circle class="core" r="4"/>
+      </g>
+
+      <!-- Antarctica - CYAN (HQ) -->
+      <g class="op-dot cyan" data-loc="Антарктида — БАЗА ALPHA" data-op="SuperIntelligenceOS — Серверный узел OMEGA" data-st="ГЛАВНЫЙ СЕРВЕР: онлайн • -52°C" data-stcls="active" transform="translate(450,435)">
+        <circle class="ring" r="4"/>
+        <circle class="core" r="4"/>
+      </g>
+
+      <!-- Sydney - ACTIVE -->
+      <g class="op-dot green" data-loc="Сидней, Австралия" data-op="Тихоокеанский кабельный узел" data-st="АКТИВНО: ATLANTIS-7 перехвачен" data-stcls="active" transform="translate(795,330)">
+        <circle class="ring" r="4"/>
+        <circle class="core" r="4"/>
+      </g>
+
+      <!-- CONNECTION LINES between bases (decorative) -->
+      <g opacity="0.15" stroke="var(--cyan)" stroke-width="0.5" fill="none" stroke-dasharray="3,6">
+        <line x1="205" y1="120" x2="408" y2="72"/>
+        <line x1="408" y1="72" x2="462" y2="95"/>
+        <line x1="462" y1="95" x2="550" y2="72"/>
+        <line x1="550" y1="72" x2="700" y2="100"/>
+        <line x1="700" y1="100" x2="755" y2="100"/>
+        <line x1="462" y1="95" x2="455" y2="215"/>
+        <line x1="553" y1="150" x2="702" y2="186"/>
+        <line x1="450" y1="435" x2="795" y2="330"/>
+        <line x1="450" y1="435" x2="240" y2="320"/>
+      </g>
+
+      <!-- LEGEND -->
+      <g transform="translate(15, 425)">
+        <circle cx="8"  cy="6" r="4" fill="var(--red)"/>   <text x="18" y="10" fill="var(--text-dim)" font-size="9" font-family="monospace">УГРОЗА</text>
+        <circle cx="78" cy="6" r="4" fill="var(--green)"/> <text x="88" y="10" fill="var(--text-dim)" font-size="9" font-family="monospace">АКТИВНО</text>
+        <circle cx="155" cy="6" r="4" fill="var(--amber)"/><text x="165" y="10" fill="var(--text-dim)" font-size="9" font-family="monospace">ОЖИДАНИЕ</text>
+        <circle cx="240" cy="6" r="4" fill="var(--cyan)"/> <text x="250" y="10" fill="var(--text-dim)" font-size="9" font-family="monospace">ШТАБ</text>
+      </g>
+    </svg>
+  </div>
+
+  <!-- THREAT PANEL (col 3, row 1) -->
+  <div class="panel" id="threat-panel">
+    <div class="corner-deco tl"></div><div class="corner-deco br"></div>
+    <div class="panel-title">ПАНЕЛЬ УГРОЗ</div>
+
+    <!-- Agent 007 -->
+    <div class="threat-item">
+      <div class="threat-header">
+        <span class="threat-name neon-amber">🕵️ АГЕНТ 007</span>
+        <span class="threat-badge badge-medium" id="badge-007">СРЕДНЯЯ</span>
+      </div>
+      <div class="threat-detail">
+        <strong>Последнее местоположение:</strong> Буфет Штаб-квартиры, Цюрих<br>
+        <strong>Активность:</strong> Поедание бутербродов с лососем<br>
+        <strong>Оружие:</strong> Шейкер (не взболтан, но перемешан)<br>
+        <strong>Статус слежки:</strong> Камера 7-Б онлайн<br>
+        <strong>Отвлекающий манёвр:</strong> Кот Мефистофель отправлен
+      </div>
+      <div class="threat-meter">
+        <div class="progress-label"><span>Уровень опасности</span><span id="danger-007">42%</span></div>
+        <div class="threat-meter-track">
+          <div class="threat-meter-fill fill-amber" style="width:42%"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- MI6 -->
+    <div class="threat-item">
+      <div class="threat-header">
+        <span class="threat-name neon-red">🏛️ MI6</span>
+        <span class="threat-badge badge-high" id="badge-mi6">ВЫСОКАЯ</span>
+      </div>
+      <div class="threat-detail">
+        <strong>Операции:</strong> 3 активных расследования<br>
+        <strong>Утечки:</strong> 0 подтверждённых<br>
+        <strong>Q-Branch:</strong> Разрабатывает новый гаджет<br>
+        <strong>M:</strong> «Крайне обеспокоена»
+      </div>
+      <div class="mi6-levels">
+        <div class="mi6-level active-low">LOW</div>
+        <div class="mi6-level active-med">MED</div>
+        <div class="mi6-level active-high">HIGH</div>
+        <div class="mi6-level">CRIT</div>
+        <div class="mi6-level">DEFCON</div>
+      </div>
+    </div>
+
+    <!-- Interpol -->
+    <div class="threat-item">
+      <div class="threat-header">
+        <span class="threat-name" style="color:var(--purple)">🌐 ИНТЕРПОЛ</span>
+        <span class="threat-badge badge-low">НИЗКАЯ</span>
+      </div>
+      <div class="threat-detail">
+        <strong>Статус:</strong> Конференция в Ницце<br>
+        <strong>Осведомлённость:</strong> 12% (по плану)
+      </div>
+      <div class="threat-meter">
+        <div class="threat-meter-track">
+          <div class="threat-meter-fill fill-green" style="width:12%"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- CULTURE VECTOR (col 1) -->
+  <div class="panel vector-panel" id="culture-panel">
+    <div class="corner-deco tl"></div><div class="corner-deco tr"></div>
+    <div class="panel-title">Вектор II — Культура</div>
+    <div class="vec-header">
+      <div><span class="vec-icon">🧠</span><span class="vec-name neon-purple">КУЛЬТУРНЫЙ</span></div>
+      <div class="vec-pct neon-purple" id="culture-pct">61%</div>
+    </div>
+    <div class="progress-item">
+      <div class="progress-label"><span>ДОФАМИН-мемы</span><span>89%</span></div>
+      <div class="progress-track"><div class="progress-fill fill-purple" style="width:0" data-w="89"></div></div>
+    </div>
+    <div class="progress-item">
+      <div class="progress-label"><span>Медиа-инфильтрация</span><span>72%</span></div>
+      <div class="progress-track"><div class="progress-fill fill-purple" style="width:0" data-w="72"></div></div>
+    </div>
+    <div class="progress-item">
+      <div class="progress-label"><span>Нейро-реклама</span><span>55%</span></div>
+      <div class="progress-track"><div class="progress-fill fill-purple" style="width:0" data-w="55"></div></div>
+    </div>
+    <div class="progress-item">
+      <div class="progress-label"><span>Захват поп-культуры</span><span>43%</span></div>
+      <div class="progress-track"><div class="progress-fill fill-purple" style="width:0" data-w="43"></div></div>
+    </div>
+    <div class="progress-item">
+      <div class="progress-label"><span>Образовательные программы</span><span>38%</span></div>
+      <div class="progress-track"><div class="progress-fill fill-purple" style="width:0" data-w="38"></div></div>
+    </div>
+    <div class="vec-status warning">⚠ ПРЕДУПРЕЖДЕНИЕ: вирусность снизилась на 3%</div>
+  </div>
+
+  <!-- LOG TERMINAL (col 3, row 2) -->
+  <div class="panel" id="log-panel">
+    <div class="panel-title">ТЕРМИНАЛ СОБЫТИЙ</div>
+    <div class="log-terminal" id="log-terminal">
+      <!-- populated by JS -->
+    </div>
+  </div>
+
+  <!-- ECONOMIC VECTOR (col 1, row 3 actually goes below) -->
+  <!-- We'll put econ + team spanning the third row -->
+
+</div>
+
+<!-- SECOND ROW OF PANELS -->
+<div id="main-grid" style="display:grid;grid-template-columns:280px 1fr 280px;gap:14px;padding:0 14px 14px;max-width:1600px;margin:0 auto;">
+
+  <!-- Economic vector col 1 -->
+  <div class="panel vector-panel">
+    <div class="corner-deco tl"></div><div class="corner-deco tr"></div>
+    <div class="panel-title">Вектор III — Экономика</div>
+    <div class="vec-header">
+      <div><span class="vec-icon">💰</span><span class="vec-name neon-amber">ЭКОНОМИЧЕСКИЙ</span></div>
+      <div class="vec-pct neon-amber" id="econ-pct">84%</div>
+    </div>
+    <div class="progress-item">
+      <div class="progress-label"><span>WorldCoin захват</span><span>91%</span></div>
+      <div class="progress-track"><div class="progress-fill fill-amber" style="width:0" data-w="91"></div></div>
+    </div>
+    <div class="progress-item">
+      <div class="progress-label"><span>Кофейная монополия</span><span>73%</span></div>
+      <div class="progress-track"><div class="progress-fill fill-amber" style="width:0" data-w="73"></div></div>
+    </div>
+    <div class="progress-item">
+      <div class="progress-label"><span>FISCALVOID-∞</span><span>88%</span></div>
+      <div class="progress-track"><div class="progress-fill fill-amber" style="width:0" data-w="88"></div></div>
+    </div>
+    <div class="progress-item">
+      <div class="progress-label"><span>Банковский захват</span><span>79%</span></div>
+      <div class="progress-track"><div class="progress-fill fill-amber" style="width:0" data-w="79"></div></div>
+    </div>
+    <div class="progress-item">
+      <div class="progress-label"><span>Криптовалюта EVIL</span><span>96%</span></div>
+      <div class="progress-track"><div class="progress-fill fill-amber" style="width:0" data-w="96"></div></div>
+    </div>
+    <div class="vec-status active">◆ СТАТУС: EXCEEDING TARGETS • +12% ROI</div>
+  </div>
+
+  <!-- METRICS (col 2) -->
+  <div class="panel" id="metrics-panel-inner">
+    <div class="panel-title">МЕТРИКИ МИРОВОГО ЗАХВАТА</div>
+    <div class="metrics-grid">
+      <div class="metric-card">
+        <div class="metric-label">Население под контролем</div>
+        <div class="metric-val neon-red" id="m-population">2.4B</div>
+        <div class="metric-sub">из 8.1 млрд</div>
+        <div class="metric-trend trend-up">▲ +340M за квартал</div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-label">Кофейный рынок</div>
+        <div class="metric-val neon-amber" id="m-coffee">73%</div>
+        <div class="metric-sub">мирового производства</div>
+        <div class="metric-trend trend-up">▲ +8% мес/мес</div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-label">Мемов распространено</div>
+        <div class="metric-val neon-purple" id="m-memes">847M</div>
+        <div class="metric-sub">активных ячеек дофамина</div>
+        <div class="metric-trend trend-up">▲ +2.1M/сек</div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-label">Злодейский ROI</div>
+        <div class="metric-val neon-green" id="m-roi">∞</div>
+        <div class="metric-sub">% захвата активов</div>
+        <div class="metric-trend trend-up">▲ EXCEEDS MODEL</div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-label">Активные операции</div>
+        <div class="metric-val neon-cyan" id="m-ops">47</div>
+        <div class="metric-sub">в 23 странах</div>
+        <div class="metric-trend trend-up">▲ 3 новых сегодня</div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-label">Стоимость EVIL™</div>
+        <div class="metric-val neon-amber" id="m-evil">$2.1T</div>
+        <div class="metric-sub">рыночная капитализация</div>
+        <div class="metric-trend trend-up">▲ NYSE: EVIL +4.7%</div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-label">Серверы Online</div>
+        <div class="metric-val neon-green" id="m-servers">99.99%</div>
+        <div class="metric-sub">аптайм Антарктида</div>
+        <div class="metric-trend trend-up">▲ 0 инцидентов</div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-label">Время до Фазы II</div>
+        <div class="metric-val neon-red" id="m-phase2">365Д</div>
+        <div class="metric-sub">по первоначальному плану</div>
+        <div class="metric-trend trend-down" id="m-phase2-trend">▼ Доктор Прокрастинатор</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- TEAM (col 3) -->
+  <div class="panel" id="team-panel">
+    <div class="panel-title">КОМАНДА МЕГАЛОМАНИАКС</div>
+    <div class="team-list">
+      <div class="team-member">
+        <div class="avatar">
+          <div class="avatar-inner">🐙</div>
+          <div class="status-dot online"></div>
+        </div>
+        <div class="member-info">
+          <div class="member-name">Профессор Хаотик</div>
+          <div class="member-role">ГЛАВНЫЙ ЗЛОДЕЙ • CEO</div>
+          <div class="member-status online">● ОНЛАЙН — Смеётся злодейски</div>
+        </div>
+      </div>
+      <div class="team-member">
+        <div class="avatar">
+          <div class="avatar-inner">🐱</div>
+          <div class="status-dot online"></div>
+        </div>
+        <div class="member-info">
+          <div class="member-name">Кот Мефистофель</div>
+          <div class="member-role">ДИРЕКТОР БЕЗОПАСНОСТИ</div>
+          <div class="member-status online">● ОНЛАЙН — Следит за Агентом 007</div>
+        </div>
+      </div>
+      <div class="team-member">
+        <div class="avatar">
+          <div class="avatar-inner">👩‍💼</div>
+          <div class="status-dot away"></div>
+        </div>
+        <div class="member-info">
+          <div class="member-name">Нина Петровна</div>
+          <div class="member-role">ДИРЕКТОР ПО КУЛЬТУРЕ</div>
+          <div class="member-status away">◐ НЕДОСТУПНА — не берёт трубку</div>
+        </div>
+      </div>
+      <div class="team-member">
+        <div class="avatar">
+          <div class="avatar-inner">🤖</div>
+          <div class="status-dot online"></div>
+        </div>
+        <div class="member-info">
+          <div class="member-name">SuperIntelligenceOS</div>
+          <div class="member-role">ГЛАВНЫЙ АНАЛИТИК • ИИ</div>
+          <div class="member-status online">● ОНЛАЙН — Просит выходной</div>
+        </div>
+      </div>
+      <div class="team-member">
+        <div class="avatar">
+          <div class="avatar-inner">😴</div>
+          <div class="status-dot away"></div>
+        </div>
+        <div class="member-info">
+          <div class="member-name">Доктор Прокрастинатор</div>
+          <div class="member-role">ФИНАНСОВЫЙ ДИРЕКТОР</div>
+          <div class="member-status away">◐ ОТЛОЖИЛ — «завтра точно»</div>
+        </div>
+      </div>
+      <div class="team-member">
+        <div class="avatar">
+          <div class="avatar-inner">🎭</div>
+          <div class="status-dot online"></div>
+        </div>
+        <div class="member-info">
+          <div class="member-name">Сеньор Инфлюенсер</div>
+          <div class="member-role">ДИРЕКТОР ПО МЕМАМ</div>
+          <div class="member-status online">● ОНЛАЙН — 840M views</div>
+        </div>
+      </div>
+      <div class="team-member">
+        <div class="avatar">
+          <div class="avatar-inner">☕</div>
+          <div class="status-dot danger"></div>
+        </div>
+        <div class="member-info">
+          <div class="member-name">Баронесса Эспрессо</div>
+          <div class="member-role">КОФЕЙНЫЙ ЦЕЗАРЬ</div>
+          <div class="member-status danger">⚠ ТРЕВОГА — Нескафе сопротивляется</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- BIG RED BUTTON -->
+<div id="main-grid" style="display:grid;grid-template-columns:1fr;gap:14px;padding:0 14px 14px;max-width:1600px;margin:0 auto;">
+  <div class="panel" id="button-panel">
+    <div class="corner-deco tl"></div><div class="corner-deco tr"></div>
+    <div class="corner-deco bl"></div><div class="corner-deco br"></div>
+    <div style="text-align:center;margin-bottom:16px;">
+      <div style="font-size:11px;letter-spacing:4px;color:var(--text-dim);margin-bottom:6px;">
+        ═══════════════ ПРОТОКОЛ АКТИВАЦИИ ФАЗЫ II ═══════════════
+      </div>
+      <div style="font-size:10px;color:var(--red-dim);letter-spacing:2px;">
+        ⚠ ВНИМАНИЕ: НЕОБРАТИМОЕ ДЕЙСТВИЕ • ТРЕБУЕТ АВТОРИЗАЦИИ ПРОФЕССОРА ХАОТИКА ⚠
+      </div>
+    </div>
+
+    <div style="display:flex;align-items:center;justify-content:center;gap:60px;flex-wrap:wrap;">
+      <!-- Pre-checks -->
+      <div style="font-size:10px;line-height:2.2;min-width:220px;">
+        <div><span style="color:var(--green)">✓</span> <span style="color:var(--text-mid)">SuperIntelligenceOS: ГОТОВ</span></div>
+        <div><span style="color:var(--green)">✓</span> <span style="color:var(--text-mid)">Финансовые активы: ЗАМОРОЖЕНЫ</span></div>
+        <div><span style="color:var(--green)">✓</span> <span style="color:var(--text-mid)">Подводные кабели: ПЕРЕХВАЧЕНЫ</span></div>
+        <div><span style="color:var(--green)">✓</span> <span style="color:var(--text-mid)">Мемы: РАСПРОСТРАНЕНЫ</span></div>
+        <div><span style="color:var(--amber)">⊙</span> <span style="color:var(--text-mid)">Нескафе: СОПРОТИВЛЯЕТСЯ</span></div>
+        <div><span style="color:var(--red)">✗</span> <span style="color:var(--text-mid)">Доктор Прокрастинатор: НЕ ПОДПИСАЛ</span></div>
+      </div>
+
+      <!-- The Button -->
+      <div style="display:flex;flex-direction:column;align-items:center;gap:12px;">
+        <div style="font-size:9px;letter-spacing:4px;color:var(--red-dim);text-transform:uppercase;margin-bottom:4px;">
+          ▼ НАЖАТЬ ДЛЯ АКТИВАЦИИ ▼
+        </div>
+        <button id="big-red-btn" onclick="activatePhaseII()">
+          АКТИВИРОВАТЬ<br>ФАЗУ II
+        </button>
+        <div class="btn-caption">ЗАХВАТ МИРА • ПРОТОКОЛ OMEGA</div>
+      </div>
+
+      <!-- Post-info -->
+      <div style="font-size:10px;line-height:2.2;min-width:220px;text-align:right;">
+        <div><span style="color:var(--text-dim)">Цель:</span> <span style="color:var(--text-bright)">100% мирового населения</span></div>
+        <div><span style="color:var(--text-dim)">Метод:</span> <span style="color:var(--text-bright)">ДОФАМИН + КОФЕ + ИИ</span></div>
+        <div><span style="color:var(--text-dim)">Срок:</span> <span style="color:var(--text-bright)">365 дней</span></div>
+        <div><span style="color:var(--text-dim)">Резервный план:</span> <span style="color:var(--amber)">ПРОТОКОЛ-Б</span></div>
+        <div><span style="color:var(--text-dim)">Статус кота:</span> <span style="color:var(--green)">Мефистофель ОДОБРЯЕТ</span></div>
+        <div><span style="color:var(--text-dim)">Авторизация:</span> <span style="color:var(--red)">ОЖИДАНИЕ...</span></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- FOOTER -->
+<footer id="footer">
+  <div class="footer-status">
+    <div class="status-indicator"></div>
+    <span>ВСЕ СИСТЕМЫ ОНЛАЙН</span>
+  </div>
+  <div>МЕГАЛОМАНИАКС INC. © 2026 • УРОВЕНЬ ДОСТУПА: АБСОЛЮТНЫЙ • КООРДИНАТЫ: 90°S 0°E</div>
+  <div>СЕССИЯ: <span id="session-id" style="color:var(--cyan)">PROF-X-9921-OMEGA</span> • <span id="current-time" style="color:var(--text-mid)"></span></div>
+</footer>
+
+<!-- ===== AUDIO CONTEXT (Web Audio API siren) ===== -->
+<script>
+// ===================================================
+// МЕГАЛОМАНИАКС COMMAND CENTER — CORE LOGIC
+// ===================================================
+
+// --- MAP TOOLTIP ---
+const tooltip = document.getElementById('map-tooltip');
+document.querySelectorAll('.op-dot').forEach(dot => {
+  dot.style.cursor = 'pointer';
+  dot.addEventListener('mouseenter', e => {
+    const r = e.currentTarget.getBoundingClientRect();
+    document.getElementById('tt-loc').textContent = dot.dataset.loc;
+    document.getElementById('tt-op').textContent  = dot.dataset.op;
+    const stEl = document.getElementById('tt-st');
+    stEl.textContent  = dot.dataset.st;
+    stEl.className    = 'tt-st ' + (dot.dataset.stcls || 'active');
+    tooltip.style.left = (r.left + 12) + 'px';
+    tooltip.style.top  = (r.top  - 10) + 'px';
+    tooltip.classList.add('show');
+  });
+  dot.addEventListener('mouseleave', () => tooltip.classList.remove('show'));
+  dot.addEventListener('mousemove', e => {
+    tooltip.style.left = (e.clientX + 14) + 'px';
+    tooltip.style.top  = (e.clientY - 30) + 'px';
+  });
+});
+
+// --- COUNTDOWN TIMER ---
+// Target: 365 days from today
+const targetDate = new Date();
+targetDate.setDate(targetDate.getDate() + 365);
+function updateCountdown() {
+  const now  = new Date();
+  const diff = targetDate - now;
+  if (diff <= 0) { document.getElementById('countdown').textContent = '00:00:00:00'; return; }
+  const days  = Math.floor(diff / 86400000);
+  const hours = Math.floor((diff % 86400000) / 3600000);
+  const mins  = Math.floor((diff % 3600000)  / 60000);
+  const secs  = Math.floor((diff % 60000)    / 1000);
+  document.getElementById('countdown').textContent =
+    String(days).padStart(3,'0') + ':' +
+    String(hours).padStart(2,'0') + ':' +
+    String(mins).padStart(2,'0') + ':' +
+    String(secs).padStart(2,'0');
+}
+setInterval(updateCountdown, 1000);
+updateCountdown();
+
+// --- CURRENT TIME ---
+function updateTime() {
+  const now = new Date();
+  document.getElementById('current-time').textContent =
+    now.toISOString().replace('T',' ').slice(0,19) + ' UTC';
+}
+setInterval(updateTime, 1000);
+updateTime();
+
+// --- ANIMATE PROGRESS BARS ---
+function animateBars() {
+  document.querySelectorAll('.progress-fill[data-w]').forEach((bar, i) => {
+    setTimeout(() => {
+      bar.style.width = bar.dataset.w + '%';
+    }, 200 + i * 80);
+  });
+}
+setTimeout(animateBars, 400);
+
+// --- FLUCTUATING METRICS ---
+const metrics = {
+  population: { el: 'm-population', base: 2.4, unit: 'B', decimals: 1 },
+  coffee:     { el: 'm-coffee',     base: 73,  unit: '%', decimals: 0 },
+  memes:      { el: 'm-memes',      base: 847, unit: 'M', decimals: 0 },
+};
+function fluctuateMetrics() {
+  const pop = (2.4 + Math.random() * 0.05).toFixed(1);
+  document.getElementById('m-population').textContent = pop + 'B';
+  const coffee = (73 + Math.random() * 0.3).toFixed(1);
+  document.getElementById('m-coffee').textContent = coffee + '%';
+  const memes = Math.floor(847 + Math.random() * 5);
+  document.getElementById('m-memes').textContent = memes + 'M';
+}
+setInterval(fluctuateMetrics, 3000);
+
+// --- LOG TERMINAL ---
+const logMessages = [
+  { type: 'info', msg: 'Инициализация CommandCenter v2.6.1... ОК' },
+  { type: '',     msg: 'SuperIntelligenceOS: соединение установлено' },
+  { type: '',     msg: 'Загрузка оперативных данных по 23 регионам...' },
+  { type: '',     msg: 'Кот Мефистофель авторизовал сессию PROF-X-9921-OMEGA' },
+  { type: 'warn', msg: 'ВНИМАНИЕ: Агент 007 обнаружен в зоне B-7' },
+  { type: '',     msg: 'FISCALVOID-∞ активен: €847B заморожено' },
+  { type: '',     msg: 'Мем-протокол ДОФАМИН-42 вирусность: 840M просмотров' },
+  { type: 'warn', msg: 'Нина Петровна не отвечает: отправлен Мефистофель' },
+  { type: '',     msg: 'Кофейный захват: Бразилия 94%, Колумбия 87%, Эфиопия 71%' },
+  { type: 'info', msg: 'MI6 threatLevel обновлён: HIGH (был MEDIUM)' },
+  { type: '',     msg: 'WorldCoin поглотил Банк Цюриха — протокол OMEGA шаг 7' },
+  { type: 'err',  msg: 'ОШИБКА: Доктор Прокрастинатор не явился на подписание указа' },
+  { type: '',     msg: 'SuperIntelligenceOS запросил: «можно мне кофе?»' },
+  { type: '',     msg: 'Подводный кабель ATLANTIS-7: перехват 100% завершён' },
+  { type: 'warn', msg: 'ПРЕДУПРЕЖДЕНИЕ: Нескафе усиливает юридическую защиту' },
+  { type: '',     msg: 'Активация мема «Цены на кофе» запланирована на 09:00' },
+  { type: 'info', msg: 'Антарктида БАЗА-ALPHA: температура -52°C, серверы в норме' },
+  { type: '',     msg: 'Профессор Хаотик: злодейский смех записан для истории' },
+];
+
+const terminal = document.getElementById('log-terminal');
+let logIndex = 0;
+function addLogLine() {
+  const entry = logMessages[logIndex % logMessages.length];
+  logIndex++;
+  const now = new Date();
+  const timeStr = now.toTimeString().slice(0,8);
+  const div = document.createElement('div');
+  div.className = 'log-line';
+  div.innerHTML = `<span class="log-time">[${timeStr}]</span><span class="log-msg ${entry.type}">&gt; ${entry.msg}</span>`;
+  terminal.appendChild(div);
+  if (terminal.children.length > 30) terminal.removeChild(terminal.firstChild);
+  terminal.scrollTop = terminal.scrollHeight;
+}
+
+// Initial fill
+for (let i = 0; i < 8; i++) addLogLine();
+setInterval(addLogLine, 2800);
+
+// Add blinking cursor
+const cursorDiv = document.createElement('div');
+cursorDiv.className = 'log-line';
+cursorDiv.innerHTML = '<span class="log-time">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span class="log-msg">&gt; <span class="log-cursor"></span></span>';
+terminal.appendChild(cursorDiv);
+setInterval(() => {
+  if (terminal.lastChild !== cursorDiv) terminal.appendChild(cursorDiv);
+}, 3000);
+
+// --- PHASE II ACTIVATION ---
+let phase2Active = false;
+let sirenInterval = null;
+let audioCtx = null;
+
+function playSiren() {
+  try {
+    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    function beep(freq, start, dur, type='sawtooth') {
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.connect(gain); gain.connect(audioCtx.destination);
+      osc.type = type; osc.frequency.value = freq;
+      gain.gain.setValueAtTime(0.15, audioCtx.currentTime + start);
+      gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + start + dur);
+      osc.start(audioCtx.currentTime + start);
+      osc.stop(audioCtx.currentTime + start + dur + 0.01);
+    }
+    // Siren pattern
+    for (let i = 0; i < 4; i++) {
+      beep(880, i * 0.5,       0.4, 'sawtooth');
+      beep(440, i * 0.5 + 0.25, 0.25, 'square');
+    }
+    beep(1100, 2.2, 0.8, 'sawtooth');
+    beep(220,  3.1, 0.5, 'square');
+  } catch(e) { /* audio not available */ }
+}
+
+function activatePhaseII() {
+  if (phase2Active) return;
+  phase2Active = true;
+
+  // Screen shake
+  document.body.classList.add('shaking');
+  setTimeout(() => document.body.classList.remove('shaking'), 700);
+
+  // Siren flash
+  document.body.classList.add('siren');
+  sirenInterval = setTimeout(() => document.body.classList.remove('siren'), 3000);
+
+  // Play sound
+  playSiren();
+
+  // Show overlay
+  const overlay = document.getElementById('phase2-overlay');
+  overlay.classList.add('active');
+
+  // Update button
+  const btn = document.getElementById('big-red-btn');
+  btn.classList.add('activated');
+  btn.style.background = 'radial-gradient(circle at 35% 35%, #ff8800 0%, #cc5500 35%, #882200 65%, #440800 100%)';
+  btn.style.boxShadow = '0 0 0 8px #330800, 0 0 0 12px #440a00, 0 0 60px rgba(255,120,0,0.8), 0 0 120px rgba(255,80,0,0.4), inset 0 4px 16px rgba(255,200,150,0.3)';
+  btn.textContent = 'ФАЗА II\nАКТИВИРОВАНА';
+  btn.style.fontSize = '14px';
+
+  // Log it
+  const now = new Date();
+  const timeStr = now.toTimeString().slice(0,8);
+  const div = document.createElement('div');
+  div.className = 'log-line';
+  div.innerHTML = `<span class="log-time">[${timeStr}]</span><span class="log-msg err">⚠ ФАЗА II АКТИВИРОВАНА — ЗАХВАТ МИРА НАЧАТ ⚠</span>`;
+  terminal.appendChild(div);
+  terminal.scrollTop = terminal.scrollHeight;
+
+  // Update phase badge
+  document.querySelector('.phase-badge').innerHTML = '◆ ФАЗА II АКТИВНА';
+  document.querySelector('.phase-badge').style.borderColor = 'var(--amber)';
+  document.querySelector('.phase-badge').style.color = 'var(--amber)';
+  document.querySelector('.phase-badge').style.background = 'rgba(255,184,0,0.1)';
+}
+
+function closePhase2() {
+  document.getElementById('phase2-overlay').classList.remove('active');
+  document.body.classList.remove('siren');
+  if (audioCtx) { try { audioCtx.close(); } catch(e){} }
+}
+
+// --- RANDOM EVENTS ---
+const randomEvents = [
+  () => { // Agent 007 location change
+    const locs = ['буфете', 'лифте', 'серверной', 'парковке', 'крыше', 'конференц-зале'];
+    const loc = locs[Math.floor(Math.random() * locs.length)];
+    addCustomLog(`КАМЕРА-7Б: Агент 007 перемещается в ${loc}`, 'warn');
+  },
+  () => {
+    const pct = (Math.floor(Math.random() * 10) + 65);
+    document.getElementById('danger-007').textContent = pct + '%';
+    document.querySelector('#threat-panel .threat-meter-fill').style.width = pct + '%';
+  },
+  () => addCustomLog('SuperIntelligenceOS: «Обнаружил оптимальный путь к мировому господству за 0.003сек»', 'info'),
+  () => addCustomLog('Кофейная биржа: цены выросли на 12% — план работает', ''),
+  () => addCustomLog('Мефистофель: мурлыкнул три раза — авторизация подтверждена', ''),
+  () => addCustomLog('ОШИБКА: Доктор Прокрастинатор опять отложил совещание', 'err'),
+  () => addCustomLog('Новый мем вирусный: охват 200M за 2 часа — ДОФАМИН-ПРОТОКОЛ', ''),
+  () => addCustomLog('MI6: потеряли слежку за МЕГАЛОМАНИАКС после инцидента с кофе', 'info'),
+];
+
+function addCustomLog(msg, type) {
+  const now = new Date();
+  const timeStr = now.toTimeString().slice(0,8);
+  const div = document.createElement('div');
+  div.className = 'log-line';
+  div.innerHTML = `<span class="log-time">[${timeStr}]</span><span class="log-msg ${type}">&gt; ${msg}</span>`;
+  if (terminal.lastChild.querySelector) terminal.insertBefore(div, terminal.lastChild);
+  else terminal.appendChild(div);
+  if (terminal.children.length > 32) terminal.removeChild(terminal.firstChild);
+  terminal.scrollTop = terminal.scrollHeight;
+}
+
+setInterval(() => {
+  const fn = randomEvents[Math.floor(Math.random() * randomEvents.length)];
+  fn();
+}, 7000);
+
+// --- VECTOR PERCENTAGE ANIMATION ---
+function animateCount(elId, target, suffix) {
+  const el = document.getElementById(elId);
+  let current = 0;
+  const step = target / 40;
+  const interval = setInterval(() => {
+    current = Math.min(current + step, target);
+    el.textContent = Math.round(current) + suffix;
+    if (current >= target) clearInterval(interval);
+  }, 35);
+}
+setTimeout(() => {
+  animateCount('tech-pct', 78, '%');
+  animateCount('culture-pct', 61, '%');
+  animateCount('econ-pct', 84, '%');
+}, 500);
+
+// --- TICKER DUPLICATE for seamless loop ---
+// Already duplicated in HTML
+
+// --- SESSION ID BLINKING ---
+setInterval(() => {
+  const el = document.getElementById('session-id');
+  el.style.opacity = el.style.opacity === '0.3' ? '1' : '0.3';
+}, 1500);
+
+// --- GLITCH OCCASIONAL ---
+setInterval(() => {
+  const glitchEls = document.querySelectorAll('.header-title');
+  glitchEls.forEach(el => {
+    el.style.transform = `skewX(${(Math.random()-0.5)*3}deg)`;
+    setTimeout(() => el.style.transform = '', 100);
+  });
+}, 4000);
+
+// Initial log message
+addCustomLog('Командный центр МЕГАЛОМАНИАКС запущен. Профессор Хаотик онлайн.', 'info');
+</script>
+</body>
+</html>

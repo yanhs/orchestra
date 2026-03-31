@@ -1,0 +1,459 @@
+/* ============================================================
+   КОМАНДА ГАММА — Hello World 3D
+   style.css
+   ============================================================ */
+
+/* ---------- Reset & Base ---------- */
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+:root {
+  --clr-bg-from:   #0d0020;
+  --clr-bg-via:    #1a0050;
+  --clr-bg-to:     #001a6e;
+  --clr-purple:    #9b30ff;
+  --clr-violet:    #7b2fff;
+  --clr-blue:      #2979ff;
+  --clr-cyan:      #00e5ff;
+  --clr-white:     #ffffff;
+  --clr-dim:       rgba(255,255,255,0.55);
+  --perspective:   900px;
+  --transition-fast: 0.08s;
+  --font-main: 'Segoe UI', system-ui, sans-serif;
+}
+
+html, body {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  font-family: var(--font-main);
+  background: var(--clr-bg-from);
+  color: var(--clr-white);
+  cursor: none;          /* Прячем системный курсор */
+}
+
+/* ============================================================
+   CANVAS — частицы
+   ============================================================ */
+#particlesCanvas {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+}
+
+/* ============================================================
+   Пользовательский курсор
+   ============================================================ */
+body::before {
+  content: '';
+  position: fixed;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--clr-cyan);
+  box-shadow: 0 0 18px var(--clr-cyan), 0 0 40px var(--clr-purple);
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+  z-index: 9999;
+  transition: width 0.15s, height 0.15s, background 0.2s;
+  /* управляется через JS custom property */
+  left: var(--cx, 50%);
+  top:  var(--cy, 50%);
+}
+
+body::after {
+  content: '';
+  position: fixed;
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  border: 1.5px solid rgba(0,229,255,0.6);
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+  z-index: 9998;
+  transition: left 0.12s ease, top 0.12s ease;
+  left: var(--cx, 50%);
+  top:  var(--cy, 50%);
+}
+
+/* ============================================================
+   Геометрические фигуры-декорации
+   ============================================================ */
+.shapes-container {
+  position: fixed;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+.shape {
+  position: absolute;
+  opacity: 0.12;
+  animation: floatShape linear infinite;
+}
+
+/* Треугольник */
+.shape--triangle {
+  width: 0;
+  height: 0;
+  border-left: 45px solid transparent;
+  border-right: 45px solid transparent;
+  border-bottom: 78px solid var(--clr-purple);
+  top: 10%;
+  left: 8%;
+  animation-duration: 18s;
+  animation-delay: 0s;
+}
+
+.shape--triangle.shape--sm {
+  border-left-width: 22px;
+  border-right-width: 22px;
+  border-bottom-width: 38px;
+  top: 70%;
+  left: 80%;
+  animation-duration: 24s;
+  animation-delay: -6s;
+  opacity: 0.09;
+}
+
+/* Круг */
+.shape--circle {
+  width: 100px;
+  height: 100px;
+  border-radius: 50%;
+  border: 3px solid var(--clr-blue);
+  top: 60%;
+  left: 12%;
+  animation-duration: 22s;
+  animation-delay: -8s;
+}
+
+.shape--circle.shape--sm {
+  width: 50px;
+  height: 50px;
+  top: 20%;
+  left: 75%;
+  animation-duration: 16s;
+  animation-delay: -3s;
+}
+
+/* Квадрат */
+.shape--square {
+  width: 60px;
+  height: 60px;
+  border: 3px solid var(--clr-cyan);
+  top: 30%;
+  left: 88%;
+  animation-duration: 20s;
+  animation-delay: -10s;
+  transform-origin: center;
+}
+
+/* Ромб */
+.shape--diamond {
+  width: 50px;
+  height: 50px;
+  background: transparent;
+  border: 3px solid var(--clr-violet);
+  top: 80%;
+  left: 50%;
+  animation-duration: 26s;
+  animation-delay: -4s;
+  transform: rotate(45deg);
+}
+
+@keyframes floatShape {
+  0%   { transform: translateY(0px) rotate(0deg);   opacity: 0.12; }
+  25%  { transform: translateY(-30px) rotate(90deg);}
+  50%  { transform: translateY(-15px) rotate(180deg); opacity: 0.18; }
+  75%  { transform: translateY(-40px) rotate(270deg);}
+  100% { transform: translateY(0px) rotate(360deg); opacity: 0.12; }
+}
+
+/* ============================================================
+   Главная сцена с 3D perspective
+   ============================================================ */
+.scene {
+  position: fixed;
+  inset: 0;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  perspective: var(--perspective);
+  perspective-origin: 50% 50%;
+  background: linear-gradient(
+    135deg,
+    var(--clr-bg-from) 0%,
+    var(--clr-bg-via)  45%,
+    var(--clr-bg-to)  100%
+  );
+}
+
+/* Внутренний 3D-контейнер — вращается от мыши */
+.scene__inner {
+  position: relative;
+  transform-style: preserve-3d;
+  transform: rotateX(0deg) rotateY(0deg);
+  transition: transform var(--transition-fast) linear;
+  will-change: transform;
+}
+
+/* ============================================================
+   Декоративные кольца
+   ============================================================ */
+.ring {
+  position: absolute;
+  border-radius: 50%;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%) translateZ(-30px) rotateX(70deg);
+  pointer-events: none;
+  animation: ringPulse 4s ease-in-out infinite alternate;
+}
+
+.ring--outer {
+  width: 420px;
+  height: 420px;
+  border: 1px solid rgba(155, 48, 255, 0.25);
+  box-shadow: 0 0 40px rgba(155, 48, 255, 0.12) inset;
+}
+
+.ring--inner {
+  width: 300px;
+  height: 300px;
+  border: 1px solid rgba(41, 121, 255, 0.3);
+  animation-delay: -2s;
+}
+
+@keyframes ringPulse {
+  from { opacity: 0.3; }
+  to   { opacity: 0.8; }
+}
+
+/* ============================================================
+   Текстовый блок
+   ============================================================ */
+.text-block {
+  position: relative;
+  text-align: center;
+  transform-style: preserve-3d;
+  padding: 3rem 4rem;
+  user-select: none;
+}
+
+/* Стеклянная карточка */
+.text-block::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 24px;
+  background: rgba(255, 255, 255, 0.035);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border: 1px solid rgba(255,255,255,0.08);
+  box-shadow:
+    0 8px 60px rgba(155, 48, 255, 0.2),
+    0 2px 10px rgba(0,0,0,0.4);
+  transform: translateZ(-10px);
+}
+
+/* Метка-шапка */
+.text-block__label {
+  font-size: 0.7rem;
+  letter-spacing: 0.35em;
+  color: var(--clr-cyan);
+  text-transform: uppercase;
+  margin-bottom: 1.4rem;
+  opacity: 0.75;
+  animation: fadeSlideDown 0.8s 0.2s both;
+}
+
+/* ============================================================
+   Заголовок Hello World — 3D
+   ============================================================ */
+.title {
+  font-size: clamp(3.5rem, 10vw, 8rem);
+  font-weight: 900;
+  line-height: 1.05;
+  letter-spacing: -0.02em;
+  transform-style: preserve-3d;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.1em;
+  animation: fadeSlideDown 0.8s 0.4s both;
+}
+
+.title__word {
+  display: inline-block;
+  position: relative;
+  transform-style: preserve-3d;
+  transition: transform 0.12s linear;
+  will-change: transform;
+
+  /* Основной текст */
+  background: linear-gradient(135deg, #e0c3fc 0%, #8ec5fc 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+
+  /* 3D тень — имитирует глубину */
+  filter: drop-shadow(0 0 20px rgba(155,48,255,0.6));
+}
+
+/* Дополнительные «слои» через псевдоэлементы для 3D-экструзии */
+.title__word::before,
+.title__word::after {
+  content: attr(data-text);
+  position: absolute;
+  inset: 0;
+  -webkit-text-fill-color: transparent;
+}
+
+.title__word::before {
+  background: linear-gradient(135deg, rgba(155,48,255,0.3), rgba(41,121,255,0.3));
+  -webkit-background-clip: text;
+  background-clip: text;
+  transform: translateZ(-8px) translateX(4px) translateY(4px);
+}
+
+.title__word::after {
+  background: linear-gradient(135deg, rgba(0,229,255,0.15), transparent);
+  -webkit-background-clip: text;
+  background-clip: text;
+  transform: translateZ(-16px) translateX(8px) translateY(8px);
+}
+
+/* Акцентное слово "World" */
+.title__word--accent {
+  background: linear-gradient(135deg, var(--clr-cyan) 0%, var(--clr-purple) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  filter: drop-shadow(0 0 30px rgba(0,229,255,0.5));
+  animation: glowPulse 3s ease-in-out infinite alternate;
+}
+
+@keyframes glowPulse {
+  from { filter: drop-shadow(0 0 20px rgba(0,229,255,0.4)); }
+  to   { filter: drop-shadow(0 0 50px rgba(155,48,255,0.9)); }
+}
+
+/* ============================================================
+   Подзаголовок «Команда Гамма»
+   ============================================================ */
+.subtitle {
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 0;
+  margin-top: 1.2rem;
+  font-size: clamp(1rem, 3vw, 1.6rem);
+  font-weight: 300;
+  letter-spacing: 0.25em;
+  text-transform: uppercase;
+}
+
+.subtitle__char {
+  display: inline-block;
+  color: var(--clr-dim);
+  animation: charAppear 0.6s calc(0.8s + var(--i) * 0.06s) both;
+  transition: transform 0.2s, color 0.2s;
+}
+
+.subtitle__char--accent {
+  color: var(--clr-cyan);
+  font-weight: 600;
+  text-shadow: 0 0 12px rgba(0,229,255,0.5);
+}
+
+.subtitle__char:hover {
+  color: var(--clr-white);
+  transform: translateY(-4px) scale(1.2);
+  cursor: default;
+}
+
+@keyframes charAppear {
+  from { opacity: 0; transform: translateY(20px) rotateX(-90deg); }
+  to   { opacity: 1; transform: translateY(0)    rotateX(0deg); }
+}
+
+/* ============================================================
+   CTA — подсказка
+   ============================================================ */
+.cta {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.8rem;
+  margin-top: 2rem;
+  font-size: 0.75rem;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: rgba(255,255,255,0.35);
+  animation: fadeSlideDown 0.8s 1.5s both;
+}
+
+.cta__dot {
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: var(--clr-cyan);
+  opacity: 0.6;
+  animation: blink 1.8s ease-in-out infinite;
+}
+
+.cta__dot:last-child {
+  animation-delay: 0.9s;
+}
+
+@keyframes blink {
+  0%, 100% { opacity: 0.6; transform: scale(1); }
+  50%       { opacity: 1;   transform: scale(1.5); }
+}
+
+/* ============================================================
+   FPS-счётчик
+   ============================================================ */
+.fps {
+  position: fixed;
+  bottom: 1rem;
+  right: 1rem;
+  font-size: 0.65rem;
+  color: rgba(255,255,255,0.2);
+  font-family: monospace;
+  z-index: 1000;
+  letter-spacing: 0.05em;
+  pointer-events: none;
+}
+
+/* ============================================================
+   Общие анимации появления
+   ============================================================ */
+@keyframes fadeSlideDown {
+  from { opacity: 0; transform: translateY(-20px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ============================================================
+   Адаптация для touch-устройств
+   ============================================================ */
+@media (hover: none) {
+  body { cursor: auto; }
+  body::before, body::after { display: none; }
+  .cta__text::after { content: ' (touch)'; }
+}
+
+@media (max-width: 480px) {
+  .text-block {
+    padding: 2rem 1.5rem;
+  }
+  .ring--outer { width: 280px; height: 280px; }
+  .ring--inner { width: 200px; height: 200px; }
+}

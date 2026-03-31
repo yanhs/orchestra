@@ -594,11 +594,24 @@ async def _run_job_task(job: Job):
     """Background task that runs the supervised orchestration."""
     from ..orchestrator.supervisor import SupervisedRun
 
+    # Store agent configs on the job for direct messaging
+    if not hasattr(job, '_agent_configs'):
+        job._agent_configs = {}
+
     async def on_update(agent_name: str, event: str, text: str):
         if event == "start":
             active_agents[agent_name] = "working"
         elif event in ("done", "error"):
             active_agents[agent_name] = "idle"
+        elif event == "agent_config":
+            # Store agent config for direct messaging later
+            try:
+                cfg = json.loads(text)
+                for ag_id, ag_data in cfg.items():
+                    job._agent_configs[ag_id] = ag_data
+            except Exception:
+                pass
+            return  # Don't broadcast config events to frontend
         job.add_event(agent_name, event, text)
         # Keep context_doc synced for continuation even on stop/crash
         if hasattr(supervised, 'context_doc'):
@@ -708,6 +721,66 @@ async def delete_job(job_id: str):
 
 # ── WebSocket ──
 
+async def _handle_message_agent(job: Job, agent_id: str, text: str):
+    """Send a direct message to a specific agent and stream response back."""
+    from ..agents.client import AgentClient
+    from ..agents.definition import AgentRole
+
+    # Find agent config from the stored agent_configs on the job, or from the YAML config
+    agent_data = None
+    if hasattr(job, '_agent_configs') and agent_id in job._agent_configs:
+        agent_data = job._agent_configs[agent_id]
+    else:
+        # Try loading from current config
+        try:
+            config = load_config(CONFIG_PATH)
+            if agent_id in config.agents:
+                role = config.agents[agent_id]
+                agent_data = {
+                    "display_name": role.display_name,
+                    "model": role.model,
+                    "system_prompt": role.system_prompt,
+                    "allowed_tools": role.allowed_tools,
+                    "max_turns": role.max_turns,
+                }
+        except Exception:
+            pass
+
+    if not agent_data:
+        job.add_event("System", "error", f"Agent '{agent_id}' not found")
+        return
+
+    display_name = agent_data.get("display_name", agent_id)
+
+    # Show user message
+    job.add_event("User", "feedback", f"[to {display_name}]: {text}")
+
+    role = AgentRole(
+        name=agent_id,
+        display_name=display_name,
+        model=agent_data.get("model", "sonnet"),
+        system_prompt=agent_data.get("system_prompt", ""),
+        allowed_tools=agent_data.get("allowed_tools", []),
+        max_turns=agent_data.get("max_turns", 50),
+    )
+
+    client = AgentClient(role=role)
+
+    async def on_stream(agent_name: str, chunk: str):
+        job.add_event(agent_name, "progress", chunk)
+
+    job.add_event(display_name, "start", f"Processing: {text[:100]}...")
+
+    try:
+        resp = await client.run(prompt=text, on_stream=on_stream)
+        if resp.is_error:
+            job.add_event(display_name, "error", resp.error_message)
+        else:
+            job.add_event(display_name, "done", resp.content)
+    except Exception as e:
+        job.add_event(display_name, "error", str(e))
+
+
 @app.websocket("/ws/run")
 async def ws_run(ws: WebSocket):
     await ws.accept()
@@ -780,12 +853,17 @@ async def ws_run(ws: WebSocket):
                 })
 
         async def _recv_feedback():
-            """Listen for user corrections mid-run."""
+            """Listen for user corrections mid-run and direct agent messages."""
             while True:
                 try:
                     msg = await ws.receive_json()
                     if msg.get("action") == "feedback" and msg.get("text"):
                         job.add_feedback(msg["text"])
+                    elif msg.get("action") == "message_agent":
+                        agent_id = msg.get("agent_id", "")
+                        text = msg.get("text", "")
+                        if agent_id and text:
+                            asyncio.create_task(_handle_message_agent(job, agent_id, text))
                 except WebSocketDisconnect:
                     return
                 except Exception:

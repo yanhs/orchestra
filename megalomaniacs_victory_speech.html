@@ -1,0 +1,1371 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>МЕГАЛОМАНИАКС — ТОРЖЕСТВЕННАЯ РЕЧЬ | Церемония Запуска Операции «НОВЫЙ МИРОВОЙ ПОРЯДОК»</title>
+<style>
+/* ===== RESET & BASE ===== */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --black:      #020105;
+  --deep:       #080510;
+  --card:       #0f0a1a;
+  --border:     #2a1a4a;
+  --gold:       #ffd700;
+  --gold2:      #ffaa00;
+  --gold-glow:  rgba(255,215,0,0.4);
+  --gold-dim:   rgba(255,215,0,0.15);
+  --red:        #ff2244;
+  --purple:     #8b00ff;
+  --silver:     #c0c0c0;
+  --text:       #f0e6d0;
+  --text-dim:   #7a6a50;
+  --curtain-l:  #3d0a0a;
+  --curtain-r:  #3d0a0a;
+}
+
+html { scroll-behavior: smooth; }
+
+body {
+  font-family: 'Georgia', 'Times New Roman', serif;
+  background: var(--black);
+  color: var(--text);
+  overflow-x: hidden;
+  min-height: 100vh;
+  position: relative;
+}
+
+/* ===== SCROLLBAR ===== */
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: var(--deep); }
+::-webkit-scrollbar-thumb { background: var(--gold); border-radius: 3px; }
+
+/* ===== STARS BACKGROUND ===== */
+#stars-canvas {
+  position: fixed; top: 0; left: 0;
+  width: 100%; height: 100%;
+  pointer-events: none; z-index: 0;
+}
+
+/* ===== CURTAINS ===== */
+#curtain-left, #curtain-right {
+  position: fixed;
+  top: 0; bottom: 0;
+  width: 52%;
+  z-index: 100;
+  transition: transform 2.5s cubic-bezier(0.77, 0, 0.18, 1);
+  will-change: transform;
+  overflow: hidden;
+}
+#curtain-left  { left: 0;  transform: translateX(0); }
+#curtain-right { right: 0; transform: translateX(0); }
+
+#curtain-left.open  { transform: translateX(-100%); }
+#curtain-right.open { transform: translateX(100%); }
+
+/* Velvet curtain texture via CSS */
+#curtain-left {
+  background:
+    repeating-linear-gradient(
+      90deg,
+      rgba(0,0,0,0.15) 0px, transparent 4px, transparent 8px
+    ),
+    linear-gradient(180deg,
+      #6b0a0a 0%, #3d0505 20%, #5c0808 40%, #3d0505 60%, #6b0a0a 80%, #3d0505 100%
+    );
+  box-shadow: inset -30px 0 60px rgba(0,0,0,0.8), 8px 0 30px rgba(0,0,0,0.9);
+}
+#curtain-right {
+  background:
+    repeating-linear-gradient(
+      90deg,
+      transparent 0px, transparent 4px, rgba(0,0,0,0.15) 4px, rgba(0,0,0,0.15) 8px
+    ),
+    linear-gradient(180deg,
+      #6b0a0a 0%, #3d0505 20%, #5c0808 40%, #3d0505 60%, #6b0a0a 80%, #3d0505 100%
+    );
+  box-shadow: inset 30px 0 60px rgba(0,0,0,0.8), -8px 0 30px rgba(0,0,0,0.9);
+}
+
+/* Gold fringes on curtains */
+#curtain-left::after {
+  content: '';
+  position: absolute; top: 0; right: 0; bottom: 0; width: 20px;
+  background: repeating-linear-gradient(
+    180deg,
+    var(--gold) 0px, var(--gold) 8px,
+    transparent 8px, transparent 18px
+  );
+  opacity: 0.7;
+}
+#curtain-right::before {
+  content: '';
+  position: absolute; top: 0; left: 0; bottom: 0; width: 20px;
+  background: repeating-linear-gradient(
+    180deg,
+    var(--gold) 0px, var(--gold) 8px,
+    transparent 8px, transparent 18px
+  );
+  opacity: 0.7;
+  z-index: 1;
+}
+
+/* Curtain header bar */
+#curtain-left::before, #curtain-right::after {
+  content: '';
+  position: absolute; top: 0; left: 0; right: 0; height: 40px;
+  background: linear-gradient(180deg, var(--gold) 0%, #8b6914 100%);
+  box-shadow: 0 4px 20px rgba(255,215,0,0.5);
+}
+#curtain-right::after { z-index: 2; }
+
+/* ===== CURTAIN OVERLAY TEXT ===== */
+#curtain-overlay {
+  position: fixed;
+  inset: 0; z-index: 150;
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  pointer-events: none;
+  opacity: 1;
+  transition: opacity 1s ease 2s;
+}
+#curtain-overlay.hidden { opacity: 0; }
+
+#curtain-title {
+  font-size: clamp(1.5rem, 4vw, 3rem);
+  font-weight: bold;
+  color: var(--gold);
+  text-shadow: 0 0 30px var(--gold-glow), 0 0 60px rgba(255,215,0,0.3);
+  text-align: center;
+  letter-spacing: 6px;
+  text-transform: uppercase;
+  animation: pulse-gold 2s ease-in-out infinite;
+  padding: 0 2rem;
+}
+#curtain-subtitle {
+  margin-top: 1rem;
+  font-size: clamp(0.8rem, 2vw, 1.2rem);
+  color: var(--silver);
+  letter-spacing: 4px;
+  text-align: center;
+  padding: 0 2rem;
+}
+
+#open-ceremony-btn {
+  margin-top: 2.5rem;
+  padding: 16px 48px;
+  background: linear-gradient(135deg, #8b0000 0%, #5c0000 100%);
+  border: 2px solid var(--gold);
+  color: var(--gold);
+  font-size: 1.1rem;
+  font-family: inherit;
+  letter-spacing: 4px;
+  text-transform: uppercase;
+  cursor: pointer;
+  pointer-events: all;
+  transition: all 0.3s;
+  box-shadow: 0 0 20px rgba(255,215,0,0.3), inset 0 0 20px rgba(139,0,0,0.5);
+  clip-path: polygon(8px 0%, 100% 0%, calc(100% - 8px) 100%, 0% 100%);
+}
+#open-ceremony-btn:hover {
+  background: linear-gradient(135deg, #b00000 0%, #800000 100%);
+  box-shadow: 0 0 40px rgba(255,215,0,0.6), inset 0 0 20px rgba(180,0,0,0.5);
+  transform: scale(1.05);
+}
+
+@keyframes pulse-gold {
+  0%, 100% { text-shadow: 0 0 30px var(--gold-glow), 0 0 60px rgba(255,215,0,0.3); }
+  50% { text-shadow: 0 0 50px var(--gold-glow), 0 0 100px rgba(255,215,0,0.5), 0 0 150px rgba(255,215,0,0.2); }
+}
+
+/* ===== MAIN CONTENT ===== */
+#main-content {
+  position: relative; z-index: 10;
+  opacity: 0;
+  transition: opacity 1.5s ease 0.5s;
+}
+#main-content.visible { opacity: 1; }
+
+/* ===== SPOTLIGHT ===== */
+#spotlight {
+  position: fixed;
+  top: 0; left: 50%; transform: translateX(-50%);
+  width: 600px; height: 100vh;
+  background: radial-gradient(ellipse 300px 500px at 50% 0%, rgba(255,215,0,0.08) 0%, transparent 70%);
+  pointer-events: none; z-index: 5;
+  opacity: 0;
+  transition: opacity 2s ease 1s;
+}
+#spotlight.on { opacity: 1; }
+
+/* ===== HEADER ===== */
+.ceremony-header {
+  text-align: center;
+  padding: 60px 2rem 40px;
+  position: relative;
+}
+
+.ceremony-header::before {
+  content: '';
+  position: absolute; top: 0; left: 10%; right: 10%; height: 3px;
+  background: linear-gradient(90deg, transparent, var(--gold), var(--gold2), var(--gold), transparent);
+  box-shadow: 0 0 20px var(--gold-glow);
+}
+
+.org-label {
+  font-size: 0.75rem;
+  letter-spacing: 8px;
+  color: var(--gold2);
+  text-transform: uppercase;
+  margin-bottom: 1rem;
+  opacity: 0.8;
+}
+
+.ceremony-title {
+  font-size: clamp(2rem, 6vw, 5rem);
+  font-weight: 900;
+  background: linear-gradient(135deg, #fff8dc 0%, var(--gold) 40%, var(--gold2) 70%, #8b6914 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  line-height: 1.1;
+  margin-bottom: 0.5rem;
+  animation: shimmer 4s ease-in-out infinite;
+  background-size: 200% auto;
+}
+
+@keyframes shimmer {
+  0% { background-position: 0% center; }
+  50% { background-position: 100% center; }
+  100% { background-position: 0% center; }
+}
+
+.ceremony-subtitle {
+  font-size: clamp(0.9rem, 2vw, 1.3rem);
+  color: var(--silver);
+  letter-spacing: 3px;
+  margin-top: 0.5rem;
+  text-transform: uppercase;
+}
+
+.ceremony-date {
+  margin-top: 1.5rem;
+  font-size: 0.85rem;
+  color: var(--text-dim);
+  letter-spacing: 2px;
+}
+
+.gold-divider {
+  display: flex; align-items: center; gap: 1rem;
+  margin: 2rem auto;
+  max-width: 600px;
+  padding: 0 2rem;
+}
+.gold-divider::before, .gold-divider::after {
+  content: ''; flex: 1; height: 1px;
+  background: linear-gradient(90deg, transparent, var(--gold));
+}
+.gold-divider::after {
+  background: linear-gradient(90deg, var(--gold), transparent);
+}
+.gold-divider-icon { color: var(--gold); font-size: 1.2rem; }
+
+/* ===== CSS-ART PODIUM & MIC ===== */
+.stage-section {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin: 20px auto 40px;
+  position: relative;
+}
+
+/* Microphone CSS art */
+.mic-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-bottom: 10px;
+  animation: mic-glow 3s ease-in-out infinite;
+}
+
+@keyframes mic-glow {
+  0%, 100% { filter: drop-shadow(0 0 8px rgba(255,215,0,0.4)); }
+  50% { filter: drop-shadow(0 0 20px rgba(255,215,0,0.8)); }
+}
+
+.mic-head {
+  width: 40px; height: 60px;
+  background: linear-gradient(180deg, #c0c0c0 0%, #888 40%, #666 100%);
+  border-radius: 20px 20px 15px 15px;
+  position: relative;
+  box-shadow: 0 0 15px rgba(255,215,0,0.3);
+}
+.mic-head::before {
+  content: '';
+  position: absolute; top: 8px; left: 6px; right: 6px;
+  border-top: 1px solid rgba(255,255,255,0.4);
+  border-bottom: 1px solid rgba(255,255,255,0.4);
+  height: 12px;
+}
+.mic-head::after {
+  content: '';
+  position: absolute; top: 28px; left: 6px; right: 6px;
+  border-top: 1px solid rgba(255,255,255,0.3);
+  height: 8px;
+}
+.mic-neck {
+  width: 6px; height: 40px;
+  background: linear-gradient(180deg, #888, #555);
+  margin: 0 auto;
+}
+.mic-base-top {
+  width: 30px; height: 6px;
+  background: linear-gradient(180deg, #aaa, #666);
+  border-radius: 3px;
+}
+.mic-stand {
+  width: 50px; height: 6px;
+  background: linear-gradient(180deg, #888, #555);
+  border-radius: 3px;
+  transform: rotate(-10deg);
+  transform-origin: right center;
+}
+
+/* Podium */
+.podium {
+  position: relative;
+  margin-top: 0;
+}
+.podium-top {
+  width: 220px; height: 20px;
+  background: linear-gradient(180deg, var(--gold) 0%, #8b6914 100%);
+  border-radius: 4px 4px 0 0;
+  box-shadow: 0 -4px 20px rgba(255,215,0,0.5);
+  display: flex; align-items: center; justify-content: center;
+}
+.podium-top::before {
+  content: '✦ МЕГАЛОМАНИАКС ✦';
+  font-size: 0.55rem;
+  letter-spacing: 2px;
+  color: #3d2000;
+  font-weight: bold;
+}
+.podium-body {
+  width: 200px; height: 100px;
+  background: linear-gradient(180deg, #1a0a00 0%, #0d0500 100%);
+  border: 2px solid var(--gold);
+  border-top: none;
+  position: relative;
+  overflow: hidden;
+}
+.podium-body::before {
+  content: 'M';
+  position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+  font-size: 3rem; font-weight: 900;
+  color: rgba(255,215,0,0.15);
+  font-style: italic;
+}
+.podium-step1 {
+  width: 240px; height: 16px;
+  background: linear-gradient(180deg, #2a1500, #1a0a00);
+  border: 1px solid rgba(255,215,0,0.5);
+  border-top: none;
+}
+.podium-step2 {
+  width: 280px; height: 14px;
+  background: linear-gradient(180deg, #1a0a00, #0d0500);
+  border: 1px solid rgba(255,215,0,0.3);
+  border-top: none;
+}
+
+/* Floor */
+.stage-floor {
+  width: 400px; height: 8px;
+  background: linear-gradient(180deg, rgba(255,215,0,0.2), transparent);
+  border-radius: 50%;
+  filter: blur(4px);
+}
+
+/* ===== SPEECH AREA ===== */
+.speech-container {
+  max-width: 860px;
+  margin: 0 auto;
+  padding: 0 2rem 4rem;
+  position: relative;
+}
+
+.speech-header {
+  text-align: center;
+  margin-bottom: 3rem;
+}
+
+.speaker-info {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  background: linear-gradient(135deg, #1a0a00 0%, #0d0500 100%);
+  border: 1px solid var(--gold);
+  padding: 1.5rem 3rem;
+  position: relative;
+  clip-path: polygon(20px 0%, 100% 0%, calc(100% - 20px) 100%, 0% 100%);
+}
+.speaker-info::before {
+  content: '';
+  position: absolute; top: 0; left: 0; right: 0; height: 2px;
+  background: linear-gradient(90deg, transparent, var(--gold), transparent);
+}
+.speaker-name {
+  font-size: 1.4rem;
+  color: var(--gold);
+  font-weight: bold;
+  letter-spacing: 3px;
+  text-transform: uppercase;
+}
+.speaker-title {
+  font-size: 0.75rem;
+  color: var(--silver);
+  letter-spacing: 2px;
+  margin-top: 0.3rem;
+}
+
+/* ===== PARAGRAPHS ===== */
+.speech-paragraphs {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.speech-para {
+  opacity: 0;
+  transform: translateY(15px);
+  transition: opacity 0.6s ease, transform 0.6s ease;
+  padding: 1.4rem 0;
+  border-bottom: 1px solid rgba(255,215,0,0.08);
+  position: relative;
+}
+.speech-para.visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+.speech-para:last-child { border-bottom: none; }
+
+.para-number {
+  position: absolute;
+  left: -2.5rem;
+  top: 1.6rem;
+  font-size: 0.65rem;
+  color: var(--text-dim);
+  letter-spacing: 1px;
+}
+
+.para-text {
+  font-size: clamp(0.95rem, 2vw, 1.12rem);
+  line-height: 1.9;
+  color: var(--text);
+  min-height: 1.9em;
+}
+
+.para-text .cursor {
+  display: inline-block;
+  width: 2px; height: 1.1em;
+  background: var(--gold);
+  vertical-align: text-bottom;
+  animation: blink 0.7s step-end infinite;
+  margin-left: 1px;
+}
+@keyframes blink { 0%,100% { opacity: 1; } 50% { opacity: 0; } }
+
+/* Special paragraph styles */
+.para-greeting .para-text { color: var(--gold); font-size: 1.2em; font-weight: bold; }
+.para-cat    .para-text em { color: var(--gold2); font-style: italic; cursor: pointer; text-decoration: underline dotted var(--gold2); }
+.para-achievement .para-text strong { color: var(--gold); }
+.para-vectors .para-text { border-left: 3px solid var(--gold); padding-left: 1rem; }
+.para-threats .para-text em { color: var(--red); font-style: normal; }
+.para-promises .para-text { background: rgba(255,215,0,0.03); border-radius: 4px; padding: 1rem; }
+.para-final   .para-text { font-size: 1.3em; font-weight: bold; color: var(--gold); text-align: center; }
+.para-clikh   .para-text {
+  font-size: clamp(1.5rem, 4vw, 2.5rem);
+  font-weight: 900;
+  text-align: center;
+  color: var(--gold);
+  text-shadow: 0 0 30px var(--gold-glow), 0 0 60px rgba(255,215,0,0.3);
+  letter-spacing: 4px;
+  animation: clikh-pulse 1.5s ease-in-out infinite;
+}
+@keyframes clikh-pulse {
+  0%,100% { text-shadow: 0 0 30px var(--gold-glow); }
+  50% { text-shadow: 0 0 60px var(--gold-glow), 0 0 100px rgba(255,215,0,0.5); }
+}
+
+/* ===== CAT EASTER EGG ===== */
+#cat-overlay {
+  position: fixed; inset: 0; z-index: 500;
+  background: rgba(0,0,0,0.88);
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  opacity: 0; pointer-events: none;
+  transition: opacity 0.4s;
+}
+#cat-overlay.show { opacity: 1; pointer-events: all; }
+
+.cat-art {
+  font-family: 'Courier New', monospace;
+  font-size: clamp(0.55rem, 1.5vw, 0.8rem);
+  line-height: 1.2;
+  color: var(--gold);
+  text-shadow: 0 0 10px var(--gold-glow);
+  white-space: pre;
+  text-align: center;
+  animation: cat-float 3s ease-in-out infinite;
+}
+@keyframes cat-float {
+  0%,100% { transform: translateY(0); }
+  50% { transform: translateY(-12px); }
+}
+
+.cat-name {
+  margin-top: 1.5rem;
+  font-size: 1.5rem;
+  color: var(--gold);
+  letter-spacing: 4px;
+  text-transform: uppercase;
+}
+.cat-title {
+  font-size: 0.85rem;
+  color: var(--silver);
+  letter-spacing: 2px;
+  margin-top: 0.3rem;
+}
+.cat-meow {
+  margin-top: 1rem;
+  font-size: 2rem;
+  animation: meow-bounce 0.5s ease-in-out 3;
+}
+@keyframes meow-bounce {
+  0%,100% { transform: scale(1); }
+  50% { transform: scale(1.3); }
+}
+.cat-close-btn {
+  margin-top: 2rem;
+  padding: 10px 30px;
+  background: transparent;
+  border: 1px solid var(--gold);
+  color: var(--gold);
+  font-family: inherit;
+  cursor: pointer;
+  letter-spacing: 2px;
+  transition: all 0.3s;
+}
+.cat-close-btn:hover { background: rgba(255,215,0,0.1); }
+
+/* ===== APPLAUSE / CONFETTI ===== */
+#confetti-canvas {
+  position: fixed; inset: 0; z-index: 400;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.5s;
+}
+#confetti-canvas.active { opacity: 1; }
+
+/* ===== COUNTDOWN BUTTON ===== */
+.countdown-section {
+  text-align: center;
+  padding: 3rem 2rem 6rem;
+  opacity: 0;
+  transition: opacity 1s ease;
+}
+.countdown-section.visible { opacity: 1; }
+
+.countdown-label {
+  font-size: 0.8rem;
+  letter-spacing: 4px;
+  color: var(--text-dim);
+  text-transform: uppercase;
+  margin-bottom: 1rem;
+}
+
+#launch-btn {
+  position: relative;
+  padding: 22px 60px;
+  background: linear-gradient(135deg, #8b0000 0%, #5c0000 50%, #8b0000 100%);
+  background-size: 200% auto;
+  border: 2px solid var(--gold);
+  color: var(--gold);
+  font-size: 1.3rem;
+  font-family: inherit;
+  letter-spacing: 6px;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: all 0.3s;
+  box-shadow:
+    0 0 30px rgba(139,0,0,0.5),
+    0 0 60px rgba(255,215,0,0.2),
+    inset 0 0 30px rgba(139,0,0,0.3);
+  clip-path: polygon(15px 0%, 100% 0%, calc(100% - 15px) 100%, 0% 100%);
+  overflow: hidden;
+}
+#launch-btn::before {
+  content: '';
+  position: absolute; top: 0; left: -100%; width: 100%; height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255,215,0,0.2), transparent);
+  transition: left 0.5s;
+}
+#launch-btn:hover::before { left: 100%; }
+#launch-btn:hover {
+  background: linear-gradient(135deg, #c00000 0%, #800000 50%, #c00000 100%);
+  background-size: 200% auto;
+  box-shadow:
+    0 0 50px rgba(200,0,0,0.6),
+    0 0 100px rgba(255,215,0,0.3),
+    inset 0 0 30px rgba(180,0,0,0.3);
+  transform: scale(1.05);
+}
+#launch-btn:active { transform: scale(0.98); }
+
+/* Countdown display */
+#countdown-display {
+  margin-top: 2.5rem;
+  font-size: clamp(4rem, 12vw, 9rem);
+  font-weight: 900;
+  color: var(--red);
+  text-shadow:
+    0 0 30px rgba(255,34,68,0.8),
+    0 0 60px rgba(255,34,68,0.4);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 4px;
+  min-height: 1.2em;
+  display: flex; align-items: center; justify-content: center;
+  opacity: 0;
+  transform: scale(0.8);
+  transition: opacity 0.5s, transform 0.5s;
+}
+#countdown-display.visible {
+  opacity: 1;
+  transform: scale(1);
+}
+#countdown-display.pulse {
+  animation: count-pulse 0.8s ease-in-out;
+}
+@keyframes count-pulse {
+  0% { transform: scale(1); }
+  30% { transform: scale(1.25); color: var(--gold); text-shadow: 0 0 60px var(--gold-glow); }
+  100% { transform: scale(1); }
+}
+
+#launch-text {
+  margin-top: 1.5rem;
+  font-size: 1rem;
+  color: var(--gold);
+  letter-spacing: 3px;
+  opacity: 0;
+  animation: none;
+}
+#launch-text.go {
+  opacity: 1;
+  animation: launch-flash 0.5s ease-in-out 6;
+}
+@keyframes launch-flash {
+  0%,100% { opacity: 1; }
+  50% { opacity: 0.2; }
+}
+
+/* ===== APPLAUSE OVERLAY ===== */
+#applause-overlay {
+  position: fixed; bottom: 2rem; left: 50%; transform: translateX(-50%);
+  z-index: 600;
+  background: rgba(10,5,0,0.9);
+  border: 1px solid var(--gold);
+  padding: 1rem 2rem;
+  font-size: 0.9rem;
+  letter-spacing: 3px;
+  color: var(--gold);
+  text-transform: uppercase;
+  opacity: 0;
+  transition: opacity 0.5s;
+  clip-path: polygon(10px 0%, 100% 0%, calc(100% - 10px) 100%, 0% 100%);
+}
+#applause-overlay.show { opacity: 1; }
+
+/* ===== FOOTER ===== */
+.ceremony-footer {
+  text-align: center;
+  padding: 2rem;
+  border-top: 1px solid rgba(255,215,0,0.15);
+  font-size: 0.7rem;
+  color: var(--text-dim);
+  letter-spacing: 2px;
+}
+
+/* ===== RESPONSIVE ===== */
+@media (max-width: 600px) {
+  .para-number { display: none; }
+  .speech-paragraphs { padding: 0; }
+  .stage-floor { width: 280px; }
+  .podium-top, .podium-step1, .podium-step2 { width: auto; max-width: 90vw; }
+}
+</style>
+</head>
+<body>
+
+<!-- Stars canvas -->
+<canvas id="stars-canvas"></canvas>
+
+<!-- Curtains -->
+<div id="curtain-left"></div>
+<div id="curtain-right"></div>
+
+<!-- Curtain overlay (pre-open) -->
+<div id="curtain-overlay">
+  <div id="curtain-title">МЕГАЛОМАНИАКС</div>
+  <div id="curtain-subtitle">Церемония Торжественного Запуска<br>Операции «НОВЫЙ МИРОВОЙ ПОРЯДОК»</div>
+  <button id="open-ceremony-btn" onclick="openCurtain()">▶ &nbsp;НАЧАТЬ ЦЕРЕМОНИЮ &nbsp;◀</button>
+</div>
+
+<!-- Spotlight -->
+<div id="spotlight"></div>
+
+<!-- Confetti canvas -->
+<canvas id="confetti-canvas"></canvas>
+
+<!-- Main content (hidden until curtain opens) -->
+<div id="main-content">
+
+  <!-- Ceremony Header -->
+  <div class="ceremony-header">
+    <div class="org-label">◈ &nbsp; Совершенно Секретно / Глобальный Гриф «АПОКАЛИПСИС» &nbsp; ◈</div>
+    <div class="ceremony-title">ТОРЖЕСТВЕННАЯ РЕЧЬ</div>
+    <div class="ceremony-subtitle">Верховного Злодея МЕГАЛОМАНИАКСА</div>
+    <div class="ceremony-date">
+      Дата: 29 марта 2026 г. &nbsp;|&nbsp; Место: Подземная База «Бункер Омега» (координаты засекречены)
+    </div>
+    <div class="gold-divider"><span class="gold-divider-icon">✦</span></div>
+  </div>
+
+  <!-- CSS-Art Stage -->
+  <div class="stage-section">
+    <div class="mic-container">
+      <div class="mic-head"></div>
+      <div class="mic-neck"></div>
+      <div class="mic-base-top"></div>
+      <div class="mic-stand"></div>
+    </div>
+    <div class="podium">
+      <div class="podium-top"></div>
+      <div class="podium-body"></div>
+      <div class="podium-step1"></div>
+      <div class="podium-step2"></div>
+    </div>
+    <div class="stage-floor"></div>
+  </div>
+
+  <!-- Speech Area -->
+  <div class="speech-container">
+
+    <div class="speech-header">
+      <div class="speaker-info">
+        <div class="speaker-name">Верховный Злодей</div>
+        <div class="speaker-title">Генеральный Директор по Мировому Господству | МЕГАЛОМАНИАКС™</div>
+      </div>
+    </div>
+
+    <div class="speech-paragraphs" id="speech-paragraphs">
+      <!-- Paragraphs injected by JS -->
+    </div>
+
+  </div><!-- /speech-container -->
+
+  <!-- Countdown Section -->
+  <div class="countdown-section" id="countdown-section">
+    <div class="countdown-label">◈ &nbsp; финальный протокол &nbsp; ◈</div>
+    <button id="launch-btn" onclick="startCountdown()">
+      🚀 &nbsp; ЗАПУСТИТЬ ОБРАТНЫЙ ОТСЧЁТ &nbsp; 🚀
+    </button>
+    <div id="countdown-display">10</div>
+    <div id="launch-text">🌍 &nbsp; ОПЕРАЦИЯ «НОВЫЙ МИРОВОЙ ПОРЯДОК» ЗАПУЩЕНА &nbsp; 🌍</div>
+  </div>
+
+  <!-- Footer -->
+  <div class="ceremony-footer">
+    © 2026 МЕГАЛОМАНИАКС™ &nbsp;|&nbsp; Все права на мировое господство защищены &nbsp;|&nbsp;
+    Перепечатка без разрешения Верховного Злодея карается вечным понедельником
+  </div>
+
+</div><!-- /main-content -->
+
+<!-- Cat Easter Egg -->
+<div id="cat-overlay" onclick="closeCat(event)">
+  <div class="cat-art" id="cat-art-el"></div>
+  <div class="cat-name">Мефистофель</div>
+  <div class="cat-title">Главный Стратег по Внезапности &nbsp;|&nbsp; Советник Верховного Злодея</div>
+  <div class="cat-meow" id="cat-meow-el"></div>
+  <button class="cat-close-btn" onclick="closeCat()">Отпустить кота (если сможешь)</button>
+</div>
+
+<!-- Applause Overlay -->
+<div id="applause-overlay">👏 &nbsp; БУРЯ АПЛОДИСМЕНТОВ &nbsp; 👏</div>
+
+<script>
+/* ====================================================
+   STARS BACKGROUND
+   ==================================================== */
+(function(){
+  const canvas = document.getElementById('stars-canvas');
+  const ctx = canvas.getContext('2d');
+  let stars = [];
+  function resize() {
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+  }
+  function initStars() {
+    stars = [];
+    for (let i = 0; i < 220; i++) {
+      stars.push({
+        x: Math.random() * canvas.width,
+        y: Math.random() * canvas.height,
+        r: Math.random() * 1.5 + 0.3,
+        o: Math.random() * 0.6 + 0.1,
+        speed: Math.random() * 0.3 + 0.05
+      });
+    }
+  }
+  function drawStars() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    stars.forEach(s => {
+      ctx.beginPath();
+      ctx.arc(s.x, s.y, s.r, 0, Math.PI*2);
+      ctx.fillStyle = `rgba(255,215,0,${s.o})`;
+      ctx.fill();
+      s.o += (Math.random() - 0.5) * 0.02;
+      if (s.o < 0.05) s.o = 0.05;
+      if (s.o > 0.7) s.o = 0.7;
+    });
+    requestAnimationFrame(drawStars);
+  }
+  window.addEventListener('resize', () => { resize(); initStars(); });
+  resize(); initStars(); drawStars();
+})();
+
+/* ====================================================
+   WEB AUDIO: GONG
+   ==================================================== */
+function playGong() {
+  try {
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+
+    // Deep strike
+    function strike(freq, gain, duration, delay) {
+      const osc = ctx.createOscillator();
+      const gainNode = ctx.createGain();
+      osc.connect(gainNode);
+      gainNode.connect(ctx.destination);
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(freq, ctx.currentTime + delay);
+      osc.frequency.exponentialRampToValueAtTime(freq * 0.8, ctx.currentTime + delay + duration);
+      gainNode.gain.setValueAtTime(0, ctx.currentTime + delay);
+      gainNode.gain.linearRampToValueAtTime(gain, ctx.currentTime + delay + 0.01);
+      gainNode.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + delay + duration);
+      osc.start(ctx.currentTime + delay);
+      osc.stop(ctx.currentTime + delay + duration);
+    }
+
+    // Gong harmonics
+    strike(80, 0.8, 5, 0);
+    strike(160, 0.4, 4, 0);
+    strike(240, 0.2, 3.5, 0);
+    strike(320, 0.15, 2.5, 0);
+    strike(100, 0.5, 4, 0.05);
+    strike(200, 0.25, 3, 0.05);
+
+    // Metal noise burst
+    const bufferSize = ctx.sampleRate * 0.15;
+    const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
+    const data = buffer.getChannelData(0);
+    for (let i = 0; i < bufferSize; i++) data[i] = (Math.random() * 2 - 1) * 0.3;
+    const src = ctx.createBufferSource();
+    src.buffer = buffer;
+    const noiseGain = ctx.createGain();
+    noiseGain.gain.setValueAtTime(0.4, ctx.currentTime);
+    noiseGain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.15);
+    src.connect(noiseGain);
+    noiseGain.connect(ctx.destination);
+    src.start();
+  } catch(e) {}
+}
+
+/* ====================================================
+   WEB AUDIO: APPLAUSE
+   ==================================================== */
+function playApplause(duration = 4) {
+  try {
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    const bufferSize = ctx.sampleRate * duration;
+    const buffer = ctx.createBuffer(2, bufferSize, ctx.sampleRate);
+
+    for (let ch = 0; ch < 2; ch++) {
+      const data = buffer.getChannelData(ch);
+      for (let i = 0; i < bufferSize; i++) {
+        // Simulate crowd applause with shaped noise
+        const wave = Math.sin(i / ctx.sampleRate * 6) * 0.4 + 0.6;
+        data[i] = (Math.random() * 2 - 1) * wave * 0.35;
+      }
+    }
+
+    const src = ctx.createBufferSource();
+    src.buffer = buffer;
+    const gainNode = ctx.createGain();
+    gainNode.gain.setValueAtTime(0, ctx.currentTime);
+    gainNode.gain.linearRampToValueAtTime(0.7, ctx.currentTime + 0.4);
+    gainNode.gain.setValueAtTime(0.7, ctx.currentTime + duration - 0.8);
+    gainNode.gain.linearRampToValueAtTime(0, ctx.currentTime + duration);
+
+    // Add some low-end to make it feel like a crowd
+    const filter = ctx.createBiquadFilter();
+    filter.type = 'bandpass';
+    filter.frequency.value = 1500;
+    filter.Q.value = 0.3;
+    src.connect(filter);
+    filter.connect(gainNode);
+    gainNode.connect(ctx.destination);
+    src.start();
+  } catch(e) {}
+}
+
+/* ====================================================
+   WEB AUDIO: DRAMATIC LAUNCH SOUND
+   ==================================================== */
+function playLaunchSound() {
+  try {
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+
+    // Rising tone
+    const osc = ctx.createOscillator();
+    const gainNode = ctx.createGain();
+    osc.connect(gainNode); gainNode.connect(ctx.destination);
+    osc.type = 'sawtooth';
+    osc.frequency.setValueAtTime(60, ctx.currentTime);
+    osc.frequency.exponentialRampToValueAtTime(1200, ctx.currentTime + 2);
+    gainNode.gain.setValueAtTime(0, ctx.currentTime);
+    gainNode.gain.linearRampToValueAtTime(0.4, ctx.currentTime + 0.1);
+    gainNode.gain.linearRampToValueAtTime(0, ctx.currentTime + 2);
+    osc.start(); osc.stop(ctx.currentTime + 2);
+
+    // Big boom at end
+    setTimeout(() => {
+      const osc2 = ctx.createOscillator();
+      const g2 = ctx.createGain();
+      osc2.connect(g2); g2.connect(ctx.destination);
+      osc2.type = 'sine';
+      osc2.frequency.setValueAtTime(60, ctx.currentTime);
+      osc2.frequency.exponentialRampToValueAtTime(30, ctx.currentTime + 0.5);
+      g2.gain.setValueAtTime(0.9, ctx.currentTime);
+      g2.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 1.5);
+      osc2.start(); osc2.stop(ctx.currentTime + 1.5);
+    }, 1800);
+  } catch(e) {}
+}
+
+/* ====================================================
+   WEB AUDIO: COUNTDOWN BEEP
+   ==================================================== */
+function playBeep(freq = 880, duration = 0.15) {
+  try {
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    const osc = ctx.createOscillator();
+    const g = ctx.createGain();
+    osc.connect(g); g.connect(ctx.destination);
+    osc.type = 'square';
+    osc.frequency.value = freq;
+    g.gain.setValueAtTime(0.3, ctx.currentTime);
+    g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + duration);
+    osc.start(); osc.stop(ctx.currentTime + duration);
+  } catch(e) {}
+}
+
+/* ====================================================
+   WEB AUDIO: CAT MEOW
+   ==================================================== */
+function playMeow() {
+  try {
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    const osc = ctx.createOscillator();
+    const gainNode = ctx.createGain();
+    osc.connect(gainNode); gainNode.connect(ctx.destination);
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(400, ctx.currentTime);
+    osc.frequency.linearRampToValueAtTime(700, ctx.currentTime + 0.1);
+    osc.frequency.linearRampToValueAtTime(550, ctx.currentTime + 0.3);
+    osc.frequency.linearRampToValueAtTime(800, ctx.currentTime + 0.45);
+    osc.frequency.linearRampToValueAtTime(350, ctx.currentTime + 0.7);
+    gainNode.gain.setValueAtTime(0, ctx.currentTime);
+    gainNode.gain.linearRampToValueAtTime(0.5, ctx.currentTime + 0.05);
+    gainNode.gain.setValueAtTime(0.5, ctx.currentTime + 0.4);
+    gainNode.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.8);
+    osc.start(); osc.stop(ctx.currentTime + 0.9);
+  } catch(e) {}
+}
+
+/* ====================================================
+   CONFETTI
+   ==================================================== */
+let confettiActive = false;
+let confettiPieces = [];
+
+function startConfetti() {
+  const canvas = document.getElementById('confetti-canvas');
+  canvas.width = window.innerWidth;
+  canvas.height = window.innerHeight;
+  canvas.classList.add('active');
+  confettiActive = true;
+  confettiPieces = [];
+
+  const colors = ['#ffd700','#ff2244','#8b00ff','#00ffaa','#ffffff','#ff8800','#00d4ff','#ffaacc'];
+
+  for (let i = 0; i < 220; i++) {
+    confettiPieces.push({
+      x: Math.random() * canvas.width,
+      y: -20 - Math.random() * 200,
+      w: 6 + Math.random() * 10,
+      h: 4 + Math.random() * 6,
+      color: colors[Math.floor(Math.random() * colors.length)],
+      speed: 2 + Math.random() * 5,
+      angle: Math.random() * Math.PI * 2,
+      spin: (Math.random() - 0.5) * 0.2,
+      drift: (Math.random() - 0.5) * 2,
+      opacity: 0.8 + Math.random() * 0.2
+    });
+  }
+
+  animateConfetti();
+  setTimeout(() => {
+    confettiActive = false;
+    canvas.classList.remove('active');
+  }, 6000);
+}
+
+function animateConfetti() {
+  if (!confettiActive) return;
+  const canvas = document.getElementById('confetti-canvas');
+  const ctx = canvas.getContext('2d');
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+  confettiPieces.forEach(p => {
+    ctx.save();
+    ctx.translate(p.x, p.y);
+    ctx.rotate(p.angle);
+    ctx.globalAlpha = p.opacity;
+    ctx.fillStyle = p.color;
+    ctx.fillRect(-p.w/2, -p.h/2, p.w, p.h);
+    ctx.restore();
+
+    p.y += p.speed;
+    p.x += p.drift;
+    p.angle += p.spin;
+    if (p.y > canvas.height + 30) {
+      p.y = -20;
+      p.x = Math.random() * canvas.width;
+    }
+  });
+
+  requestAnimationFrame(animateConfetti);
+}
+
+/* ====================================================
+   OPEN CURTAIN
+   ==================================================== */
+function openCurtain() {
+  playGong();
+
+  document.getElementById('curtain-left').classList.add('open');
+  document.getElementById('curtain-right').classList.add('open');
+  document.getElementById('curtain-overlay').classList.add('hidden');
+  document.getElementById('spotlight').classList.add('on');
+
+  setTimeout(() => {
+    document.getElementById('main-content').classList.add('visible');
+    document.getElementById('curtain-overlay').style.display = 'none';
+    startSpeech();
+  }, 2000);
+}
+
+/* ====================================================
+   SPEECH DATA
+   ==================================================== */
+const speechLines = [
+  {
+    cls: 'para-greeting',
+    text: 'Дамы! Господа! Приспешники первого, второго и третьего рангов! Тайные агенты, операторы дронов, технические злодеи, маркетологи тьмы, HR-специалисты по наймy армии зла и вы — дорогой ночной охранник Вася, который всё равно слушает это из коридора — я приветствую вас всех!'
+  },
+  {
+    cls: 'para-greeting',
+    text: 'МЕГАЛОМАНИАКС — приветствует вас на величайшей церемонии запуска со времён падения Римской империи! Правда, у них тоже был неплохой логотип, но нашему до него далеко — мы наняли дизайнера за 47 долларов на Fiverr, и он сделал ЭТО ЗА ВЫХОДНЫЕ.'
+  },
+  {
+    cls: 'para-cat',
+    text: 'Прежде чем мы перейдём к официальной части, я хочу выразить особую, нечеловеческую благодарность нашему Главному Стратегу по Внезапности — <em id="cat-trigger">коту Мефистофелю</em>. За 847 задокументированных случаев срыва важных совещаний, за постоянное сидение на клавиатуре в критические моменты и за моральную поддержку в виде мурчания, когда всё шло не так, как планировалось. Мефистофель — ты настоящий злодей.'
+  },
+  {
+    cls: 'para-achievement',
+    text: '<strong>О ДОСТИЖЕНИЯХ — говорите?</strong> Ха! Мы не просто достигали. Мы ДОМИНИРОВАЛИ. За прошедший период командой МЕГАЛОМАНИАКСА создано: <strong>стратегический SWOT-анализ мирового господства</strong> (47 страниц, шрифт Times New Roman 12pt, правильные отступы — юристы в восторге), полноценная архитектура системы Orchestra для координации злодейских агентов, HR-портал набора приспешников со встроенной системой ранжирования и корпоративными привилегиями...'
+  },
+  {
+    cls: 'para-achievement',
+    text: '...командный центр мирового господства с реальными дашбордами и метриками захвата, питч-дек для злодейских инвесторов (отклонён шестью VC, приняты двумя тайными обществами), полный брендбук злодея с корпоративным стилем и сертифицированным ISO 9001 смехом «Му-ха-ха», медиаплан операции, техническое задание Фазы I и white paper «VaaS: Villainy as a Service»...'
+  },
+  {
+    cls: 'para-achievement',
+    text: '...лендинг злодейской организации с конверсией 34% (что на 2000% выше среднего по отрасли «мировое господство»), полный аудит безопасности в формате MI6 против МЕГАЛОМАНИАКС — и, наконец, <strong>эта речь</strong>. Которую вы сейчас слушаете. Что уже само по себе является нашим величайшим достижением.'
+  },
+  {
+    cls: 'para-vectors',
+    text: '⚡ ВЕКТОР ПЕРВЫЙ: ТЕХНОЛОГИИ. Наш ИИ-ассистент работает 24/7, не требует отпусков и не просит повышения зарплаты. Пока конкуренты развёртывают армии роботов, мы захватываем алгоритмы, базы данных и push-уведомления. К 2027 году 73% человечества будут видеть нашу рекламу до того, как увидят рекламу конкурентов. Это и есть настоящее господство.'
+  },
+  {
+    cls: 'para-vectors',
+    text: '⚡ ВЕКТОР ВТОРОЙ: КУЛЬТУРА. Мемы — это новое ядерное оружие, и наш арсенал уже насчитывает 4,7 тысячи единиц боевого контента. Мы захватим TikTok, Twitter/X, LinkedIn (особенно LinkedIn — там сосредоточено максимальное количество людей, готовых поверить в что угодно, если написать «5 уроков от великих злодеев»). VaaS — Villainy as a Service — уже на Product Hunt.'
+  },
+  {
+    cls: 'para-vectors',
+    text: '⚡ ВЕКТОР ТРЕТИЙ: ЭКОНОМИКА. Мы знаем слабое место любой цивилизации. Нет, не волканический остров — хотя он тоже в плане. Это понедельники. Отмена понедельников обеспечит нам 94% электоральной поддержки ещё до начала официального захвата. Добавьте бесплатный Wi-Fi везде — и это уже 99%. Оставшийся процент — налоговая служба. С ней переговоры ведутся.'
+  },
+  {
+    cls: 'para-threats',
+    text: 'Теперь — о конкурентах. <em>Агент 007</em>, мы знаем, что ты здесь. Мы видели твои запросы на наш сайт. Советуем: текущий злодей предлагает корпоративный кофе, пятницы в гавайских рубашках и нормированный рабочий день. Подумай о карьерных перспективах. Наш HR-отдел уже выслал оффер на твой зашифрованный адрес.'
+  },
+  {
+    cls: 'para-threats',
+    text: '<em>Илон Маск</em> — уважаемый коллега по части монологов о захвате мира. Скажем так: Марс — это мило. Но мы берём то, что уже есть. Когда мы захватим Землю, мы вышлем вам дипломатическую ноту. Надеемся на добрососедские отношения между планетами. P.S. Ваш логотип всё ещё лучше нашего, но мы работаем над этим.'
+  },
+  {
+    cls: 'para-threats',
+    text: 'И наконец — <em>Погода</em>. Ты разрушала наши планы слишком долго. Дождь на день открытых дверей базы. Туман во время испытания дронов. Снег в день корпоратива. Знай: мы уже патентуем технологию управления климатом. Это не угроза. Это официальное уведомление.'
+  },
+  {
+    cls: 'para-promises',
+    text: 'А теперь — обещания нашим верным приспешникам. Потому что злодейство держится не на страхе, а на правильной корпоративной культуре. Первое: <strong>корпоративный кофе</strong>. Настоящий. Не та бурда из автомата на третьем этаже бункера. Итальянский эспрессо, доставка которого будет замаскирована под «технические расходы».'
+  },
+  {
+    cls: 'para-promises',
+    text: 'Второе: <strong>пятницы в гавайских рубашках</strong>. Обязательно. Для всех рангов, включая роботов-охранников. Особенно для роботов-охранников. Третье: удалённая работа для приспешников категории «Цифровой Зло». Потому что бункер — это хорошо, но дом с кошкой — это лучше. Четвёртое: страховка. Да, включая «несчастные случаи при захвате мира» — это отдельная строка в полисе.'
+  },
+  {
+    cls: 'para-promises',
+    text: 'И самое главное — мы <strong>отменяем понедельники для сотрудников</strong>. Начиная с Фазы II. Рабочая неделя МЕГАЛОМАНИАКСА: вторник-пятница. Четыре дня. Ровно столько, сколько нужно для захвата мира, не теряя баланса между злодейством и личной жизнью.'
+  },
+  {
+    cls: 'para-final',
+    text: 'Итак. Все документы подписаны. Все агенты на позициях. Кот Мефистофель благословил операцию (он просто потоптался по кнопке «Запустить»). Система Orchestra готова координировать агентов. Бункер Омега оснащён кофе-машиной. Гавайские рубашки заказаны. Мировое господство — буквально в одном нажатии кнопки.'
+  },
+  {
+    cls: 'para-final',
+    text: 'Историки будущего — а мы сами будем писать историю будущего, так что переживём — запишут эту дату золотыми буквами. «29 марта 2026 года Верховный Злодей МЕГАЛОМАНИАКС произнёс речь, после которой мир уже никогда не был прежним. Преимущественно потому, что понедельники отменили.»'
+  },
+  {
+    cls: 'para-clikh',
+    text: '⚡ МЕГАЛОМАНИАКС — ВПЕРЁД! ⚡'
+  }
+];
+
+/* ====================================================
+   TYPEWRITER ENGINE
+   ==================================================== */
+let currentPara = 0;
+let speechStarted = false;
+let allParasRendered = false;
+
+function createParaEl(idx, data) {
+  const div = document.createElement('div');
+  div.className = `speech-para ${data.cls}`;
+  div.id = `para-${idx}`;
+  div.innerHTML = `<span class="para-number">${String(idx+1).padStart(2,'0')}</span><p class="para-text" id="para-text-${idx}"></p>`;
+  return div;
+}
+
+async function typeText(el, html, speedMs = 28) {
+  // Strip HTML tags for typing, then reveal HTML at end
+  const tempDiv = document.createElement('div');
+  tempDiv.innerHTML = html;
+  const plainText = tempDiv.textContent;
+
+  // Add cursor
+  const cursor = document.createElement('span');
+  cursor.className = 'cursor';
+  el.appendChild(cursor);
+
+  for (let i = 0; i < plainText.length; i++) {
+    const span = document.createElement('span');
+    span.textContent = plainText[i];
+    el.insertBefore(span, cursor);
+    await sleep(speedMs);
+  }
+
+  // Remove cursor, replace with final HTML
+  cursor.remove();
+  el.innerHTML = html;
+
+  // Re-attach cat easter egg if present
+  const catEl = document.getElementById('cat-trigger');
+  if (catEl) {
+    catEl.style.cursor = 'pointer';
+    catEl.addEventListener('click', openCatEasterEgg);
+  }
+}
+
+function sleep(ms) {
+  return new Promise(r => setTimeout(r, ms));
+}
+
+async function startSpeech() {
+  if (speechStarted) return;
+  speechStarted = true;
+
+  const container = document.getElementById('speech-paragraphs');
+
+  for (let i = 0; i < speechLines.length; i++) {
+    const data = speechLines[i];
+    const paraEl = createParaEl(i, data);
+    container.appendChild(paraEl);
+
+    // Slight pause before revealing each para
+    await sleep(300);
+    paraEl.classList.add('visible');
+
+    const textEl = document.getElementById(`para-text-${i}`);
+    const speed = data.cls.includes('clikh') ? 40 : 22;
+    await typeText(textEl, data.text, speed);
+
+    await sleep(data.cls.includes('clikh') ? 600 : 200);
+  }
+
+  // All done — show applause & countdown
+  allParasRendered = true;
+  await sleep(800);
+
+  playApplause(5);
+  showApplause();
+  startConfetti();
+
+  await sleep(1200);
+  const cdSection = document.getElementById('countdown-section');
+  cdSection.classList.add('visible');
+  cdSection.scrollIntoView({ behavior: 'smooth', block: 'center' });
+}
+
+function showApplause() {
+  const el = document.getElementById('applause-overlay');
+  el.classList.add('show');
+  setTimeout(() => el.classList.remove('show'), 5000);
+}
+
+/* ====================================================
+   CAT EASTER EGG
+   ==================================================== */
+const catAscii = `
+     /\\_____/\\
+    /  o   o  \\
+   ( ==  ^  == )
+    )         (
+   (           )
+  ( (  )   (  ) )
+ (__(__)___(__)__)
+
+  ~~~ МЯЯЯЯУ ~~~
+`;
+
+function openCatEasterEgg() {
+  const overlay = document.getElementById('cat-overlay');
+  const artEl = document.getElementById('cat-art-el');
+  const meowEl = document.getElementById('cat-meow-el');
+
+  artEl.textContent = catAscii;
+  meowEl.textContent = '';
+  overlay.classList.add('show');
+
+  playMeow();
+
+  // Animated meow text
+  const meows = ['М', 'МЯ', 'МЯУ', 'МЯЯУ', 'МЯЯЯУ', 'МЯЯЯЯУ!'];
+  let mi = 0;
+  const meowInterval = setInterval(() => {
+    if (mi < meows.length) {
+      meowEl.textContent = meows[mi++];
+    } else {
+      clearInterval(meowInterval);
+    }
+  }, 120);
+
+  setTimeout(() => {
+    playMeow();
+  }, 900);
+}
+
+function closeCat(e) {
+  if (e && e.target !== document.getElementById('cat-overlay') && !e.target.classList.contains('cat-close-btn')) return;
+  document.getElementById('cat-overlay').classList.remove('show');
+}
+
+// Direct attach (backup)
+document.addEventListener('click', function(e) {
+  if (e.target && e.target.id === 'cat-trigger') {
+    openCatEasterEgg();
+  }
+});
+
+/* ====================================================
+   COUNTDOWN
+   ==================================================== */
+let countdownRunning = false;
+
+async function startCountdown() {
+  if (countdownRunning) return;
+  countdownRunning = true;
+
+  const btn = document.getElementById('launch-btn');
+  const display = document.getElementById('countdown-display');
+  const launchText = document.getElementById('launch-text');
+
+  btn.disabled = true;
+  btn.style.opacity = '0.5';
+
+  display.classList.add('visible');
+  playLaunchSound();
+
+  for (let n = 10; n >= 1; n--) {
+    display.textContent = n;
+    display.classList.remove('pulse');
+    void display.offsetWidth; // reflow
+    display.classList.add('pulse');
+    playBeep(880 + (10-n)*60, 0.18);
+    await sleep(900);
+  }
+
+  // ZERO!
+  display.textContent = '🚀';
+  display.classList.remove('pulse');
+  void display.offsetWidth;
+  display.classList.add('pulse');
+  playBeep(1760, 0.5);
+
+  await sleep(600);
+
+  // LAUNCHED
+  display.textContent = '✦';
+  display.style.color = 'var(--gold)';
+  display.style.textShadow = '0 0 60px var(--gold-glow), 0 0 120px rgba(255,215,0,0.5)';
+
+  launchText.classList.add('go');
+
+  startConfetti();
+  playApplause(8);
+  showApplause();
+
+  // Fireworks sound
+  for (let i = 0; i < 8; i++) {
+    await sleep(400);
+    playBeep(440 + Math.random()*880, 0.2);
+  }
+}
+</script>
+</body>
+</html>

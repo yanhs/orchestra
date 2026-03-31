@@ -1,0 +1,1896 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>МЕГАЛОМАНИАКС CAREERS — Построй карьеру, разрушая чужие</title>
+<style>
+  /* ===== RESET & BASE ===== */
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --black:    #050508;
+    --dark:     #0d0d1a;
+    --card:     #111126;
+    --border:   #1e1e3f;
+    --accent:   #7b00ff;
+    --accent2:  #ff003c;
+    --gold:     #ffd700;
+    --glow:     #a855f7;
+    --text:     #e2e2f0;
+    --muted:    #7070a0;
+    --success:  #00ffaa;
+  }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    font-family: 'Segoe UI', system-ui, sans-serif;
+    background: var(--black);
+    color: var(--text);
+    overflow-x: hidden;
+    line-height: 1.6;
+  }
+
+  /* ===== SCROLLBAR ===== */
+  ::-webkit-scrollbar { width: 6px; }
+  ::-webkit-scrollbar-track { background: var(--dark); }
+  ::-webkit-scrollbar-thumb { background: var(--accent); border-radius: 3px; }
+
+  /* ===== PARTICLES CANVAS ===== */
+  #particles-canvas {
+    position: fixed; top: 0; left: 0;
+    width: 100%; height: 100%;
+    pointer-events: none; z-index: 0;
+    opacity: 0.35;
+  }
+
+  /* ===== LAYOUT HELPERS ===== */
+  .container { max-width: 1200px; margin: 0 auto; padding: 0 2rem; position: relative; z-index: 1; }
+  section { padding: 100px 0; position: relative; }
+
+  .section-title {
+    font-size: clamp(2rem, 4vw, 3rem);
+    font-weight: 900;
+    text-align: center;
+    margin-bottom: 0.5rem;
+    background: linear-gradient(135deg, #fff 30%, var(--glow));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+  .section-sub {
+    text-align: center;
+    color: var(--muted);
+    margin-bottom: 4rem;
+    font-size: 1.1rem;
+  }
+
+  /* ===== DIVIDER ===== */
+  .divider {
+    width: 100%; height: 1px;
+    background: linear-gradient(90deg, transparent, var(--accent), transparent);
+    margin: 0;
+  }
+
+  /* ===== NAVIGATION ===== */
+  nav {
+    position: fixed; top: 0; left: 0; right: 0; z-index: 1000;
+    background: rgba(5,5,8,0.85);
+    backdrop-filter: blur(12px);
+    border-bottom: 1px solid var(--border);
+    padding: 1rem 0;
+    transition: all 0.3s;
+  }
+  .nav-inner {
+    max-width: 1200px; margin: 0 auto;
+    padding: 0 2rem;
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .nav-logo {
+    font-size: 1.1rem; font-weight: 900; letter-spacing: 0.1em;
+    color: var(--gold);
+    text-decoration: none;
+    text-shadow: 0 0 20px rgba(255,215,0,0.5);
+  }
+  .nav-links { display: flex; gap: 2rem; list-style: none; }
+  .nav-links a {
+    color: var(--muted); text-decoration: none;
+    font-size: 0.9rem; font-weight: 600; letter-spacing: 0.05em;
+    text-transform: uppercase;
+    transition: color 0.2s;
+  }
+  .nav-links a:hover { color: var(--gold); }
+
+  /* ===== HERO / HEADER ===== */
+  #hero {
+    min-height: 100vh;
+    display: flex; align-items: center; justify-content: center;
+    text-align: center;
+    padding: 120px 2rem 80px;
+    background: radial-gradient(ellipse 80% 60% at 50% 0%, rgba(123,0,255,0.18) 0%, transparent 70%);
+    position: relative; overflow: hidden;
+  }
+
+  /* Logo SVG art */
+  .logo-art {
+    width: 120px; height: 120px;
+    margin: 0 auto 2rem;
+    position: relative;
+    animation: logoFloat 4s ease-in-out infinite;
+  }
+  @keyframes logoFloat {
+    0%,100% { transform: translateY(0) rotate(0deg); }
+    50% { transform: translateY(-12px) rotate(3deg); }
+  }
+
+  .logo-circle {
+    width: 120px; height: 120px;
+    border-radius: 50%;
+    background: radial-gradient(circle at 40% 35%, #2a0060, #0d0020);
+    border: 2px solid var(--accent);
+    box-shadow: 0 0 30px rgba(123,0,255,0.6), inset 0 0 30px rgba(123,0,255,0.15);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 3rem;
+    position: relative;
+  }
+  .logo-circle::before {
+    content: '';
+    position: absolute; inset: -8px;
+    border-radius: 50%;
+    border: 1px solid rgba(123,0,255,0.3);
+    animation: logoPulse 2s ease-in-out infinite;
+  }
+  .logo-circle::after {
+    content: '';
+    position: absolute; inset: -16px;
+    border-radius: 50%;
+    border: 1px solid rgba(123,0,255,0.15);
+    animation: logoPulse 2s ease-in-out infinite 0.5s;
+  }
+  @keyframes logoPulse {
+    0%,100% { transform: scale(1); opacity: 0.6; }
+    50% { transform: scale(1.08); opacity: 1; }
+  }
+
+  .hero-eyebrow {
+    font-size: 0.8rem; font-weight: 700; letter-spacing: 0.3em;
+    text-transform: uppercase; color: var(--accent);
+    margin-bottom: 1rem;
+    animation: fadeInDown 0.8s ease both;
+  }
+  .hero-title {
+    font-size: clamp(2.5rem, 6vw, 5.5rem);
+    font-weight: 900;
+    line-height: 1.05;
+    margin-bottom: 1.5rem;
+    animation: fadeInDown 0.8s ease 0.15s both;
+  }
+  .hero-title span {
+    background: linear-gradient(135deg, var(--gold), #ff8c00);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+  .hero-subtitle {
+    font-size: clamp(1rem, 2vw, 1.3rem);
+    color: var(--muted);
+    max-width: 600px; margin: 0 auto 2.5rem;
+    animation: fadeInDown 0.8s ease 0.3s both;
+  }
+  .hero-btns {
+    display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap;
+    animation: fadeInDown 0.8s ease 0.45s both;
+  }
+
+  @keyframes fadeInDown {
+    from { opacity: 0; transform: translateY(-20px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  /* ===== BUTTONS ===== */
+  .btn {
+    display: inline-flex; align-items: center; gap: 0.5rem;
+    padding: 0.9rem 2rem;
+    border-radius: 6px;
+    font-weight: 700; font-size: 0.95rem;
+    text-decoration: none; cursor: pointer;
+    border: none; transition: all 0.25s;
+    letter-spacing: 0.05em;
+    position: relative; overflow: hidden;
+  }
+  .btn::before {
+    content: '';
+    position: absolute; inset: 0;
+    background: linear-gradient(135deg, rgba(255,255,255,0.15), transparent);
+    opacity: 0; transition: opacity 0.25s;
+  }
+  .btn:hover::before { opacity: 1; }
+  .btn-primary {
+    background: linear-gradient(135deg, var(--accent), #5500cc);
+    color: #fff;
+    box-shadow: 0 4px 20px rgba(123,0,255,0.4);
+  }
+  .btn-primary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 30px rgba(123,0,255,0.6);
+  }
+  .btn-outline {
+    background: transparent;
+    color: var(--gold);
+    border: 1.5px solid var(--gold);
+  }
+  .btn-outline:hover {
+    background: rgba(255,215,0,0.1);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 20px rgba(255,215,0,0.2);
+  }
+  .btn-danger {
+    background: linear-gradient(135deg, var(--accent2), #aa0028);
+    color: #fff;
+    box-shadow: 0 4px 20px rgba(255,0,60,0.4);
+  }
+  .btn-danger:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 30px rgba(255,0,60,0.6);
+  }
+
+  /* ===== STATS ROW ===== */
+  .stats-row {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    gap: 1.5rem; margin-top: 5rem;
+  }
+  .stat-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 12px; padding: 1.5rem;
+    text-align: center;
+    transition: border-color 0.3s, transform 0.3s;
+  }
+  .stat-card:hover { border-color: var(--accent); transform: translateY(-4px); }
+  .stat-num {
+    font-size: 2.5rem; font-weight: 900;
+    color: var(--gold);
+    display: block;
+  }
+  .stat-label { font-size: 0.8rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.1em; }
+
+  /* ===== WHY US ===== */
+  #why { background: linear-gradient(180deg, var(--black), var(--dark)); }
+
+  .perks-grid {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 1.5rem;
+  }
+  .perk-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 16px; padding: 2rem;
+    transition: all 0.3s;
+    position: relative; overflow: hidden;
+  }
+  .perk-card::before {
+    content: '';
+    position: absolute; top: 0; left: 0; right: 0; height: 3px;
+    background: linear-gradient(90deg, var(--accent), var(--accent2));
+    transform: scaleX(0); transform-origin: left;
+    transition: transform 0.3s;
+  }
+  .perk-card:hover::before { transform: scaleX(1); }
+  .perk-card:hover {
+    border-color: rgba(123,0,255,0.4);
+    transform: translateY(-6px);
+    box-shadow: 0 12px 40px rgba(123,0,255,0.15);
+  }
+  .perk-icon { font-size: 2.5rem; margin-bottom: 1rem; }
+  .perk-title { font-size: 1.1rem; font-weight: 700; margin-bottom: 0.5rem; }
+  .perk-desc { color: var(--muted); font-size: 0.9rem; line-height: 1.6; }
+
+  /* ===== VACANCIES ===== */
+  #vacancies { background: var(--black); }
+
+  .vacancies-grid {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
+    gap: 1.5rem;
+  }
+  .vacancy-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 16px; padding: 2rem;
+    transition: all 0.3s;
+    cursor: pointer;
+    position: relative;
+  }
+  .vacancy-card:hover {
+    border-color: rgba(123,0,255,0.5);
+    transform: translateY(-6px);
+    box-shadow: 0 16px 50px rgba(123,0,255,0.2);
+  }
+  .vacancy-badge {
+    display: inline-flex; align-items: center; gap: 0.4rem;
+    background: rgba(123,0,255,0.15);
+    border: 1px solid rgba(123,0,255,0.3);
+    color: var(--glow);
+    padding: 0.2rem 0.7rem;
+    border-radius: 20px; font-size: 0.75rem; font-weight: 700;
+    text-transform: uppercase; letter-spacing: 0.08em;
+    margin-bottom: 1rem;
+  }
+  .vacancy-badge.hot {
+    background: rgba(255,0,60,0.15);
+    border-color: rgba(255,0,60,0.3);
+    color: #ff6688;
+  }
+  .vacancy-title { font-size: 1.25rem; font-weight: 800; margin-bottom: 0.5rem; }
+  .vacancy-desc { color: var(--muted); font-size: 0.9rem; margin-bottom: 1rem; line-height: 1.6; }
+  .vacancy-requirements { margin-bottom: 1.5rem; }
+  .vacancy-requirements h4 { font-size: 0.8rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; color: var(--muted); margin-bottom: 0.5rem; }
+  .req-list { list-style: none; }
+  .req-list li {
+    font-size: 0.85rem; color: var(--text); padding: 0.2rem 0;
+    padding-left: 1.2rem; position: relative;
+  }
+  .req-list li::before { content: '◆'; position: absolute; left: 0; color: var(--accent); font-size: 0.5rem; top: 0.4em; }
+  .vacancy-footer { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 1rem; }
+  .salary {
+    font-size: 1.1rem; font-weight: 800;
+    background: linear-gradient(135deg, var(--gold), #ff8c00);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+  .salary span { font-size: 0.7rem; color: var(--muted); display: block; font-weight: 400; -webkit-text-fill-color: var(--muted); }
+
+  /* ===== TEST / QUIZ ===== */
+  #quiz {
+    background: linear-gradient(180deg, var(--dark), var(--black));
+  }
+
+  .quiz-wrapper {
+    max-width: 760px; margin: 0 auto;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 20px; overflow: hidden;
+  }
+  .quiz-progress-bar {
+    height: 4px;
+    background: var(--border);
+    position: relative;
+  }
+  .quiz-progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--accent), var(--accent2));
+    transition: width 0.4s ease;
+  }
+  .quiz-body { padding: 3rem; }
+  .quiz-step-label {
+    font-size: 0.8rem; font-weight: 700; letter-spacing: 0.15em;
+    text-transform: uppercase; color: var(--accent);
+    margin-bottom: 1rem;
+  }
+  .quiz-question {
+    font-size: clamp(1.2rem, 2.5vw, 1.6rem);
+    font-weight: 800; margin-bottom: 2rem; line-height: 1.3;
+  }
+  .quiz-options { display: flex; flex-direction: column; gap: 0.8rem; }
+  .quiz-option {
+    background: var(--dark);
+    border: 1.5px solid var(--border);
+    border-radius: 10px; padding: 1rem 1.5rem;
+    cursor: pointer; transition: all 0.2s;
+    text-align: left; font-size: 1rem; color: var(--text);
+    font-family: inherit;
+    display: flex; align-items: center; gap: 1rem;
+  }
+  .quiz-option:hover {
+    border-color: var(--accent);
+    background: rgba(123,0,255,0.1);
+    transform: translateX(6px);
+  }
+  .quiz-option.selected {
+    border-color: var(--accent);
+    background: rgba(123,0,255,0.2);
+    color: #fff;
+  }
+  .quiz-option-letter {
+    width: 28px; height: 28px; border-radius: 50%;
+    background: var(--border); display: flex; align-items: center; justify-content: center;
+    font-size: 0.75rem; font-weight: 700; flex-shrink: 0;
+    transition: background 0.2s;
+  }
+  .quiz-option.selected .quiz-option-letter { background: var(--accent); }
+  .quiz-nav {
+    display: flex; justify-content: space-between; align-items: center;
+    margin-top: 2rem;
+  }
+  .quiz-nav-dots { display: flex; gap: 0.5rem; }
+  .quiz-dot {
+    width: 8px; height: 8px; border-radius: 50%;
+    background: var(--border); transition: background 0.2s;
+  }
+  .quiz-dot.active { background: var(--accent); }
+  .quiz-dot.done { background: var(--glow); }
+
+  /* Quiz Result */
+  .quiz-result { display: none; padding: 3rem; text-align: center; }
+  .quiz-result.visible { display: block; }
+  .archetype-art {
+    width: 160px; height: 160px;
+    margin: 0 auto 2rem;
+  }
+
+  /* CSS Art — Гениальный Учёный */
+  .art-scientist {
+    position: relative;
+    width: 160px; height: 160px;
+  }
+  .art-scientist .head {
+    width: 80px; height: 80px; border-radius: 50%;
+    background: #e8d5b7; position: absolute;
+    top: 10px; left: 40px;
+    box-shadow: 0 0 0 3px #333;
+  }
+  .art-scientist .hair {
+    width: 86px; height: 30px;
+    background: #fff;
+    position: absolute; top: 6px; left: 37px;
+    border-radius: 43px 43px 0 0;
+  }
+  .art-scientist .glasses {
+    position: absolute; top: 48px; left: 38px;
+    display: flex; gap: 4px;
+  }
+  .art-scientist .glasses-l, .art-scientist .glasses-r {
+    width: 24px; height: 18px; border-radius: 4px;
+    border: 2px solid #333; background: rgba(100,200,255,0.3);
+  }
+  .art-scientist .body {
+    width: 70px; height: 55px;
+    background: #1a3a6b; position: absolute;
+    bottom: 0; left: 45px;
+    border-radius: 8px 8px 0 0;
+  }
+  .art-scientist .coat {
+    width: 90px; height: 58px;
+    background: #f0f0f0; position: absolute;
+    bottom: 0; left: 35px;
+    border-radius: 6px 6px 0 0;
+    border: 2px solid #ccc;
+  }
+  .art-scientist .flask {
+    position: absolute; right: 10px; top: 60px;
+    width: 20px; height: 30px;
+  }
+  .art-scientist .flask-body {
+    width: 20px; height: 22px;
+    background: rgba(0,255,100,0.7);
+    border-radius: 0 0 50% 50%;
+    border: 2px solid #333;
+    position: absolute; bottom: 0;
+  }
+  .art-scientist .flask-neck {
+    width: 10px; height: 10px;
+    background: #f0f0f0;
+    border: 2px solid #333;
+    position: absolute; top: 0; left: 3px;
+  }
+  .art-scientist .zap {
+    position: absolute; top: 0; right: 20px;
+    font-size: 1.5rem; animation: zapAnim 0.5s ease-in-out infinite alternate;
+  }
+  @keyframes zapAnim { from { opacity: 0.3; } to { opacity: 1; } }
+
+  /* CSS Art — Теневой Кукловод */
+  .art-puppeteer {
+    position: relative; width: 160px; height: 160px;
+  }
+  .art-puppeteer .shadow-body {
+    width: 60px; height: 90px;
+    background: linear-gradient(180deg, #1a0030, #050010);
+    border-radius: 30px 30px 0 0;
+    position: absolute; bottom: 0; left: 50px;
+    box-shadow: 0 0 20px rgba(123,0,255,0.5);
+  }
+  .art-puppeteer .shadow-head {
+    width: 50px; height: 50px;
+    background: #1a0030; border-radius: 50%;
+    position: absolute; top: 8px; left: 55px;
+    box-shadow: 0 0 15px rgba(123,0,255,0.6);
+  }
+  .art-puppeteer .eye { width: 8px; height: 8px; background: var(--glow); border-radius: 50%; position: absolute; top: 22px; animation: eyeGlow 2s ease-in-out infinite; }
+  .art-puppeteer .eye.l { left: 62px; }
+  .art-puppeteer .eye.r { left: 85px; }
+  @keyframes eyeGlow { 0%,100% { box-shadow: 0 0 4px var(--glow); } 50% { box-shadow: 0 0 12px var(--glow); } }
+  .art-puppeteer .string { width: 1px; background: rgba(168,85,247,0.6); position: absolute; top: 0; }
+  .art-puppeteer .s1 { height: 80px; left: 40px; transform: rotate(-15deg); }
+  .art-puppeteer .s2 { height: 70px; left: 80px; }
+  .art-puppeteer .s3 { height: 85px; left: 120px; transform: rotate(15deg); }
+  .art-puppeteer .puppet {
+    width: 20px; height: 20px;
+    background: #ffd700; border-radius: 50%;
+    position: absolute; top: 78px;
+  }
+  .art-puppeteer .p1 { left: 30px; }
+  .art-puppeteer .p2 { left: 70px; }
+  .art-puppeteer .p3 { left: 110px; }
+  .art-puppeteer .hat {
+    width: 44px; height: 36px;
+    position: absolute; top: -4px; left: 58px;
+  }
+  .art-puppeteer .hat-brim {
+    width: 44px; height: 8px; background: #2a0050; border-radius: 4px;
+    position: absolute; bottom: 0;
+  }
+  .art-puppeteer .hat-top {
+    width: 28px; height: 28px; background: #1a0030;
+    border-radius: 4px 4px 0 0; position: absolute; bottom: 6px; left: 8px;
+  }
+
+  /* CSS Art — Харизматичный Демагог */
+  .art-demagogue {
+    position: relative; width: 160px; height: 160px;
+  }
+  .art-demagogue .body {
+    width: 64px; height: 70px;
+    background: linear-gradient(180deg, #8b0000, #5a0000);
+    position: absolute; bottom: 0; left: 48px;
+    border-radius: 6px 6px 0 0;
+  }
+  .art-demagogue .tie {
+    width: 16px; height: 40px;
+    background: #ff003c;
+    position: absolute; bottom: 2px; left: 72px;
+    clip-path: polygon(50% 0, 100% 20%, 60% 100%, 40% 100%, 0 20%);
+  }
+  .art-demagogue .head {
+    width: 60px; height: 65px;
+    background: #f0c87a; border-radius: 50% 50% 40% 40%;
+    position: absolute; top: 6px; left: 50px;
+    box-shadow: 0 0 0 2px #c8a060;
+  }
+  .art-demagogue .hair {
+    width: 66px; height: 22px;
+    background: linear-gradient(90deg, #ffd700, #ff8c00);
+    position: absolute; top: 2px; left: 47px;
+    border-radius: 33px 33px 0 0;
+    transform: rotate(-5deg);
+  }
+  .art-demagogue .mouth {
+    width: 28px; height: 10px;
+    background: #8b0000; border-radius: 0 0 14px 14px;
+    position: absolute; top: 52px; left: 66px;
+  }
+  .art-demagogue .speech {
+    width: 55px; height: 40px;
+    background: rgba(255,215,0,0.1);
+    border: 2px solid var(--gold);
+    border-radius: 10px;
+    position: absolute; top: 0; right: 0;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 0.6rem; color: var(--gold); text-align: center; padding: 4px;
+    line-height: 1.2;
+  }
+  .art-demagogue .speech::after {
+    content: '';
+    position: absolute; bottom: -8px; left: 10px;
+    border: 4px solid transparent;
+    border-top-color: var(--gold);
+  }
+
+  /* CSS Art — Кот */
+  .art-cat {
+    position: relative; width: 160px; height: 160px;
+  }
+  .art-cat .body {
+    width: 90px; height: 70px;
+    background: #2a2a3a; border-radius: 50%;
+    position: absolute; bottom: 10px; left: 35px;
+    box-shadow: 0 0 20px rgba(123,0,255,0.3);
+  }
+  .art-cat .head {
+    width: 70px; height: 65px;
+    background: #2a2a3a; border-radius: 50% 50% 40% 40%;
+    position: absolute; top: 12px; left: 45px;
+    box-shadow: 0 0 15px rgba(123,0,255,0.2);
+  }
+  .art-cat .ear { position: absolute; top: 4px; }
+  .art-cat .ear-l { left: 44px; width: 0; height: 0; border-left: 12px solid transparent; border-right: 12px solid transparent; border-bottom: 22px solid #2a2a3a; }
+  .art-cat .ear-r { right: 44px; width: 0; height: 0; border-left: 12px solid transparent; border-right: 12px solid transparent; border-bottom: 22px solid #2a2a3a; }
+  .art-cat .eye-c { width: 14px; height: 14px; background: #00ffaa; border-radius: 50%; position: absolute; top: 30px; animation: catEye 3s ease-in-out infinite; }
+  .art-cat .eye-c.l { left: 55px; }
+  .art-cat .eye-c.r { right: 55px; }
+  @keyframes catEye { 0%,90%,100% { transform: scaleY(1); } 95% { transform: scaleY(0.1); } }
+  .art-cat .pupil { width: 6px; height: 10px; background: #000; border-radius: 3px; position: absolute; top: 2px; left: 4px; }
+  .art-cat .nose { width: 10px; height: 8px; background: #ff6688; border-radius: 50%; position: absolute; top: 50px; left: 75px; }
+  .art-cat .whisker { height: 1px; background: rgba(255,255,255,0.4); position: absolute; top: 54px; }
+  .art-cat .w1 { width: 30px; left: 28px; transform: rotate(-10deg); }
+  .art-cat .w2 { width: 30px; left: 28px; }
+  .art-cat .w3 { width: 30px; right: 28px; transform: rotate(10deg); }
+  .art-cat .w4 { width: 30px; right: 28px; }
+  .art-cat .tail {
+    width: 50px; height: 12px;
+    background: #2a2a3a; border-radius: 6px;
+    position: absolute; bottom: 8px; right: 10px;
+    transform-origin: left center;
+    animation: tailWag 2s ease-in-out infinite;
+  }
+  @keyframes tailWag { 0%,100% { transform: rotate(-20deg); } 50% { transform: rotate(20deg); } }
+  .art-cat .crown {
+    position: absolute; top: 0; left: 55px;
+    width: 50px; height: 22px;
+  }
+  .art-cat .crown-base { width: 50px; height: 10px; background: var(--gold); position: absolute; bottom: 0; border-radius: 2px; }
+  .art-cat .crown-point { position: absolute; bottom: 8px; width: 0; height: 0; border-left: 8px solid transparent; border-right: 8px solid transparent; border-bottom: 14px solid var(--gold); }
+  .art-cat .cp1 { left: 3px; }
+  .art-cat .cp2 { left: 17px; }
+  .art-cat .cp3 { left: 31px; }
+
+  .archetype-name {
+    font-size: 2rem; font-weight: 900;
+    background: linear-gradient(135deg, var(--gold), #ff8c00);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    margin-bottom: 0.5rem;
+  }
+  .archetype-tagline {
+    font-size: 1rem; color: var(--accent); margin-bottom: 1.5rem;
+    font-style: italic;
+  }
+  .archetype-desc {
+    color: var(--muted); line-height: 1.7; margin-bottom: 2rem;
+    font-size: 1rem;
+  }
+  .archetype-traits {
+    display: flex; flex-wrap: wrap; gap: 0.5rem;
+    justify-content: center; margin-bottom: 2rem;
+  }
+  .trait-tag {
+    background: rgba(123,0,255,0.2);
+    border: 1px solid rgba(123,0,255,0.3);
+    color: var(--glow);
+    padding: 0.3rem 0.8rem; border-radius: 20px;
+    font-size: 0.8rem; font-weight: 600;
+  }
+
+  /* ===== APPLICATION FORM ===== */
+  #apply { background: var(--dark); }
+
+  .form-wrapper {
+    max-width: 700px; margin: 0 auto;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 20px; padding: 3rem;
+  }
+  .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; }
+  .form-group { display: flex; flex-direction: column; gap: 0.4rem; }
+  .form-group.full { grid-column: 1 / -1; }
+  label {
+    font-size: 0.8rem; font-weight: 700;
+    text-transform: uppercase; letter-spacing: 0.1em;
+    color: var(--muted);
+  }
+  input[type="text"],
+  input[type="email"],
+  textarea,
+  select {
+    background: var(--dark);
+    border: 1.5px solid var(--border);
+    color: var(--text);
+    border-radius: 8px; padding: 0.9rem 1rem;
+    font-size: 1rem; font-family: inherit;
+    transition: border-color 0.2s, box-shadow 0.2s;
+    outline: none;
+    width: 100%;
+  }
+  input:focus, textarea:focus, select:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px rgba(123,0,255,0.15);
+  }
+  textarea { resize: vertical; min-height: 120px; }
+  select { appearance: none; cursor: pointer; }
+  select option { background: var(--dark); }
+
+  .file-upload {
+    border: 2px dashed var(--border);
+    border-radius: 10px; padding: 2rem;
+    text-align: center; cursor: pointer;
+    transition: all 0.25s;
+  }
+  .file-upload:hover { border-color: var(--accent); background: rgba(123,0,255,0.05); }
+  .file-upload input { display: none; }
+  .file-upload-icon { font-size: 2rem; margin-bottom: 0.5rem; }
+  .file-upload-text { color: var(--muted); font-size: 0.9rem; }
+  .file-upload-text strong { color: var(--accent); }
+
+  .checkbox-group {
+    display: flex; align-items: flex-start; gap: 1rem;
+    cursor: pointer;
+  }
+  .checkbox-group input[type="checkbox"] {
+    width: 20px; height: 20px; flex-shrink: 0;
+    accent-color: var(--accent); cursor: pointer;
+    margin-top: 2px;
+  }
+  .checkbox-label { font-size: 0.9rem; color: var(--muted); line-height: 1.5; }
+  .checkbox-label strong { color: var(--text); }
+
+  .form-submit-area { margin-top: 2rem; text-align: center; }
+  .form-note { color: var(--muted); font-size: 0.8rem; margin-top: 1rem; }
+
+  /* Success message */
+  .form-success {
+    display: none; text-align: center; padding: 2rem;
+  }
+  .form-success.visible { display: block; }
+  .form-success-icon { font-size: 4rem; margin-bottom: 1rem; animation: successBounce 0.5s ease; }
+  @keyframes successBounce { 0%,100% { transform: scale(1); } 50% { transform: scale(1.2); } }
+
+  /* ===== TESTIMONIALS ===== */
+  #testimonials { background: var(--black); }
+
+  .testimonials-grid {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 1.5rem;
+  }
+  .testimonial-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 16px; padding: 2rem;
+    transition: all 0.3s; position: relative;
+  }
+  .testimonial-card:hover { border-color: rgba(123,0,255,0.3); transform: translateY(-4px); }
+  .testimonial-card::before {
+    content: '"';
+    position: absolute; top: 1rem; right: 1.5rem;
+    font-size: 6rem; color: rgba(123,0,255,0.1);
+    font-family: Georgia, serif; line-height: 1;
+  }
+  .testimonial-text { color: var(--text); line-height: 1.7; margin-bottom: 1.5rem; font-style: italic; }
+  .testimonial-author { display: flex; align-items: center; gap: 1rem; }
+  .author-avatar {
+    width: 48px; height: 48px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1.5rem;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    flex-shrink: 0;
+  }
+  .author-name { font-weight: 700; font-size: 0.95rem; }
+  .author-role { color: var(--muted); font-size: 0.8rem; }
+  .stars { color: var(--gold); font-size: 0.9rem; margin-bottom: 0.5rem; }
+
+  /* ===== FOOTER ===== */
+  footer {
+    background: var(--dark);
+    border-top: 1px solid var(--border);
+    padding: 3rem 0 2rem;
+    position: relative; z-index: 1;
+  }
+  .footer-inner {
+    max-width: 1200px; margin: 0 auto; padding: 0 2rem;
+  }
+  .footer-top {
+    display: grid; grid-template-columns: 1.5fr 1fr 1fr 1fr;
+    gap: 3rem; margin-bottom: 3rem;
+  }
+  .footer-brand .brand-name {
+    font-size: 1.2rem; font-weight: 900; color: var(--gold); margin-bottom: 1rem;
+  }
+  .footer-brand p { color: var(--muted); font-size: 0.9rem; line-height: 1.6; }
+  .footer-col h4 {
+    font-size: 0.8rem; font-weight: 700; text-transform: uppercase;
+    letter-spacing: 0.1em; color: var(--text); margin-bottom: 1rem;
+  }
+  .footer-links { list-style: none; }
+  .footer-links li { margin-bottom: 0.6rem; }
+  .footer-links a { color: var(--muted); text-decoration: none; font-size: 0.9rem; transition: color 0.2s; }
+  .footer-links a:hover { color: var(--gold); }
+  .footer-bottom {
+    border-top: 1px solid var(--border);
+    padding-top: 2rem;
+    display: flex; justify-content: space-between; align-items: center;
+    flex-wrap: wrap; gap: 1rem;
+  }
+  .footer-bottom p { color: var(--muted); font-size: 0.8rem; }
+  .footer-badges { display: flex; gap: 0.5rem; flex-wrap: wrap; }
+  .footer-badge {
+    background: rgba(123,0,255,0.1);
+    border: 1px solid rgba(123,0,255,0.2);
+    color: var(--glow); padding: 0.3rem 0.7rem;
+    border-radius: 4px; font-size: 0.7rem; font-weight: 600;
+    letter-spacing: 0.05em;
+  }
+
+  /* ===== MODAL ===== */
+  .modal-overlay {
+    position: fixed; inset: 0; z-index: 2000;
+    background: rgba(0,0,0,0.85);
+    display: none; align-items: center; justify-content: center;
+    padding: 2rem;
+  }
+  .modal-overlay.open { display: flex; }
+  .modal {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 20px; padding: 2.5rem;
+    max-width: 550px; width: 100%;
+    position: relative;
+    animation: modalIn 0.3s ease;
+  }
+  @keyframes modalIn { from { opacity: 0; transform: scale(0.9) translateY(20px); } to { opacity: 1; transform: scale(1) translateY(0); } }
+  .modal-close {
+    position: absolute; top: 1.5rem; right: 1.5rem;
+    background: none; border: none; color: var(--muted);
+    font-size: 1.5rem; cursor: pointer; transition: color 0.2s;
+  }
+  .modal-close:hover { color: var(--accent2); }
+  .modal-title { font-size: 1.5rem; font-weight: 800; margin-bottom: 0.5rem; }
+
+  /* ===== TOAST ===== */
+  .toast {
+    position: fixed; bottom: 2rem; right: 2rem; z-index: 3000;
+    background: var(--card);
+    border: 1px solid var(--accent);
+    border-radius: 10px; padding: 1rem 1.5rem;
+    color: var(--text);
+    transform: translateY(100px); opacity: 0;
+    transition: all 0.3s;
+    max-width: 300px;
+  }
+  .toast.show { transform: translateY(0); opacity: 1; }
+  .toast-title { font-weight: 700; margin-bottom: 0.2rem; }
+  .toast-body { font-size: 0.85rem; color: var(--muted); }
+
+  /* ===== MISC ANIMATIONS ===== */
+  .fade-in {
+    opacity: 0; transform: translateY(30px);
+    transition: opacity 0.6s ease, transform 0.6s ease;
+  }
+  .fade-in.visible { opacity: 1; transform: translateY(0); }
+
+  .glow-text {
+    text-shadow: 0 0 20px rgba(168,85,247,0.5);
+  }
+
+  /* Typing cursor */
+  .typewriter::after {
+    content: '|';
+    animation: blink 0.7s step-end infinite;
+    color: var(--accent);
+  }
+  @keyframes blink { 50% { opacity: 0; } }
+
+  /* ===== RESPONSIVE ===== */
+  @media (max-width: 768px) {
+    .form-grid { grid-template-columns: 1fr; }
+    .footer-top { grid-template-columns: 1fr 1fr; }
+    .nav-links { display: none; }
+    section { padding: 70px 0; }
+  }
+  @media (max-width: 480px) {
+    .footer-top { grid-template-columns: 1fr; }
+    .quiz-body { padding: 1.5rem; }
+  }
+</style>
+</head>
+<body>
+
+<!-- Particles canvas -->
+<canvas id="particles-canvas"></canvas>
+
+<!-- NAVIGATION -->
+<nav id="main-nav">
+  <div class="nav-inner">
+    <a href="#hero" class="nav-logo">☠ МЕГАЛОМАНИАКС</a>
+    <ul class="nav-links">
+      <li><a href="#why">Преимущества</a></li>
+      <li><a href="#vacancies">Вакансии</a></li>
+      <li><a href="#quiz">Тест</a></li>
+      <li><a href="#apply">Подать заявку</a></li>
+    </ul>
+  </div>
+</nav>
+
+<!-- ========== HERO ========== -->
+<section id="hero">
+  <div class="container">
+    <div class="logo-art">
+      <div class="logo-circle">☠</div>
+    </div>
+    <p class="hero-eyebrow">Корпоративный рекрутинг нового порядка</p>
+    <h1 class="hero-title">
+      МЕГАЛОМАНИАКС<br>
+      <span>CAREERS</span>
+    </h1>
+    <p class="hero-subtitle typewriter" id="hero-typewriter">Построй карьеру, разрушая чужие</p>
+    <div class="hero-btns">
+      <a href="#vacancies" class="btn btn-primary">⚡ Смотреть вакансии</a>
+      <a href="#quiz" class="btn btn-outline">🧪 Пройти тест</a>
+    </div>
+
+    <div class="stats-row fade-in">
+      <div class="stat-card">
+        <span class="stat-num" data-target="666">0</span>
+        <span class="stat-label">Приспешников</span>
+      </div>
+      <div class="stat-card">
+        <span class="stat-num" data-target="13">0</span>
+        <span class="stat-label">Тайных баз</span>
+      </div>
+      <div class="stat-card">
+        <span class="stat-num" data-target="3">0</span>
+        <span class="stat-label">Лучей смерти</span>
+      </div>
+      <div class="stat-card">
+        <span class="stat-num" data-target="1">0</span>
+        <span class="stat-label">Кот-директор</span>
+      </div>
+      <div class="stat-card">
+        <span class="stat-num">∞</span>
+        <span class="stat-label">WorldCoin</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="divider"></div>
+
+<!-- ========== WHY US ========== -->
+<section id="why">
+  <div class="container">
+    <h2 class="section-title fade-in">Почему МЕГАЛОМАНИАКС?</h2>
+    <p class="section-sub fade-in">Потому что у вас нет другого выбора. Но всё равно — вот преимущества.</p>
+
+    <div class="perks-grid">
+      <div class="perk-card fade-in">
+        <div class="perk-icon">☕</div>
+        <h3 class="perk-title">Бесплатный кофе</h3>
+        <p class="perk-desc">Эспрессо из захваченных плантаций Коста-Рики. Лучшие зёрна, которые только можно украсть у транснациональных корпораций.</p>
+      </div>
+      <div class="perk-card fade-in">
+        <div class="perk-icon">🐱</div>
+        <h3 class="perk-title">Кот-терапия с Мефистофелем</h3>
+        <p class="perk-desc">Наш Главный Кот-Директор Мефистофель проводит еженедельные сессии кот-терапии. Он осудит вас взглядом — и станет легче.</p>
+      </div>
+      <div class="perk-card fade-in">
+        <div class="perk-icon">⏰</div>
+        <h3 class="perk-title">Гибкий график прокрастинации</h3>
+        <p class="perk-desc">Захват мира — дело не одного дня. Работайте в удобное время: с 11:00 до 14:00 или когда придумаете достаточно злодейский план.</p>
+      </div>
+      <div class="perk-card fade-in">
+        <div class="perk-icon">💉</div>
+        <h3 class="perk-title">ДМС нового уровня</h3>
+        <p class="perk-desc">Медицинская страховка покрывает: лечение ожогов от лучей смерти, психологическую травму после провала планов, протезирование щупалец.</p>
+      </div>
+      <div class="perk-card fade-in">
+        <div class="perk-icon">🌋</div>
+        <h3 class="perk-title">Работа из вулканического логова</h3>
+        <p class="perk-desc">Уникальный remote-first опыт: хотите — работайте из уютной тайной базы в вулкане. Или из домашнего бункера. Главное — план захвата.</p>
+      </div>
+      <div class="perk-card fade-in">
+        <div class="perk-icon">📈</div>
+        <h3 class="perk-title">Карьерный рост</h3>
+        <p class="perk-desc">От Приспешника до Верховного Злодея — прозрачная карьерная лестница. Или можно устранить конкурентов. Мы не осуждаем.</p>
+      </div>
+      <div class="perk-card fade-in">
+        <div class="perk-icon">🏖️</div>
+        <h3 class="perk-title">Отпуск на захваченных курортах</h3>
+        <p class="perk-desc">30 дней оплачиваемого отпуска. Список доступных островов обновляется по мере их захвата. Статус: Мальдивы — в процессе.</p>
+      </div>
+      <div class="perk-card fade-in">
+        <div class="perk-icon">🎓</div>
+        <h3 class="perk-title">Обучение и развитие</h3>
+        <p class="perk-desc">Курсы: «Монологи перед героями», «Не говорить злодейские планы вслух», «Уязвимые места воздуховодов» — всё за счёт организации.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="divider"></div>
+
+<!-- ========== VACANCIES ========== -->
+<section id="vacancies">
+  <div class="container">
+    <h2 class="section-title fade-in">Открытые вакансии</h2>
+    <p class="section-sub fade-in">Нам нужны лучшие. Худших мы уже поглотили.</p>
+
+    <div class="vacancies-grid">
+
+      <!-- 1 -->
+      <div class="vacancy-card fade-in" onclick="openVacancyModal('volcano')">
+        <div class="vacancy-badge">🌋 Операционный отдел</div>
+        <h3 class="vacancy-title">Оператор Вулканического Логова</h3>
+        <p class="vacancy-desc">Управляете кнопками, рычагами и заслонками лавы в нашей флагманской базе. Следите, чтобы никто случайно не упал в жерло (если не предусмотрено планом).</p>
+        <div class="vacancy-requirements">
+          <h4>Требования</h4>
+          <ul class="req-list">
+            <li>Опыт работы с вулканическим оборудованием от 2 лет</li>
+            <li>Стрессоустойчивость при температуре +400°C</li>
+            <li>Умение различать кнопки «смерть» и «кофемашина»</li>
+            <li>Непереносимость миссий спасения</li>
+          </ul>
+        </div>
+        <div class="vacancy-footer">
+          <div class="salary">120 000 ₩C<span>в месяц + бонус за сохранность базы</span></div>
+          <button class="btn btn-outline" onclick="event.stopPropagation(); scrollToApply('Оператор Вулканического Логова')">Откликнуться</button>
+        </div>
+      </div>
+
+      <!-- 2 -->
+      <div class="vacancy-card fade-in" onclick="openVacancyModal('cat')">
+        <div class="vacancy-badge hot">🐱 Топ-приоритет</div>
+        <h3 class="vacancy-title">Кошачий Психолог</h3>
+        <p class="vacancy-desc">Работаете персональным психологом Мефистофеля. Понимаете его нужды, интерпретируете взгляды, предотвращаете приступы неудовольства, ставящие под угрозу всю организацию.</p>
+        <div class="vacancy-requirements">
+          <h4>Требования</h4>
+          <ul class="req-list">
+            <li>Учёная степень в фелинологии или смежных науках</li>
+            <li>Опыт работы с котами-социопатами</li>
+            <li>Иммунитет к царапинам и презрению</li>
+            <li>Знание языка взглядов (разочарованный, очень разочарованный, уничтожающий)</li>
+            <li>Не аллергик. Принципиально.</li>
+          </ul>
+        </div>
+        <div class="vacancy-footer">
+          <div class="salary">95 000 ₩C<span>+ ежемесячный бонус от Мефистофеля (если заслужите)</span></div>
+          <button class="btn btn-outline" onclick="event.stopPropagation(); scrollToApply('Кошачий Психолог')">Откликнуться</button>
+        </div>
+      </div>
+
+      <!-- 3 -->
+      <div class="vacancy-card fade-in" onclick="openVacancyModal('intern')">
+        <div class="vacancy-badge">🎓 Стажировка</div>
+        <h3 class="vacancy-title">Стажёр Мирового Господства</h3>
+        <p class="vacancy-desc">Идеальная точка входа в индустрию захвата мира. Вы будете ассистировать главным злодеям, готовить кофе, записывать злодейские монологи и учиться злодейству изнутри.</p>
+        <div class="vacancy-requirements">
+          <h4>Требования</h4>
+          <ul class="req-list">
+            <li>Незаконченное высшее (любое — мы переучим)</li>
+            <li>Желание захватить мир или хотя бы квартал</li>
+            <li>Готовность работать в нестандартных условиях</li>
+            <li>Чёрная водолазка (обязательно)</li>
+          </ul>
+        </div>
+        <div class="vacancy-footer">
+          <div class="salary">15 000 ₩C<span>+ опыт бесценнее любых денег</span></div>
+          <button class="btn btn-outline" onclick="event.stopPropagation(); scrollToApply('Стажёр Мирового Господства')">Откликнуться</button>
+        </div>
+      </div>
+
+      <!-- 4 -->
+      <div class="vacancy-card fade-in" onclick="openVacancyModal('barista')">
+        <div class="vacancy-badge">☕ Инфраструктура</div>
+        <h3 class="vacancy-title">Бариста Секретной Базы</h3>
+        <p class="vacancy-desc">Поддерживаете боевой дух армии злодеев с помощью идеального эспрессо. Ваш кофе — это то, что стоит между нами и провалом. Буквально.</p>
+        <div class="vacancy-requirements">
+          <h4>Требования</h4>
+          <ul class="req-list">
+            <li>Сертификат бариста или эквивалентный злодейский опыт</li>
+            <li>Умение хранить секреты (и рецепты)</li>
+            <li>Навык работы в условиях повышенной секретности</li>
+            <li>Стойкость к вопросу «где кофе?» в 3 часа ночи</li>
+          </ul>
+        </div>
+        <div class="vacancy-footer">
+          <div class="salary">60 000 ₩C<span>+ чаевые от благодарных злодеев</span></div>
+          <button class="btn btn-outline" onclick="event.stopPropagation(); scrollToApply('Бариста Секретной Базы')">Откликнуться</button>
+        </div>
+      </div>
+
+      <!-- 5 -->
+      <div class="vacancy-card fade-in" onclick="openVacancyModal('deathray')">
+        <div class="vacancy-badge hot">⚡ R&amp;D Отдел</div>
+        <h3 class="vacancy-title">Senior Разработчик Лучей Смерти</h3>
+        <p class="vacancy-desc">Ключевая роль в нашем технологическом стеке захвата мира. Разрабатываете, тестируете и итерируете лучи смерти. Agile-спринты, code review (выживших коллег).</p>
+        <div class="vacancy-requirements">
+          <h4>Требования</h4>
+          <ul class="req-list">
+            <li>PhD в физике или «достаточно интересный» LinkedIn</li>
+            <li>Опыт разработки оружия массового воздействия 5+ лет</li>
+            <li>Знание Python, C++, и квантовой злодеяния</li>
+            <li>Умение объяснять сложные вещи инвесторам простыми словами</li>
+            <li>GitHub с хоть одним публичным репозиторием</li>
+          </ul>
+        </div>
+        <div class="vacancy-footer">
+          <div class="salary">350 000 ₩C<span>+ опционы на долю в мировом господстве</span></div>
+          <button class="btn btn-outline" onclick="event.stopPropagation(); scrollToApply('Senior Разработчик Лучей Смерти')">Откликнуться</button>
+        </div>
+      </div>
+
+      <!-- 6 -->
+      <div class="vacancy-card fade-in" onclick="openVacancyModal('procrastination')">
+        <div class="vacancy-badge">📋 Менеджмент</div>
+        <h3 class="vacancy-title">Менеджер по Прокрастинации</h3>
+        <p class="vacancy-desc">Официальный заместитель Доктора по вопросам откладывания захвата мира. Ведёте документацию почему захват откладывается, разрабатываете новые причины, оптимизируете процесс ничегонеделания.</p>
+        <div class="vacancy-requirements">
+          <h4>Требования</h4>
+          <ul class="req-list">
+            <li>Опыт прокрастинации 10+ лет (без перерыва)</li>
+            <li>Владение Excel для табличек «почему не сегодня»</li>
+            <li>Способность убедительно говорить «завтра точно»</li>
+            <li>Нечувствительность к дедлайнам</li>
+            <li>Умение делегировать прокрастинацию команде</li>
+          </ul>
+        </div>
+        <div class="vacancy-footer">
+          <div class="salary">180 000 ₩C<span>Зарплата выплачивается. Когда-нибудь.</span></div>
+          <button class="btn btn-outline" onclick="event.stopPropagation(); scrollToApply('Менеджер по Прокрастинации')">Откликнуться</button>
+        </div>
+      </div>
+
+    </div>
+
+    <div style="text-align:center; margin-top: 3rem;" class="fade-in">
+      <p style="color: var(--muted); margin-bottom: 1rem;">Не нашли подходящую позицию?</p>
+      <button class="btn btn-primary" onclick="scrollToApply('Спонтанный Злодей (открытая заявка)')">Подать открытую заявку</button>
+    </div>
+  </div>
+</section>
+
+<div class="divider"></div>
+
+<!-- ========== QUIZ ========== -->
+<section id="quiz">
+  <div class="container">
+    <h2 class="section-title fade-in">Какой ты злодейский архетип?</h2>
+    <p class="section-sub fade-in">5 вопросов. 4 судьбы. Узнай своё истинное злодейское предназначение.</p>
+
+    <div class="quiz-wrapper fade-in">
+      <div class="quiz-progress-bar">
+        <div class="quiz-progress-fill" id="quiz-progress" style="width: 0%"></div>
+      </div>
+
+      <!-- Questions container -->
+      <div id="quiz-questions">
+        <div class="quiz-body">
+          <div class="quiz-step-label" id="quiz-step-label">Вопрос 1 из 5</div>
+          <div class="quiz-question" id="quiz-question-text"></div>
+          <div class="quiz-options" id="quiz-options-container"></div>
+          <div class="quiz-nav">
+            <div class="quiz-nav-dots" id="quiz-dots"></div>
+            <button class="btn btn-primary" id="quiz-next-btn" onclick="quizNext()" style="display:none">Далее →</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Result container -->
+      <div class="quiz-result" id="quiz-result">
+        <div class="archetype-art" id="result-art"></div>
+        <div class="archetype-name" id="result-name"></div>
+        <div class="archetype-tagline" id="result-tagline"></div>
+        <div class="archetype-desc" id="result-desc"></div>
+        <div class="archetype-traits" id="result-traits"></div>
+        <div style="display:flex; gap:1rem; justify-content:center; flex-wrap:wrap;">
+          <button class="btn btn-primary" onclick="scrollToApply('')">Подать заявку →</button>
+          <button class="btn btn-outline" onclick="quizRestart()">Пройти снова</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="divider"></div>
+
+<!-- ========== APPLICATION FORM ========== -->
+<section id="apply">
+  <div class="container">
+    <h2 class="section-title fade-in">Подать заявку</h2>
+    <p class="section-sub fade-in">Мы рассмотрим вашу кандидатуру в течение 3–5 злодейских рабочих дней</p>
+
+    <div class="form-wrapper fade-in">
+      <form id="application-form" onsubmit="submitForm(event)">
+        <div class="form-grid">
+          <div class="form-group">
+            <label for="f-name">Имя / Псевдоним злодея *</label>
+            <input type="text" id="f-name" placeholder="Доктор Ужас, Тёмный Лорд..." required>
+          </div>
+          <div class="form-group">
+            <label for="f-email">Email для связи *</label>
+            <input type="email" id="f-email" placeholder="evil@megalomaniacs.world" required>
+          </div>
+          <div class="form-group full">
+            <label for="f-position">Желаемая позиция *</label>
+            <select id="f-position" required>
+              <option value="" disabled selected>Выберите вашу судьбу...</option>
+              <option>Оператор Вулканического Логова</option>
+              <option>Кошачий Психолог</option>
+              <option>Стажёр Мирового Господства</option>
+              <option>Бариста Секретной Базы</option>
+              <option>Senior Разработчик Лучей Смерти</option>
+              <option>Менеджер по Прокрастинации</option>
+              <option>Спонтанный Злодей (открытая заявка)</option>
+            </select>
+          </div>
+          <div class="form-group full">
+            <label for="f-superpower">Суперспособность *</label>
+            <input type="text" id="f-superpower" placeholder="Телекинез, невидимость, умение не спать 72 часа..." required>
+          </div>
+          <div class="form-group full">
+            <label for="f-why">Почему вы хотите захватить мир? *</label>
+            <textarea id="f-why" placeholder="Расскажите о вашей мотивации. Чем конкретнее злодейский план — тем лучше. Минимум 3 предложения." required></textarea>
+          </div>
+          <div class="form-group full">
+            <label>Злодейское резюме</label>
+            <label class="file-upload" for="f-resume">
+              <input type="file" id="f-resume" accept=".pdf,.doc,.docx,.txt" onchange="updateFileLabel(this)">
+              <div class="file-upload-icon">📄</div>
+              <div class="file-upload-text" id="file-label-text">
+                <strong>Нажмите для загрузки</strong> или перетащите файл<br>
+                PDF, DOC, DOCX — макс. 10 МБ. Секретные досье приветствуются.
+              </div>
+            </label>
+          </div>
+          <div class="form-group full">
+            <label class="checkbox-group">
+              <input type="checkbox" id="f-oath" required>
+              <span class="checkbox-label">
+                Я клянусь <strong>служить Нине Петровне</strong> (кем бы она ни была), не задавать лишних вопросов, не раскрывать расположение вулканической базы и выполнять приказы с должным уровнем загадочности. *
+              </span>
+            </label>
+          </div>
+        </div>
+        <div class="form-submit-area">
+          <button type="submit" class="btn btn-danger" style="font-size:1.1rem; padding: 1.1rem 3rem;">
+            ☠ Подать заявку на служение
+          </button>
+          <p class="form-note">* Нажимая кнопку, вы соглашаетесь с Условиями Злодейской Службы и передаёте бессмертную душу в залог.</p>
+        </div>
+      </form>
+
+      <div class="form-success" id="form-success">
+        <div class="form-success-icon">☠</div>
+        <h3 style="font-size:1.8rem; font-weight:900; margin-bottom:1rem;">Заявка принята, приспешник!</h3>
+        <p style="color:var(--muted); margin-bottom:1.5rem; line-height:1.7;">
+          Ваше злодейское резюме получено. Наш HR-отдел рассмотрит его в ближайшие 3–5 злодейских дней.<br>
+          Если вы достаточно злодейски одарены — мы свяжемся через зашифрованный канал.<br>
+          <br>
+          <em>Если не свяжемся — это тоже своего рода ответ.</em>
+        </p>
+        <button class="btn btn-primary" onclick="resetForm()">Подать ещё одну заявку</button>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="divider"></div>
+
+<!-- ========== TESTIMONIALS ========== -->
+<section id="testimonials">
+  <div class="container">
+    <h2 class="section-title fade-in">Отзывы нашей команды</h2>
+    <p class="section-sub fade-in">Мнения реальных злодеев. Под псевдонимами. Из соображений безопасности.</p>
+
+    <div class="testimonials-grid">
+
+      <div class="testimonial-card fade-in">
+        <div class="stars">★★★★★</div>
+        <p class="testimonial-text">«Работаю Оператором Логова уже три года. Да, иногда лава течёт не туда. Да, я потерял бровь в инциденте с кнопкой №47. Но кофе бесплатный и Мефистофель иногда смотрит на меня без ненависти. Рекомендую.»</p>
+        <div class="testimonial-author">
+          <div class="author-avatar">🌋</div>
+          <div>
+            <div class="author-name">Игорь «Тектоник» В.</div>
+            <div class="author-role">Старший оператор Логова, 3 года в МЕГАЛОМАНИАКС</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="testimonial-card fade-in">
+        <div class="stars">★★★★★</div>
+        <p class="testimonial-text">«Мефистофель — сложный клиент. Но кто из нас без недостатков? За два года работы я научилась понимать 47 оттенков его презрения. Это ли не профессиональный рост? Медстраховка покрыла все царапины.»</p>
+        <div class="testimonial-author">
+          <div class="author-avatar">🐱</div>
+          <div>
+            <div class="author-name">Светлана Т.</div>
+            <div class="author-role">Кошачий Психолог, 2 года в МЕГАЛОМАНИАКС</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="testimonial-card fade-in">
+        <div class="stars">★★★★☆</div>
+        <p class="testimonial-text">«Стажировка превзошла все ожидания. Первую неделю я думал, что это шутка. Потом я увидел луч смерти в действии. С тех пор работаю с повышенной мотивацией. Минус звезда — нет парковки.»</p>
+        <div class="testimonial-author">
+          <div class="author-avatar">🎓</div>
+          <div>
+            <div class="author-name">Алексей «Тень» К.</div>
+            <div class="author-role">Бывший стажёр, ныне Младший Злодей</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="testimonial-card fade-in">
+        <div class="stars">★★★★★</div>
+        <p class="testimonial-text">«Кофе из захваченных плантаций — это не маркетинг. Это правда лучший кофе в моей жизни. И я пробовал кофе на всех континентах. Некоторые из которых мы уже контролируем.»</p>
+        <div class="testimonial-author">
+          <div class="author-avatar">☕</div>
+          <div>
+            <div class="author-name">Эдуард «Эспрессо» М.</div>
+            <div class="author-role">Главный Бариста Базы №7, 4 года в МЕГАЛОМАНИАКС</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="testimonial-card fade-in">
+        <div class="stars">★★★★★</div>
+        <p class="testimonial-text">«Разработка лучей смерти — это настоящее инженерное вызов. Stack интересный: квантовая механика, немного машинного обучения, щепотка тёмной энергии. Ни один FAANG такого не предложит.»</p>
+        <div class="testimonial-author">
+          <div class="author-avatar">⚡</div>
+          <div>
+            <div class="author-name">Dr. Наталья «Квант» Р.</div>
+            <div class="author-role">Lead Engineer, Отдел Лучей Смерти</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="testimonial-card fade-in">
+        <div class="stars">★★★★★</div>
+        <p class="testimonial-text">«Как Менеджер по Прокрастинации могу сказать: работа мечты. Вчера написал отчёт о том, почему отчёт будет завтра. Сегодня планирую написать отчёт о вчерашнем отчёте. Перспективы безграничны.»</p>
+        <div class="testimonial-author">
+          <div class="author-avatar">📋</div>
+          <div>
+            <div class="author-name">Виктор «Потом» Д.</div>
+            <div class="author-role">Зам. Доктора по Прокрастинации</div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<!-- ========== FOOTER ========== -->
+<footer>
+  <div class="footer-inner">
+    <div class="footer-top">
+      <div class="footer-brand">
+        <div class="brand-name">☠ МЕГАЛОМАНИАКС</div>
+        <p>Международная организация по глобальному переустройству мира с 1977 года. Три направления: технологии, культура, экономика.</p>
+        <p style="margin-top:1rem; font-size:0.8rem; color:var(--muted)">Координаты штаб-квартиры: секретно. Серьёзно.</p>
+      </div>
+      <div class="footer-col">
+        <h4>Карьера</h4>
+        <ul class="footer-links">
+          <li><a href="#vacancies">Все вакансии</a></li>
+          <li><a href="#why">Преимущества</a></li>
+          <li><a href="#apply">Подать заявку</a></li>
+          <li><a href="#quiz">Пройти тест</a></li>
+        </ul>
+      </div>
+      <div class="footer-col">
+        <h4>Организация</h4>
+        <ul class="footer-links">
+          <li><a href="#">О нас</a></li>
+          <li><a href="#">Миссия и ценности</a></li>
+          <li><a href="#">Пресс-служба</a></li>
+          <li><a href="#">Инвесторам</a></li>
+        </ul>
+      </div>
+      <div class="footer-col">
+        <h4>Контакты</h4>
+        <ul class="footer-links">
+          <li><a href="#">hr@megalomaniacs.world</a></li>
+          <li><a href="#">Зашифрованный канал</a></li>
+          <li><a href="#">Явка (только по паролю)</a></li>
+          <li><a href="#">Мефистофель (лично)</a></li>
+        </ul>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      <p>© 1977–2026 МЕГАЛОМАНИАКС. Все права зарезервированы, мир ещё нет.</p>
+      <div class="footer-badges">
+        <span class="footer-badge">ISO 666</span>
+        <span class="footer-badge">Evil Corp Certified</span>
+        <span class="footer-badge">Кот одобрил</span>
+        <span class="footer-badge">WorldCoin Ready</span>
+      </div>
+    </div>
+  </div>
+</footer>
+
+<!-- ========== VACANCY MODAL ========== -->
+<div class="modal-overlay" id="vacancy-modal" onclick="closeModal()">
+  <div class="modal" onclick="event.stopPropagation()">
+    <button class="modal-close" onclick="closeModal()">✕</button>
+    <div id="modal-content"></div>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div class="toast" id="toast">
+  <div class="toast-title" id="toast-title"></div>
+  <div class="toast-body" id="toast-body"></div>
+</div>
+
+<!-- ========== JAVASCRIPT ========== -->
+<script>
+// ===== PARTICLES =====
+(function(){
+  const canvas = document.getElementById('particles-canvas');
+  const ctx = canvas.getContext('2d');
+  let W, H, particles = [];
+
+  function resize(){
+    W = canvas.width = window.innerWidth;
+    H = canvas.height = window.innerHeight;
+  }
+  resize();
+  window.addEventListener('resize', resize);
+
+  class Particle {
+    constructor(){
+      this.x = Math.random() * W;
+      this.y = Math.random() * H;
+      this.r = Math.random() * 1.5 + 0.3;
+      this.vx = (Math.random() - 0.5) * 0.4;
+      this.vy = (Math.random() - 0.5) * 0.4;
+      this.alpha = Math.random() * 0.7 + 0.1;
+      this.color = Math.random() > 0.5 ? '123,0,255' : '168,85,247';
+    }
+    update(){
+      this.x += this.vx; this.y += this.vy;
+      if(this.x < 0) this.x = W;
+      if(this.x > W) this.x = 0;
+      if(this.y < 0) this.y = H;
+      if(this.y > H) this.y = 0;
+    }
+    draw(){
+      ctx.beginPath();
+      ctx.arc(this.x, this.y, this.r, 0, Math.PI*2);
+      ctx.fillStyle = `rgba(${this.color},${this.alpha})`;
+      ctx.fill();
+    }
+  }
+
+  for(let i=0; i<120; i++) particles.push(new Particle());
+
+  function drawConnections(){
+    for(let i=0;i<particles.length;i++){
+      for(let j=i+1;j<particles.length;j++){
+        const dx=particles[i].x-particles[j].x, dy=particles[i].y-particles[j].y;
+        const d=Math.sqrt(dx*dx+dy*dy);
+        if(d<120){
+          ctx.beginPath();
+          ctx.moveTo(particles[i].x,particles[i].y);
+          ctx.lineTo(particles[j].x,particles[j].y);
+          ctx.strokeStyle=`rgba(123,0,255,${0.08*(1-d/120)})`;
+          ctx.lineWidth=0.5;
+          ctx.stroke();
+        }
+      }
+    }
+  }
+
+  function animate(){
+    ctx.clearRect(0,0,W,H);
+    particles.forEach(p=>{p.update();p.draw();});
+    drawConnections();
+    requestAnimationFrame(animate);
+  }
+  animate();
+})();
+
+// ===== COUNTER ANIMATION =====
+function animateCounter(el, target){
+  let current = 0;
+  const step = Math.ceil(target / 60);
+  const interval = setInterval(()=>{
+    current = Math.min(current + step, target);
+    el.textContent = current;
+    if(current >= target) clearInterval(interval);
+  }, 25);
+}
+
+// ===== INTERSECTION OBSERVER =====
+const io = new IntersectionObserver((entries)=>{
+  entries.forEach(e=>{
+    if(e.isIntersecting){
+      e.target.classList.add('visible');
+      // Counters
+      const nums = e.target.querySelectorAll('[data-target]');
+      nums.forEach(n=>animateCounter(n, +n.dataset.target));
+    }
+  });
+},{threshold:0.15});
+
+document.querySelectorAll('.fade-in').forEach(el=>io.observe(el));
+// Also observe stats row
+document.querySelectorAll('[data-target]').forEach(el=>{
+  const row = el.closest('.stats-row');
+  if(row) io.observe(row);
+});
+
+// ===== TYPEWRITER =====
+(function(){
+  const phrases = [
+    'Построй карьеру, разрушая чужие',
+    'Потому что обычные компании — скучно',
+    'Мефистофель ждёт вашего резюме',
+    'Захват мира начинается с хорошей команды',
+    '666 довольных злодеев не могут ошибаться'
+  ];
+  let pi = 0, ci = 0, deleting = false;
+  const el = document.getElementById('hero-typewriter');
+  function type(){
+    const phrase = phrases[pi];
+    if(!deleting){
+      el.textContent = phrase.slice(0, ci+1);
+      ci++;
+      if(ci === phrase.length){ deleting = true; setTimeout(type, 2000); return; }
+    } else {
+      el.textContent = phrase.slice(0, ci-1);
+      ci--;
+      if(ci === 0){ deleting = false; pi = (pi+1) % phrases.length; }
+    }
+    setTimeout(type, deleting ? 35 : 70);
+  }
+  type();
+})();
+
+// ===== NAV SCROLL EFFECT =====
+window.addEventListener('scroll', ()=>{
+  const nav = document.getElementById('main-nav');
+  nav.style.background = window.scrollY > 50
+    ? 'rgba(5,5,8,0.97)'
+    : 'rgba(5,5,8,0.85)';
+});
+
+// ===== QUIZ =====
+const quizData = [
+  {
+    q: 'Ваш план захвата мира провалился. Что вы делаете?',
+    opts: [
+      { text: 'Анализирую ошибки, создаю более совершенный план v2.0', scores: [3,0,0,0] },
+      { text: 'Манипулирую другими злодеями, чтобы они взяли вину на себя', scores: [0,3,0,0] },
+      { text: 'Произношу вдохновляющую речь и поднимаю боевой дух армии', scores: [0,0,3,0] },
+      { text: 'Игнорирую провал и засыпаю в самом неподходящем месте', scores: [0,0,0,3] },
+    ]
+  },
+  {
+    q: 'Что вы сделаете ПЕРВЫМ делом после захвата мира?',
+    opts: [
+      { text: 'Переименую все научные институты в свою честь', scores: [3,0,1,0] },
+      { text: 'Установлю систему тотального скрытого контроля', scores: [0,3,0,0] },
+      { text: 'Выступлю перед всем человечеством с получасовым монологом', scores: [0,0,3,0] },
+      { text: 'Найду лучший солнечный подоконник на планете', scores: [0,0,0,3] },
+    ]
+  },
+  {
+    q: 'Агент спецслужб попал в вашу ловушку. Ваши действия?',
+    opts: [
+      { text: 'Объясняю детали своего гениального плана — не могу удержаться', scores: [3,0,1,0] },
+      { text: 'Молчу и наблюдаю. Пусть думает, что победил.', scores: [0,3,0,0] },
+      { text: 'Предлагаю перейти на мою сторону пламенной речью', scores: [0,0,3,0] },
+      { text: 'Сижу у него на коленях и мурлыкаю. Это сбивает с толку.', scores: [0,0,0,3] },
+    ]
+  },
+  {
+    q: 'Что для вас главное в мировом господстве?',
+    opts: [
+      { text: 'Технологическое превосходство и научный прогресс', scores: [3,0,0,0] },
+      { text: 'Незаметная власть — все делают что хочу, не зная об этом', scores: [0,3,0,0] },
+      { text: 'Всеобщее признание и постоянные аплодисменты', scores: [0,0,3,0] },
+      { text: 'Неограниченный запас тунца и тёплые солнечные пятна', scores: [0,0,0,3] },
+    ]
+  },
+  {
+    q: 'Ваш фирменный стиль злодея — это:',
+    opts: [
+      { text: 'Лабораторный халат, монокль и лазерная указка', scores: [3,0,0,0] },
+      { text: 'Тёмный плащ, тени, способность исчезать в разговоре', scores: [0,3,0,0] },
+      { text: 'Дорогой костюм, харизма, умение убеждать толпы', scores: [0,0,3,0] },
+      { text: 'Шерсть, когти, взгляд убивающий на расстоянии', scores: [0,0,0,3] },
+    ]
+  }
+];
+
+const archetypes = [
+  {
+    name: 'Гениальный Учёный',
+    tagline: '«Наука на службе злодейства»',
+    desc: 'Ваш интеллект — ваше главное оружие. Вы видите мир как задачу, которую нужно решить — желательно с помощью луча смерти или биологического агента. Планы провалятся только потому, что вы не можете не рассказать о них вслух.',
+    traits: ['IQ выше нормы', 'Монолог-монополист', 'Коллекционер нобелевок', 'Халат всегда в химических пятнах'],
+    art: 'scientist'
+  },
+  {
+    name: 'Теневой Кукловод',
+    tagline: '«Лучший злодей — невидимый злодей»',
+    desc: 'Вы управляете событиями из тени. Никто не знает вашего имени, но все ощущают вашу руку. Правительства, корпорации, международные организации — всё это нити в ваших руках. Вы даже не злодей, вы — "обстоятельства".',
+    traits: ['Мастер манипуляций', 'Не существует официально', 'Всегда в тени', 'Знает всё обо всех'],
+    art: 'puppeteer'
+  },
+  {
+    name: 'Харизматичный Демагог',
+    tagline: '«Слово острее луча смерти»',
+    desc: 'Вам не нужна армия — вам нужен микрофон. Вы захватываете не страны, а умы. Ваши речи превращают обычных людей в фанатичных приспешников. Единственная слабость — вы не можете замолчать.',
+    traits: ['Голос золота', 'Фанаты везде', 'Харизма +999', 'Монолог длиннее фильма'],
+    art: 'demagogue'
+  },
+  {
+    name: 'Кот',
+    tagline: '«Высшая форма злодейства»',
+    desc: 'Поздравляем. Вы достигли вершины. Коты — истинные повелители мира, просто делают вид что нет. Вы получаете всё что хотите одним взглядом, разрушаете планы просто сидя на важных документах и всем на вас работают. Мефистофель ждёт вас.',
+    traits: ['Мировое господство уже есть', 'Стратегия: смотреть презрительно', 'Физика не применима', 'Кот-директор'],
+    art: 'cat'
+  }
+];
+
+let quizScores = [0,0,0,0];
+let quizCurrent = 0;
+let selectedOption = null;
+
+const artTemplates = {
+  scientist: `<div class="art-scientist">
+    <div class="hair"></div>
+    <div class="head"></div>
+    <div class="glasses"><div class="glasses-l"></div><div class="glasses-r"></div></div>
+    <div class="coat"></div>
+    <div class="body"></div>
+    <div class="flask"><div class="flask-neck"></div><div class="flask-body"></div></div>
+    <div class="zap">⚡</div>
+  </div>`,
+  puppeteer: `<div class="art-puppeteer">
+    <div class="string s1"></div><div class="string s2"></div><div class="string s3"></div>
+    <div class="puppet p1"></div><div class="puppet p2"></div><div class="puppet p3"></div>
+    <div class="hat"><div class="hat-top"></div><div class="hat-brim"></div></div>
+    <div class="shadow-head"></div>
+    <div class="eye l"></div><div class="eye r"></div>
+    <div class="shadow-body"></div>
+  </div>`,
+  demagogue: `<div class="art-demagogue">
+    <div class="speech">МЫ ЗАХВАТИМ МИР!</div>
+    <div class="hair"></div>
+    <div class="head"></div>
+    <div class="mouth"></div>
+    <div class="body"></div>
+    <div class="tie"></div>
+  </div>`,
+  cat: `<div class="art-cat">
+    <div class="crown">
+      <div class="crown-point cp1"></div>
+      <div class="crown-point cp2"></div>
+      <div class="crown-point cp3"></div>
+      <div class="crown-base"></div>
+    </div>
+    <div class="ear ear-l"></div><div class="ear ear-r"></div>
+    <div class="head"></div>
+    <div class="eye-c l"><div class="pupil"></div></div>
+    <div class="eye-c r"><div class="pupil"></div></div>
+    <div class="nose"></div>
+    <div class="whisker w1"></div><div class="whisker w2"></div>
+    <div class="whisker w3"></div><div class="whisker w4"></div>
+    <div class="body"></div>
+    <div class="tail"></div>
+  </div>`
+};
+
+function renderQuiz(){
+  const q = quizData[quizCurrent];
+  document.getElementById('quiz-step-label').textContent = `Вопрос ${quizCurrent+1} из ${quizData.length}`;
+  document.getElementById('quiz-question-text').textContent = q.q;
+  document.getElementById('quiz-progress').style.width = `${(quizCurrent/quizData.length)*100}%`;
+
+  const container = document.getElementById('quiz-options-container');
+  const letters = ['А','Б','В','Г'];
+  container.innerHTML = q.opts.map((o,i)=>`
+    <button class="quiz-option" onclick="selectOption(this, ${i})" data-index="${i}">
+      <span class="quiz-option-letter">${letters[i]}</span>
+      ${o.text}
+    </button>
+  `).join('');
+
+  // Dots
+  const dots = document.getElementById('quiz-dots');
+  dots.innerHTML = quizData.map((_,i)=>`
+    <div class="quiz-dot ${i<quizCurrent?'done':i===quizCurrent?'active':''}"></div>
+  `).join('');
+
+  selectedOption = null;
+  document.getElementById('quiz-next-btn').style.display = 'none';
+}
+
+function selectOption(btn, idx){
+  document.querySelectorAll('.quiz-option').forEach(b=>b.classList.remove('selected'));
+  btn.classList.add('selected');
+  selectedOption = idx;
+  document.getElementById('quiz-next-btn').style.display = 'flex';
+}
+
+function quizNext(){
+  if(selectedOption === null) return;
+  const scores = quizData[quizCurrent].opts[selectedOption].scores;
+  scores.forEach((s,i)=>quizScores[i]+=s);
+
+  quizCurrent++;
+  if(quizCurrent < quizData.length){
+    renderQuiz();
+  } else {
+    showResult();
+  }
+}
+
+function showResult(){
+  document.getElementById('quiz-questions').style.display = 'none';
+  document.getElementById('quiz-progress').style.width = '100%';
+
+  const maxScore = Math.max(...quizScores);
+  const winIdx = quizScores.indexOf(maxScore);
+  const archetype = archetypes[winIdx];
+
+  document.getElementById('result-art').innerHTML = artTemplates[archetype.art];
+  document.getElementById('result-name').textContent = archetype.name;
+  document.getElementById('result-tagline').textContent = archetype.tagline;
+  document.getElementById('result-desc').textContent = archetype.desc;
+  document.getElementById('result-traits').innerHTML = archetype.traits.map(t=>`<span class="trait-tag">${t}</span>`).join('');
+
+  const resultEl = document.getElementById('quiz-result');
+  resultEl.classList.add('visible');
+}
+
+function quizRestart(){
+  quizScores = [0,0,0,0];
+  quizCurrent = 0;
+  selectedOption = null;
+  document.getElementById('quiz-result').classList.remove('visible');
+  document.getElementById('quiz-questions').style.display = 'block';
+  renderQuiz();
+}
+
+// Init quiz
+renderQuiz();
+
+// ===== VACANCY MODAL DATA =====
+const vacancyDetails = {
+  volcano: {
+    icon: '🌋',
+    title: 'Оператор Вулканического Логова',
+    dept: 'Операционный отдел',
+    format: 'Полная занятость • Вулкан, Тихий океан (секретные координаты)',
+    full: 'Мы ищем опытного специалиста для управления нашей флагманской базой в действующем вулкане. Ваша ответственность — бесперебойная работа всех систем: лавовые заслонки, лифты для миньонов, система самоуничтожения (только по приказу).',
+    salary: '120 000 ₩C / мес'
+  },
+  cat: {
+    icon: '🐱',
+    title: 'Кошачий Психолог',
+    dept: 'Отдел по работе с высшим руководством',
+    format: 'Полная занятость • Личные покои Мефистофеля',
+    full: 'Мефистофель — наш Главный Кот-Директор и де-факто верховный стратег организации. Его психологическое благополучие напрямую влияет на мировое господство. Вы обеспечите правильный баланс игнорирования, поглаживания и рыбных деликатесов.',
+    salary: '95 000 ₩C / мес'
+  },
+  intern: {
+    icon: '🎓',
+    title: 'Стажёр Мирового Господства',
+    dept: 'Отдел развития кадров',
+    format: '6 месяцев • Чередование баз',
+    full: 'Программа стажировки «Завтрашние Злодеи» — лучший старт в карьере злодея. Вы будете ротироваться между отделами: R&D, Оперативный, Пропаганды и Кофе. По итогам — оффер или… ну, посмотрим на результаты.',
+    salary: '15 000 ₩C / мес'
+  },
+  barista: {
+    icon: '☕',
+    title: 'Бариста Секретной Базы',
+    dept: 'Инфраструктура и жизнеобеспечение',
+    format: 'Полная занятость • База по договорённости',
+    full: 'Армия злодеев работает на кофе. Ваш эспрессо — это топливо для захвата мира. Вы будете обслуживать главный кофейный пост базы, разрабатывать сезонное меню из трофейных ингредиентов и обеспечивать военную тайну всех рецептур.',
+    salary: '60 000 ₩C / мес'
+  },
+  deathray: {
+    icon: '⚡',
+    title: 'Senior Разработчик Лучей Смерти',
+    dept: 'Отдел R&D',
+    format: 'Полная занятость • Лаборатория Глубины (−3 этаж)',
+    full: 'Ключевая техническая роль в нашем продуктовом портфеле. Вы будете проектировать, разрабатывать и тестировать лучи смерти следующего поколения. Технологический стек: квантовая физика, тёмная энергия, немного Python для автоматизации.',
+    salary: '350 000 ₩C / мес'
+  },
+  procrastination: {
+    icon: '📋',
+    title: 'Менеджер по Прокрастинации',
+    dept: 'Стратегическое планирование (или откладывание оного)',
+    format: 'Полная занятость • Когда-нибудь начнёте',
+    full: 'Официальный заместитель Доктора по всем вопросам, которые можно отложить. Вы создаёте методологию прокрастинации, ведёте реестр «почему не сегодня» и оптимизируете процесс максимально убедительного ничегонеделания.',
+    salary: '180 000 ₩C / мес'
+  }
+};
+
+function openVacancyModal(key){
+  const d = vacancyDetails[key];
+  if(!d) return;
+  document.getElementById('modal-content').innerHTML = `
+    <div style="margin-bottom:1rem">
+      <span style="font-size:2.5rem">${d.icon}</span>
+    </div>
+    <div class="modal-title">${d.title}</div>
+    <p style="color:var(--accent);font-size:0.85rem;margin-bottom:0.3rem;font-weight:600">${d.dept}</p>
+    <p style="color:var(--muted);font-size:0.85rem;margin-bottom:1.5rem">${d.format}</p>
+    <p style="color:var(--text);line-height:1.7;margin-bottom:1.5rem">${d.full}</p>
+    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:1rem;padding:1rem;background:var(--dark);border-radius:8px;margin-bottom:1.5rem">
+      <div>
+        <div style="font-size:0.75rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.1em;margin-bottom:0.2rem">Зарплата</div>
+        <div style="font-size:1.2rem;font-weight:800;color:var(--gold)">${d.salary}</div>
+      </div>
+      <div style="font-size:1.5rem">💰</div>
+    </div>
+    <button class="btn btn-danger" style="width:100%" onclick="closeModal(); scrollToApply('${d.title}')">
+      ☠ Откликнуться на вакансию
+    </button>
+  `;
+  document.getElementById('vacancy-modal').classList.add('open');
+}
+
+function closeModal(){
+  document.getElementById('vacancy-modal').classList.remove('open');
+}
+
+// ===== FORM =====
+function scrollToApply(position){
+  document.getElementById('apply').scrollIntoView({behavior:'smooth'});
+  if(position){
+    setTimeout(()=>{
+      const sel = document.getElementById('f-position');
+      for(let o of sel.options){
+        if(o.value === position || o.text === position){
+          sel.value = o.value; break;
+        }
+      }
+    }, 600);
+  }
+}
+
+function updateFileLabel(input){
+  const label = document.getElementById('file-label-text');
+  if(input.files && input.files[0]){
+    label.innerHTML = `<strong style="color:var(--success)">✓ ${input.files[0].name}</strong><br><span style="color:var(--muted)">Файл прикреплён</span>`;
+  }
+}
+
+function submitForm(e){
+  e.preventDefault();
+  const name = document.getElementById('f-name').value;
+  document.getElementById('application-form').style.display = 'none';
+  document.getElementById('form-success').classList.add('visible');
+  showToast('Заявка принята!', `${name}, ваш путь к злодейству начался`);
+}
+
+function resetForm(){
+  document.getElementById('application-form').reset();
+  document.getElementById('application-form').style.display = 'block';
+  document.getElementById('form-success').classList.remove('visible');
+  document.getElementById('file-label-text').innerHTML = '<strong>Нажмите для загрузки</strong> или перетащите файл<br>PDF, DOC, DOCX — макс. 10 МБ. Секретные досье приветствуются.';
+}
+
+// ===== TOAST =====
+function showToast(title, body){
+  const t = document.getElementById('toast');
+  document.getElementById('toast-title').textContent = title;
+  document.getElementById('toast-body').textContent = body;
+  t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'), 4000);
+}
+
+// ===== FILE DRAG & DROP =====
+const dropZone = document.querySelector('.file-upload');
+if(dropZone){
+  dropZone.addEventListener('dragover', e=>{
+    e.preventDefault();
+    dropZone.style.borderColor = 'var(--accent)';
+    dropZone.style.background = 'rgba(123,0,255,0.08)';
+  });
+  dropZone.addEventListener('dragleave', ()=>{
+    dropZone.style.borderColor = '';
+    dropZone.style.background = '';
+  });
+  dropZone.addEventListener('drop', e=>{
+    e.preventDefault();
+    dropZone.style.borderColor = '';
+    dropZone.style.background = '';
+    const files = e.dataTransfer.files;
+    if(files[0]){
+      const input = document.getElementById('f-resume');
+      // Can't directly set files, just show name
+      document.getElementById('file-label-text').innerHTML =
+        `<strong style="color:var(--success)">✓ ${files[0].name}</strong><br><span style="color:var(--muted)">Файл прикреплён</span>`;
+    }
+  });
+}
+</script>
+</body>
+</html>

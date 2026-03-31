@@ -1,0 +1,72 @@
+version: "3.9"
+
+# ============================================================
+# Agent Orchestra — production docker-compose
+# ============================================================
+
+services:
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: runtime
+    image: orchestra:latest
+    container_name: orchestra-web
+    restart: unless-stopped
+
+    # Порт: хост:контейнер (из src/cli/app.py default=3015)
+    ports:
+      - "${ORCHESTRA_PORT:-3015}:3015"
+
+    # Переменные окружения из .env файла
+    env_file:
+      - .env
+
+    environment:
+      - PYTHONUNBUFFERED=1
+      - ORCHESTRA_HOST=0.0.0.0
+      - ORCHESTRA_PORT=3015
+
+    # Монтируем директорию с данными для персистентности
+    volumes:
+      - orchestra_data:/app/_orchestra
+      - ./config:/app/config:ro
+
+    # Healthcheck (дублируем из Dockerfile для compose)
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3015/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 15s
+
+    # Ограничения ресурсов
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+          cpus: "1.0"
+        reservations:
+          memory: 256M
+          cpus: "0.25"
+
+    # Логирование
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "50m"
+        max-file: "5"
+
+    # Метки для идентификации
+    labels:
+      - "com.orchestra.service=web"
+      - "com.orchestra.version=0.1.0"
+
+# ============================================================
+# Именованные тома
+# ============================================================
+volumes:
+  orchestra_data:
+    driver: local
+    labels:
+      com.orchestra.description: "Persistent data: jobs, runs, sessions"

@@ -1,0 +1,81 @@
+# ============================================================
+# .dockerignore — исключения из Docker build context
+# ============================================================
+
+# Git
+.git/
+.gitignore
+.github/
+
+# Python кэш и артефакты
+__pycache__/
+**/__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.pyw
+*.egg
+*.egg-info/
+dist/
+build/
+*.whl
+.eggs/
+
+# Виртуальные окружения
+.venv/
+venv/
+env/
+.env.local
+.env.*.local
+
+# Poetry
+# НЕ исключаем poetry.lock — он нужен для воспроизводимости!
+
+# Тесты и CI
+tests/
+.pytest_cache/
+.coverage
+coverage.xml
+htmlcov/
+.tox/
+
+# IDE и редакторы
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+
+# Docker-файлы (не нужны внутри образа)
+Dockerfile*
+docker-compose*.yml
+.dockerignore
+
+# Документация
+docs/
+*.md
+*.rst
+LICENSE
+
+# Данные и состояние (монтируются как volume)
+_orchestra/
+
+# Секреты и конфиги окружения
+.env
+.env.*
+!.env.example
+
+# Временные файлы
+*.tmp
+*.bak
+*.log
+logs/
+
+# Node (если есть)
+node_modules/
+npm-debug.log*
+
+# Gigs и прочее
+gigs/
