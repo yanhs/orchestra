@@ -726,6 +726,7 @@ function switchJob(id){
     jobs[activeJobId]._activePhases=[...S.activePhases];
     jobs[activeJobId]._currentPhase=S.currentPhase;
     jobs[activeJobId]._selectedAgent=selectedAgent;
+    jobs[activeJobId]._choiceGroups=allChoiceGroups;
   }
 
   activeJobId=id;
@@ -747,6 +748,8 @@ function switchJob(id){
     S.activePhases=j._activePhases||[];
     S.currentPhase=j._currentPhase||null;
     selectedAgent=j._selectedAgent||null;
+    allChoiceGroups=j._choiceGroups||[];
+    renderChoicesPanel();
     // Re-connect WS if running
     if(j.status==='running'&&j.ws&&j.ws.readyState===1){
       S.ws=j.ws;
@@ -784,6 +787,7 @@ function deleteJob(id){
   if(jobs[id]&&jobs[id].ws){try{jobs[id].ws.close()}catch(e){}}
   delete jobs[id];
   if(id===activeJobId){
+    allChoiceGroups=[];renderChoicesPanel();
     const ids=Object.keys(jobs);
     if(ids.length)switchJob(ids[ids.length-1]);
     else fullReset();
