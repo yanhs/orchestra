@@ -17,10 +17,10 @@ _config_lock = asyncio.Lock()
 
 
 async def _call_supervisor(prompt: str, model: str = "sonnet", on_progress=None) -> str:
-    """Call supervisor with retry fallback."""
+    """Call supervisor with streaming progress."""
     from ..web.server import _call_claude
-    return await _call_claude(prompt, model=model,
-        system_prompt="You are a JSON-only API. Respond with exactly one valid JSON object. No text, no markdown, no explanation.",
+    return await _call_claude(prompt, model=model, max_turns=3,
+        system_prompt="Think step by step about the task, then respond with a valid JSON object. Your thinking will be shown to the user as progress.",
         on_progress=on_progress)
 
 
@@ -362,8 +362,9 @@ Respond with a JSON object. Plan your first stage."""
 
             # Ask supervisor what to do
             try:
-                await self._notify(self.role_name, "progress", f"Планирую... ({self.supervisor_model})")
-                raw = await _call_supervisor(prompt, self.supervisor_model)
+                async def _sv_progress(text):
+                    await self._notify(self.role_name, "progress", text)
+                raw = await _call_supervisor(prompt, self.supervisor_model, on_progress=_sv_progress)
                 if not raw.strip():
                     empty_retries += 1
                     if empty_retries > max_empty_retries:

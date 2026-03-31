@@ -287,7 +287,7 @@ GENERAL RULES:
 - IMPORTANT: ALL text MUST be in the SAME LANGUAGE as the TASK"""
 
 
-async def _call_claude(prompt: str, model: str = "opus", max_retries: int = 3, system_prompt: str = "", on_progress=None) -> str:
+async def _call_claude(prompt: str, model: str = "opus", max_retries: int = 3, system_prompt: str = "", on_progress=None, max_turns: int = 1) -> str:
     """Helper: call Claude with auto-retry on failure. Prepends model fallback warning."""
     from claude_agent_sdk import ClaudeAgentOptions, ClaudeSDKClient, AssistantMessage, ResultMessage, TextBlock
 
@@ -297,7 +297,7 @@ async def _call_claude(prompt: str, model: str = "opus", max_retries: int = 3, s
 
     for attempt in range(max_retries):
         try:
-            options = ClaudeAgentOptions(model=current_model, max_turns=1, permission_mode="bypassPermissions")
+            options = ClaudeAgentOptions(model=current_model, max_turns=max_turns, permission_mode="bypassPermissions")
             if system_prompt:
                 options.system_prompt = system_prompt
             client = ClaudeSDKClient(options)
@@ -311,13 +311,14 @@ async def _call_claude(prompt: str, model: str = "opus", max_retries: int = 3, s
                             content = msg.result
                         break
                     elif isinstance(msg, AssistantMessage):
+                        msg_text = ""
                         for block in msg.content or []:
                             if isinstance(block, TextBlock):
+                                msg_text += block.text
                                 content += block.text
-                        # Stream progress
-                        if on_progress and content:
-                            snippet = content[:100].replace('\n',' ')
-                            r = on_progress(f"Thinking: {snippet}...")
+                        # Stream each message's text as progress (skip raw JSON)
+                        if on_progress and msg_text and not msg_text.strip().startswith('{') and not msg_text.strip().startswith('```'):
+                            r = on_progress(msg_text)
                             if asyncio.iscoroutine(r): await r
             finally:
                 await client.disconnect()
