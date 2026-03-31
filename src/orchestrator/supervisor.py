@@ -227,13 +227,15 @@ YOUR ROLE:
 - Workers can request help: if you see [REQUEST_AGENT: ...] in their output, create the requested agent in the next stage
 
 TEAM BUILDING RULES:
-- MINIMUM 3 agents per stage. Never 1 or 2.
+- MINIMUM 3 agents per stage. Never 1 or 2. This applies to EVERY stage including parallel sub-stages.
+- Do NOT use run_parallel_stages with 1 agent per sub-stage. That defeats the purpose.
 - Research/Analysis → 3+ agents: Researcher + Critic + Analyst (discuss mode, 2 rounds)
 - Planning/Strategy → 3 agents: Strategist + Opponent/Devil's Advocate + Finalizer (Red-Blue or discuss)
 - Development/Code → 4 agents: Architect → Developer → Tester → Reviewer (pipeline with rework)
 - Content/Writing → 3 agents: Writer + Editor + Fact-checker (pipeline or Red-Blue)
 - Every team MUST include a quality checker (critic/reviewer/tester) — no work ships without review.
-- If the goal mentions N items to research/build, create N specialized agents (one per item) + 1 critic.
+- For implementation: use pipeline (architect→developer→tester→reviewer), NOT a single "Full-Stack Developer".
+- If the goal mentions N items to build, create N parallel_delegates (sub-managers), each with a full team.
 
 """ + SUPERVISOR_SYSTEM.split("BASE MODES")[1]  # Reuse modes, mechanics, format from main prompt
 
