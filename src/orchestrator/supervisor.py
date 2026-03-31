@@ -320,46 +320,6 @@ class SupervisedRun:
         """Execute the full supervised workflow."""
         result = OrchestraResult(mode="supervised", topic=self.goal)
 
-        # Check for sub-supervisor checkpoints to resume directly (skip Executive)
-        if self.context_doc and not self.stages:
-            import glob
-            sub_checkpoints = sorted(
-                glob.glob(str(self.project_path / "_orchestra" / "runs" / "*_supervised" / ".checkpoint.json")),
-                key=lambda p: Path(p).stat().st_mtime, reverse=True
-            )
-            # Find sub-supervisors with actual stages (managers that did work)
-            resumable = []
-            for cp_path in sub_checkpoints[:10]:
-                try:
-                    cp_data = json.loads(Path(cp_path).read_text())
-                    if cp_data.get("stages") and cp_data.get("goal") != self.goal:
-                        resumable.append(cp_path)
-                except: pass
-
-            if resumable:
-                await self._notify(self.role_name, "start",
-                    f"Resuming {len(resumable)} manager(s) directly...")
-                for cp_path in resumable:
-                    try:
-                        sub_run = SupervisedRun.from_checkpoint(Path(cp_path), on_update=self.on_update)
-                        sub_run._parent_hierarchy = copy.deepcopy({**self._parent_hierarchy, **self.agent_hierarchy})
-                        sub_result = await sub_run.run()
-                        for resp in sub_result.responses:
-                            result.add_response(resp)
-                        self.total_cost += sub_run.total_cost
-                        if sub_run.context_doc:
-                            self.context_doc = sub_run.context_doc
-                        # Merge hierarchy
-                        for name, info in sub_run.agent_hierarchy.items():
-                            if name not in self.agent_hierarchy:
-                                self.agent_hierarchy[name] = info
-                    except Exception as e:
-                        await self._notify(self.role_name, "error", f"Resume failed: {e}")
-
-                self._save_progress()
-                # After resuming managers, let Executive decide what's next
-                # (fall through to normal flow with updated context)
-
         if self.stages:
             # Resuming from checkpoint with completed stages
             last = self.stages[-1]
