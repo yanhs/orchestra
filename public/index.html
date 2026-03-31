@@ -877,12 +877,30 @@ function addCard(ag,ev,txt){
     return;
   }
 
-  // done/error — replace active card with final
-  const a=document.getElementById(cid);if(a)a.remove();
-  const c=document.createElement('div');c.className=`rc ev-${ev}`;
-  c.innerHTML=`<div class="rc-h"><span class="al">${esc(ag)}</span><span class="el">${ev}</span></div><div class="rc-b">${fmtMd(txt)}</div>`;
-  if(selectedAgent&&selectedAgent!==ag)c.style.display='none';
-  out.appendChild(c);out.scrollTop=out.scrollHeight;
+  // done/error — keep live process, update header + append result
+  const a=document.getElementById(cid);
+  if(a){
+    // Remove spinner, update header color
+    a.querySelectorAll('.spinner').forEach(s=>s.remove());
+    a.className=`rc ev-${ev}`;
+    a.removeAttribute('id');
+    // Append final result if not empty
+    if(txt&&txt.length>10){
+      const res=document.createElement('div');
+      res.style.borderTop='1px solid rgba(255,255,255,0.06)';
+      res.style.padding='0.4rem';
+      res.style.fontSize='0.75rem';
+      res.innerHTML=fmtMd(txt);
+      a.appendChild(res);
+    }
+  } else {
+    // No active card — create fresh
+    const c=document.createElement('div');c.className=`rc ev-${ev}`;
+    c.innerHTML=`<div class="rc-h"><span class="al">${esc(ag)}</span><span class="el">${ev}</span></div><div class="rc-b">${fmtMd(txt)}</div>`;
+    if(selectedAgent&&selectedAgent!==ag)c.style.display='none';
+    out.appendChild(c);
+  }
+  out.scrollTop=out.scrollHeight;
 }
 function addSum(txt){const out=document.getElementById('output');const c=document.createElement('div');c.className='rc sc';c.innerHTML=`<div class="rc-h"><span class="al">Summary</span></div><div class="rc-b">${fmtMd(txt)}</div>`;out.appendChild(c);out.scrollTop=out.scrollHeight}
 function showStats(d){const b=document.getElementById('statsBar');b.style.display='block';b.textContent=`$${(d.cost||0).toFixed(4)} | ${((d.duration_ms||0)/1000).toFixed(0)}s | ${d.responses||0} agents`}
