@@ -38,10 +38,12 @@ class DiscussionMode(BaseMode):
             # Notify all agents starting
             if on_update:
                 for agent in agents:
+                    agents_list = ", ".join(a.display_name for a in agents)
+                    label = f"Discussion {round_num}/{self.max_rounds}: {agents_list}" if self.max_rounds > 1 else f"Discussion: {agents_list}"
                     r = on_update(
                         agent.display_name,
                         "start",
-                        f"Round {round_num}/{self.max_rounds}",
+                        label,
                     )
                     if asyncio.iscoroutine(r):
                         await r
