@@ -232,8 +232,9 @@ body.st-running .phase-bar,body.st-done .phase-bar{display:flex}
 <div class="hdr">
   <h1><span>Agent</span> Orchestra</h1>
   <div class="hdr-sp"></div>
+  <button class="prompt-btn" id="goBtn" onclick="handlePrompt()" style="padding:0.25rem 0.6rem;font-size:0.65rem">Go</button>
+  <button class="prompt-btn stop" id="stopBtn" onclick="stopCurrent()" style="padding:0.25rem 0.6rem;font-size:0.65rem">Stop</button>
   <div class="model-sel-wrap">
-    <span class="model-sel-label">Supervisor</span>
     <select class="model-sel" id="supervisorModel">
       <option value="haiku">haiku</option>
       <option value="sonnet">sonnet</option>
@@ -265,9 +266,8 @@ body.st-running .phase-bar,body.st-done .phase-bar{display:flex}
     </div>
     <div class="prompt-bar" id="promptBar">
       <span id="promptAgent" style="display:none;font-size:0.6rem;font-weight:600;color:var(--a);white-space:nowrap;padding:0.2rem 0.4rem;background:var(--ad);border-radius:3px;cursor:pointer" onclick="selectAgent(null)"></span>
-      <input class="prompt-in" id="promptIn" placeholder="Enter a goal..." onkeydown="if(event.key==='Enter')handlePrompt()">
-      <button class="prompt-btn" id="promptBtn" onclick="handlePrompt()">Go</button>
-      <button class="prompt-btn stop" id="stopBtn" onclick="stopCurrent()">Stop</button>
+      <input class="prompt-in" id="promptIn" placeholder="Enter a goal or message..." onkeydown="if(event.key==='Enter')handlePrompt()">
+      <button class="prompt-btn" id="promptBtn" onclick="handlePrompt()" style="font-size:0.6rem;padding:0.25rem 0.5rem">Send</button>
     </div>
   </div>
   <div class="out-area">
@@ -1224,33 +1224,30 @@ function findAgentId(displayName){
 
 function updatePromptUI(){
   const inp=document.getElementById('promptIn');
-  const goBtn=document.getElementById('promptBtn');
+  const goBtn=document.getElementById('goBtn');
   const stopBtn=document.getElementById('stopBtn');
   const agLabel=document.getElementById('promptAgent');
 
   // Show selected agent label
   if(selectedAgent && selectedAgent!==null){
     agLabel.style.display='inline';
-    agLabel.textContent=selectedAgent+' x';
+    agLabel.textContent=selectedAgent+' ×';
     agLabel.title='Click to deselect';
     inp.placeholder=`Write to ${selectedAgent}...`;
-    goBtn.textContent='Send';
-    goBtn.style.opacity='1';
   } else if(S.phase==='running'){
     agLabel.style.display='none';
-    inp.placeholder='Send correction to supervisor...';
-    goBtn.textContent='Send';
-    goBtn.style.opacity='0.7';
+    inp.placeholder='Send correction...';
   } else {
     agLabel.style.display='none';
     inp.placeholder='Enter goal or follow-up...';
-    goBtn.textContent='Go';
-    goBtn.style.opacity='1';
   }
 
+  // Header buttons state
   if(S.phase==='running'){
+    goBtn.style.opacity='0.5';
     stopBtn.style.opacity='1';
   } else {
+    goBtn.style.opacity='1';
     stopBtn.style.opacity='0.3';
   }
 }
