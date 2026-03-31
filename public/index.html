@@ -919,7 +919,9 @@ function addCard(ag,ev,txt){
     const c=document.createElement('div');c.className='rc ev-start';c.id=cid;
     c.innerHTML=`<div class="rc-h"><span class="al">${esc(ag)}</span><span class="el">${esc(txt)}</span><div class="spinner"></div></div><div class="rc-b rc-live" style="font-size:0.7rem;color:var(--d);max-height:none;overflow-y:auto"></div>`;
     if(selectedAgent&&selectedAgent!==ag)c.style.display='none';
-    out.appendChild(c);autoScroll(out);return;
+    out.appendChild(c);
+    c.scrollIntoView({behavior:'smooth',block:'start'});
+    return;
   }
 
   if(ev==='progress'){
