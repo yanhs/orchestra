@@ -265,9 +265,9 @@ body.st-running .phase-bar,body.st-done .phase-bar{display:flex}
       <div class="ps-label" style="padding:0 0.1rem 0.3rem">Agents</div>
     </div>
     <div class="prompt-bar" id="promptBar">
-      <span id="promptAgent" style="display:none;font-size:0.6rem;font-weight:600;color:var(--a);white-space:nowrap;padding:0.2rem 0.4rem;background:var(--ad);border-radius:3px;cursor:pointer" onclick="selectAgent(null)"></span>
+      <span id="promptAgent" style="display:none;font-size:0.55rem;color:var(--a);padding:0.1rem 0.3rem;background:var(--ad);border-radius:3px;cursor:pointer;max-width:60px;overflow:hidden;text-overflow:ellipsis" onclick="selectAgent(null)" title="Click to deselect"></span>
       <input class="prompt-in" id="promptIn" placeholder="Enter a goal or message..." onkeydown="if(event.key==='Enter')handlePrompt()">
-      <button class="prompt-btn" id="promptBtn" onclick="handlePrompt()" style="font-size:0.6rem;padding:0.25rem 0.5rem">Send</button>
+      <button class="prompt-btn" id="promptBtn" onclick="handlePrompt()" style="font-size:0.55rem;padding:0.2rem 0.4rem">↑</button>
     </div>
   </div>
   <div class="out-area">
@@ -1086,38 +1086,47 @@ function renderAgentList(){
   if(phaseText||costText){
     html+=`<div style="font-size:0.6rem;color:var(--d);padding:0 0.1rem 0.4rem">${phaseText}${costText?' · <span class="mono">'+esc(costText)+'</span>':''}</div>`;
   }
-  // Agents — hierarchical display using tracked roles
+  // Agents — tree rendering from hierarchy
   const names=Object.keys(agentOutputs);
   if(names.length){
     html+=`<div class="ps-label" style="padding:0 0.1rem 0.3rem">Team</div>`;
     html+=`<div class="al-item${selectedAgent===null?' selected':''}" onclick="selectAgent(null)"><span class="al-dot off"></span><span class="al-name" style="color:var(--d2)">All</span></div>`;
-    // Sort: Executive first, then Managers, then Workers (using agentRoles)
-    const execs=names.filter(n=>(agentRoles[n]||'worker')==='executive');
-    const mgrs=names.filter(n=>(agentRoles[n]||'worker')==='manager');
-    const workers=names.filter(n=>(agentRoles[n]||'worker')==='worker');
-    const sorted=[...execs,...mgrs,...workers];
-    for(const name of sorted){
+
+    // Render tree recursively
+    const rendered=new Set();
+    function renderNode(name, depth){
+      if(rendered.has(name)||!agentOutputs[name])return;
+      rendered.add(name);
       const st=S.agentActivity[name]||'off';
       const msgs=agentOutputs[name].length;
       const sel=selectedAgent===name?' selected':'';
-      // Use hierarchy data for indent if available, else fall back to role-based
-      const hi=agentHierarchy[name];
-      let indent, parentLabel='';
-      if(hi){
-        indent=(hi.level||0)*16;
-        if(hi.parent)parentLabel=hi.parent;
-      } else {
-        const role=agentRoles[name]||'worker';
-        indent=role==='executive'?0:role==='manager'?12:24;
-      }
-      const lastEv=agentOutputs[name][agentOutputs[name].length-1];
-      const snippet=lastEv?lastEv.text.slice(0,40):'';
+      const indent=depth*14;
       html+=`<div class="al-item${sel}" style="margin-left:${indent}px" onclick="selectAgent('${esc(name).replace(/'/g,"\\&#39;")}')"><span class="al-dot ${st}"></span><span class="al-name">${esc(name)}</span><span class="al-status">${msgs}</span></div>`;
-      if(parentLabel&&indent>0){
-        html+=`<div style="font-size:0.5rem;color:var(--d);padding:0 0.5rem 0.15rem ${indent+20}px;margin-top:-2px">${esc(parentLabel)}</div>`;
+      if(sel){
+        const lastEv=agentOutputs[name][agentOutputs[name].length-1];
+        if(lastEv){html+=`<div style="font-size:0.55rem;color:var(--d);padding:0.1rem 0.3rem 0.2rem ${indent+18}px;word-wrap:break-word">${esc(lastEv.text.slice(0,50))}...</div>`}
       }
-      if(sel&&snippet){
-        html+=`<div style="font-size:0.58rem;color:var(--d);padding:0.1rem 0.5rem 0.3rem ${indent+20}px;word-wrap:break-word">${esc(snippet)}...</div>`;
+      // Render children
+      const hi=agentHierarchy[name];
+      if(hi&&hi.children){
+        for(const child of hi.children) renderNode(child, depth+1);
+      }
+    }
+
+    // Start from roots (no parent), or Executive
+    const roots=Object.keys(agentHierarchy).filter(n=>!agentHierarchy[n].parent&&agentOutputs[n]);
+    if(roots.length){
+      for(const r of roots) renderNode(r, 0);
+    }
+    // Render any orphans not in hierarchy
+    for(const name of names){
+      if(!rendered.has(name)&&name!=='System'&&name!=='Error'&&name!=='User'){
+        const role=agentRoles[name]||'worker';
+        const indent=role==='executive'?0:role==='manager'?14:28;
+        const st=S.agentActivity[name]||'off';
+        const msgs=agentOutputs[name].length;
+        const sel=selectedAgent===name?' selected':'';
+        html+=`<div class="al-item${sel}" style="margin-left:${indent}px" onclick="selectAgent('${esc(name).replace(/'/g,"\\&#39;")}')"><span class="al-dot ${st}"></span><span class="al-name">${esc(name)}</span><span class="al-status">${msgs}</span></div>`;
       }
     }
   } else {
