@@ -288,8 +288,12 @@ GENERAL RULES:
 
 
 async def _call_claude(prompt: str, model: str = "opus", max_retries: int = 3, system_prompt: str = "", on_progress=None, max_turns: int = 1) -> str:
-    """Helper: call Claude with auto-retry on failure. Prepends model fallback warning."""
+    """Helper: call Claude with auto-retry and token-level streaming."""
     from claude_agent_sdk import ClaudeAgentOptions, ClaudeSDKClient, AssistantMessage, ResultMessage, TextBlock
+    try:
+        from claude_agent_sdk import StreamEvent
+    except ImportError:
+        StreamEvent = None
 
     fallback_models = {"opus": "sonnet", "sonnet": "haiku", "haiku": "haiku"}
     requested_model = model
@@ -300,8 +304,11 @@ async def _call_claude(prompt: str, model: str = "opus", max_retries: int = 3, s
             options = ClaudeAgentOptions(model=current_model, max_turns=max_turns, permission_mode="bypassPermissions")
             if system_prompt:
                 options.system_prompt = system_prompt
+            # Enable token-level streaming
+            options.include_partial_messages = True
             client = ClaudeSDKClient(options)
             content = ""
+            stream_buf = ""  # accumulate deltas for progress
             try:
                 await client.connect()
                 await client.query(prompt)
@@ -310,16 +317,34 @@ async def _call_claude(prompt: str, model: str = "opus", max_retries: int = 3, s
                         if msg.result:
                             content = msg.result
                         break
+                    elif StreamEvent and isinstance(msg, StreamEvent):
+                        # Token-level streaming
+                        ev = msg.event if isinstance(msg.event, dict) else {}
+                        delta = ev.get('delta', {})
+                        if delta.get('type') == 'text_delta':
+                            chunk = delta.get('text', '')
+                            stream_buf += chunk
+                            content += chunk
+                            # Send progress every ~100 chars
+                            if on_progress and len(stream_buf) >= 100:
+                                r = on_progress(stream_buf)
+                                if asyncio.iscoroutine(r): await r
+                                stream_buf = ""
                     elif isinstance(msg, AssistantMessage):
+                        # Full message (fallback if StreamEvent not available)
                         msg_text = ""
                         for block in msg.content or []:
                             if isinstance(block, TextBlock):
                                 msg_text += block.text
-                                content += block.text
-                        # Stream each message's text as progress (skip raw JSON)
-                        if on_progress and msg_text and not msg_text.strip().startswith('{') and not msg_text.strip().startswith('```'):
+                                if not stream_buf:  # only add if not already from deltas
+                                    content += block.text
+                        if on_progress and msg_text and not stream_buf:
                             r = on_progress(msg_text)
                             if asyncio.iscoroutine(r): await r
+                # Flush remaining buffer
+                if on_progress and stream_buf:
+                    r = on_progress(stream_buf)
+                    if asyncio.iscoroutine(r): await r
             finally:
                 await client.disconnect()
 

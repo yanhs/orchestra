@@ -363,6 +363,10 @@ Respond with a JSON object. Plan your first stage."""
             # Ask supervisor what to do
             try:
                 async def _sv_progress(text):
+                    # Filter out raw JSON — only show human-readable text
+                    t = text.strip()
+                    if t.startswith('{') or t.startswith('"') or t.startswith('[') or t.startswith('```'):
+                        return
                     await self._notify(self.role_name, "progress", text)
                 raw = await _call_supervisor(prompt, self.supervisor_model, on_progress=_sv_progress)
                 if not raw.strip():

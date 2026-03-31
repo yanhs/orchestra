@@ -13,6 +13,10 @@ from claude_agent_sdk import (
     TextBlock,
     ToolUseBlock,
 )
+try:
+    from claude_agent_sdk import StreamEvent
+except ImportError:
+    StreamEvent = None
 
 from ..orchestrator.sessions import get_session, set_session
 from .definition import AgentRole
@@ -68,6 +72,7 @@ class AgentClient:
             max_turns=self.role.max_turns,
             cwd=str(self.project_path),
             permission_mode="bypassPermissions",
+            include_partial_messages=True,
         )
         if self.cli_path:
             opts.cli_path = self.cli_path
@@ -103,26 +108,35 @@ class AgentClient:
                 await client.connect()
                 await client.query(prompt)
 
+                stream_buf = ""  # accumulate token deltas
                 async for msg in client.receive_messages():
                     messages.append(msg)
 
                     if isinstance(msg, ResultMessage):
                         break
 
-                    # Stream text + tool use — chunk long text into paragraphs
+                    # Token-level streaming via StreamEvent
+                    if on_stream and StreamEvent and isinstance(msg, StreamEvent):
+                        ev = msg.event if isinstance(msg.event, dict) else {}
+                        delta = ev.get('delta', {})
+                        if delta.get('type') == 'text_delta':
+                            chunk = delta.get('text', '')
+                            stream_buf += chunk
+                            if len(stream_buf) >= 80:
+                                r = on_stream(self.role.display_name, stream_buf)
+                                if asyncio.iscoroutine(r): await r
+                                stream_buf = ""
+                        continue
+
+                    # Full message fallback + tool use streaming
                     if on_stream and isinstance(msg, AssistantMessage):
+                        # Flush stream buffer first
+                        if stream_buf:
+                            r = on_stream(self.role.display_name, stream_buf)
+                            if asyncio.iscoroutine(r): await r
+                            stream_buf = ""
                         for block in msg.content or []:
-                            if isinstance(block, TextBlock) and block.text:
-                                # Split into paragraphs and stream each
-                                paragraphs = [p.strip() for p in block.text.split('\n\n') if p.strip()]
-                                if len(paragraphs) <= 1:
-                                    r = on_stream(self.role.display_name, block.text)
-                                    if asyncio.iscoroutine(r): await r
-                                else:
-                                    for para in paragraphs:
-                                        r = on_stream(self.role.display_name, para)
-                                        if asyncio.iscoroutine(r): await r
-                            elif isinstance(block, ToolUseBlock):
+                            if isinstance(block, ToolUseBlock):
                                 tool_info = f"🔧 {block.name}"
                                 inp = block.input or {}
                                 if block.name == 'Bash':
@@ -135,6 +149,11 @@ class AgentClient:
                                     tool_info += f": {(inp.get('query', '') or inp.get('url', ''))[:60]}"
                                 r = on_stream(self.role.display_name, tool_info)
                                 if asyncio.iscoroutine(r): await r
+
+                # Flush remaining
+                if on_stream and stream_buf:
+                    r = on_stream(self.role.display_name, stream_buf)
+                    if asyncio.iscoroutine(r): await r
             finally:
                 await client.disconnect()
 
