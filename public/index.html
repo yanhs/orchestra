@@ -641,7 +641,7 @@ function connectWS(msg){
       }
       // Parse hierarchy events — don't render as a card
       if(d.event==='hierarchy'){
-        try{agentHierarchy=JSON.parse(d.text)}catch(e){}
+        try{const h=JSON.parse(d.text);Object.assign(agentHierarchy,h)}catch(e){}
         if(wsJobId===activeJobId){renderAgentList();drawDiagram()}
       } else if(wsJobId===activeJobId){
         // Only render normal events if this is the active tab
@@ -910,7 +910,7 @@ function trackAgent(ag, ev, txt){
   // Track hierarchy role from event patterns
   if(!agentRoles[ag]){
     if(ag==='Executive'||ag==='Supervisor') agentRoles[ag]='executive';
-    else if(/^Manager-L\d+$/i.test(ag)) agentRoles[ag]='manager';
+    else if(ag.startsWith('Manager')) agentRoles[ag]='manager';
     else agentRoles[ag]='worker';
   }
   // Dedupe: don't add if last entry is identical (replay protection)
