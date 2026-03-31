@@ -58,6 +58,9 @@ class Job:
         # Notify all subscribers
         for q in self._subscribers:
             q.put_nowait(ev)
+        # Auto-save every 10 events (survive server restart)
+        if len(self.events) % 10 == 0:
+            self._save()
 
     def subscribe(self) -> asyncio.Queue:
         q: asyncio.Queue = asyncio.Queue()
