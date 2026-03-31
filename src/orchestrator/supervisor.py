@@ -296,6 +296,7 @@ class SupervisedRun:
         self.agent_hierarchy: dict[str, dict] = {
             self.role_name: {"parent": None, "level": self.level, "children": []}
         }
+        self._parent_hierarchy: dict[str, dict] = {}  # inherited from parent supervisor
         # Directory for saving full agent outputs — inside project_path so agents can access
         run_ts = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
         self.run_dir: Path = self.project_path / "_orchestra" / "runs" / f"{run_ts}_supervised"
@@ -325,7 +326,7 @@ class SupervisedRun:
                 last.get("result_summary", "Stage completed"))
             # Emit hierarchy on resume so frontend has agent tree
             if self.agent_hierarchy:
-                await self._notify(self.role_name, "hierarchy", json.dumps(self.agent_hierarchy))
+                await self._notify(self.role_name, "hierarchy", json.dumps({**self._parent_hierarchy, **self.agent_hierarchy}))
         else:
             # Fresh start
             prompt = f"""{self._system_prompt}
@@ -467,7 +468,8 @@ You are a manager — delegate the work to agents. Plan a stage now."""
                     level=self.level + 1,
                 )
                 sub_run.max_stages = max_sub
-                sub_run.context_doc = self.context_doc  # share context
+                sub_run.context_doc = self.context_doc
+                sub_run._parent_hierarchy = {**self._parent_hierarchy, **self.agent_hierarchy}
                 sub_result = await sub_run.run()
 
                 # Merge sub-supervisor's hierarchy into ours
@@ -486,7 +488,7 @@ You are a manager — delegate the work to agents. Plan a stage now."""
                     if self.role_name in self.agent_hierarchy:
                         self.agent_hierarchy[self.role_name]["children"].append(sub_run.role_name)
                 # Emit updated hierarchy to frontend
-                await self._notify(self.role_name, "hierarchy", json.dumps(self.agent_hierarchy))
+                await self._notify(self.role_name, "hierarchy", json.dumps({**self._parent_hierarchy, **self.agent_hierarchy}))
 
                 # Merge results
                 for resp in sub_result.responses:
@@ -621,6 +623,7 @@ You are a manager — delegate the work to agents. Plan a stage now."""
                     )
                     sub_run.max_stages = min(d.get("max_sub_stages", 5), 5)
                     sub_run.context_doc = self.context_doc
+                    sub_run._parent_hierarchy = {**self._parent_hierarchy, **self.agent_hierarchy}
                     return sub_run, await sub_run.run()
 
                 tasks = [asyncio.create_task(_run_delegate(d)) for d in delegates]
@@ -659,7 +662,7 @@ You are a manager — delegate the work to agents. Plan a stage now."""
                     })
                     combined_output.append(f"### Manager: {sub_run.goal[:50]}\n{sub_result.summary or ''}")
 
-                await self._notify(self.role_name, "hierarchy", json.dumps(self.agent_hierarchy))
+                await self._notify(self.role_name, "hierarchy", json.dumps({**self._parent_hierarchy, **self.agent_hierarchy}))
                 self._save_progress()
                 prompt = self._build_next_prompt(stage_num, "parallel managers", "\n\n".join(combined_output))
                 await self._notify(self.role_name, "start", "Reviewing manager results...")
@@ -816,7 +819,7 @@ You are a manager — delegate the work to agents. Plan a stage now."""
                         parent_children.append(display)
 
         # Emit hierarchy to frontend
-        await self._notify(self.role_name, "hierarchy", json.dumps(self.agent_hierarchy))
+        await self._notify(self.role_name, "hierarchy", json.dumps({**self._parent_hierarchy, **self.agent_hierarchy}))
 
         config = load_config(CONFIG_PATH)
         coordinator = OrchestraCoordinator(
@@ -897,7 +900,7 @@ You are a manager — delegate the work to agents. Plan a stage now."""
                         parent_children.append(name)
         # Re-emit hierarchy if new agents were found
         if stage_result.responses:
-            await self._notify(self.role_name, "hierarchy", json.dumps(self.agent_hierarchy))
+            await self._notify(self.role_name, "hierarchy", json.dumps({**self._parent_hierarchy, **self.agent_hierarchy}))
 
         return stage_result
 

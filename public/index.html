@@ -641,7 +641,21 @@ function connectWS(msg){
       }
       // Parse hierarchy events — don't render as a card
       if(d.event==='hierarchy'){
-        try{const h=JSON.parse(d.text);Object.assign(agentHierarchy,h)}catch(e){}
+        try{
+          const h=JSON.parse(d.text);
+          // Merge: don't overwrite existing entries with fewer children
+          for(const [k,v] of Object.entries(h)){
+            const existing=agentHierarchy[k];
+            if(!existing){
+              agentHierarchy[k]=v;
+            } else {
+              // Merge children lists
+              for(const ch of (v.children||[])){
+                if(!existing.children.includes(ch)) existing.children.push(ch);
+              }
+            }
+          }
+        }catch(e){}
         if(wsJobId===activeJobId){renderAgentList();drawDiagram()}
       } else if(wsJobId===activeJobId){
         // Only render normal events if this is the active tab
