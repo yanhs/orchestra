@@ -618,7 +618,9 @@ You are a manager — delegate the work to agents. Plan a stage now."""
                 await self._notify(self.role_name, "done",
                     f"**Launching {len(delegates)} parallel Managers**\n{decision.get('reasoning', '')}")
 
-                async def _run_delegate(d):
+                # Pre-create all sub-supervisors and register them BEFORE starting
+                sub_runs = []
+                for d in delegates:
                     sub_model = d.get("manager_model", "sonnet")
                     sub_run = SupervisedRun(
                         goal=d["sub_goal"],
@@ -629,16 +631,22 @@ You are a manager — delegate the work to agents. Plan a stage now."""
                     )
                     sub_run.max_stages = min(d.get("max_sub_stages", 5), 5)
                     sub_run.context_doc = self.context_doc
-                    sub_run._parent_hierarchy = copy.deepcopy({**self._parent_hierarchy, **self.agent_hierarchy})
-                    # Set parent relationship
                     sub_run.agent_hierarchy[sub_run.role_name]["parent"] = self.role_name
-                    # Register in parent's children
+                    # Register ALL managers as children first
                     if self.role_name in self.agent_hierarchy:
                         if sub_run.role_name not in self.agent_hierarchy[self.role_name]["children"]:
                             self.agent_hierarchy[self.role_name]["children"].append(sub_run.role_name)
-                    return sub_run, await sub_run.run()
+                    sub_runs.append(sub_run)
 
-                tasks = [asyncio.create_task(_run_delegate(d)) for d in delegates]
+                # Now pass complete parent hierarchy (with all siblings) to each
+                full_parent = copy.deepcopy({**self._parent_hierarchy, **self.agent_hierarchy})
+                for sub_run in sub_runs:
+                    sub_run._parent_hierarchy = copy.deepcopy(full_parent)
+
+                async def _run_sub(sr):
+                    return sr, await sr.run()
+
+                tasks = [asyncio.create_task(_run_sub(sr)) for sr in sub_runs]
                 if self._job:
                     self._job._child_tasks.extend(tasks)
 
