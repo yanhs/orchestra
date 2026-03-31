@@ -471,6 +471,11 @@ You are a manager — delegate the work to agents. Plan a stage now."""
                 sub_run.max_stages = max_sub
                 sub_run.context_doc = self.context_doc
                 sub_run._parent_hierarchy = copy.deepcopy({**self._parent_hierarchy, **self.agent_hierarchy})
+                # Set parent relationship
+                sub_run.agent_hierarchy[sub_run.role_name]["parent"] = self.role_name
+                if self.role_name in self.agent_hierarchy:
+                    if sub_run.role_name not in self.agent_hierarchy[self.role_name]["children"]:
+                        self.agent_hierarchy[self.role_name]["children"].append(sub_run.role_name)
                 sub_result = await sub_run.run()
 
                 # Merge sub-supervisor's hierarchy into ours
@@ -625,6 +630,12 @@ You are a manager — delegate the work to agents. Plan a stage now."""
                     sub_run.max_stages = min(d.get("max_sub_stages", 5), 5)
                     sub_run.context_doc = self.context_doc
                     sub_run._parent_hierarchy = copy.deepcopy({**self._parent_hierarchy, **self.agent_hierarchy})
+                    # Set parent relationship
+                    sub_run.agent_hierarchy[sub_run.role_name]["parent"] = self.role_name
+                    # Register in parent's children
+                    if self.role_name in self.agent_hierarchy:
+                        if sub_run.role_name not in self.agent_hierarchy[self.role_name]["children"]:
+                            self.agent_hierarchy[self.role_name]["children"].append(sub_run.role_name)
                     return sub_run, await sub_run.run()
 
                 tasks = [asyncio.create_task(_run_delegate(d)) for d in delegates]
