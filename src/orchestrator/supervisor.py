@@ -901,10 +901,12 @@ You are a manager — delegate the work to agents. Plan a stage now."""
             # Clean up: remove agents not in current stage to prevent unbounded growth
             raw["agents"] = {k: v for k, v in raw["agents"].items() if k in current_ids}
 
-            # Detect goal language for agent instructions
-            workspace = self.run_dir / "workspace"
+            # Workspace in projects/ with readable name from goal
+            import re as _re
+            safe_name = _re.sub(r'[^\w\s-]', '', self.goal[:40]).strip().replace(' ', '_')[:30] or 'project'
+            workspace = self.project_path / "projects" / safe_name
             workspace.mkdir(parents=True, exist_ok=True)
-            lang_hint = f"\nIMPORTANT: Respond ONLY in the same language as: \"{self.goal[:50]}\"\nWORKSPACE: Save ALL files to {workspace}/ — this is the shared project directory."
+            lang_hint = f"\nIMPORTANT: Respond ONLY in the same language as: \"{self.goal[:50]}\"\nWORKSPACE: Save ALL files to {workspace}/ — this is the shared project directory. Do NOT use /tmp/ or any other location."
             for ag in agents_data:
                 raw["agents"][ag["id"]] = {
                     "display_name": ag.get("display_name", ag["id"]),
